@@ -22,12 +22,15 @@ function harness(options = {}) {
   const listeners = new Map();
   const nativeListeners = new Map();
   const timers = new Map();
+  const frames = new Map();
+  const steps = [];
   const saved = [];
   const restored = [];
   const published = [];
   const calls = [];
   const errors = [];
   const updates = [];
+  let renders = 0;
   let serial = 0;
   let viewDisposed = 0;
   let audioDisposed = 0;
@@ -47,7 +50,7 @@ function harness(options = {}) {
         sound: false,
         tidying,
         idle: true,
-        animate: false,
+        animate: options.animate ?? false,
         held,
         dragged: held,
       };
@@ -112,7 +115,9 @@ function harness(options = {}) {
     setVisible(visible) {
       calls.push(["visible", visible]);
     },
-    step() {},
+    step(delta) {
+      steps.push(delta);
+    },
   };
   const browser = {
     size() {
@@ -189,15 +194,25 @@ function harness(options = {}) {
       },
       schedule(callback, delay) {
         const id = ++serial;
-        timers.set(id, { callback, delay });
+        timers.set(id, { callback, delay, at: currentTime + delay });
         return id;
       },
       cancel(id) {
         timers.delete(id);
       },
+      requestFrame(callback) {
+        const id = ++serial;
+        frames.set(id, callback);
+        return id;
+      },
+      cancelFrame(id) {
+        frames.delete(id);
+      },
     },
     view: {
-      render() {},
+      render() {
+        renders++;
+      },
       update(value) {
         updates.push(value);
       },
@@ -224,7 +239,24 @@ function harness(options = {}) {
     calls,
     errors,
     timers,
+    frames,
+    steps,
     updates,
+    displayFrame(delta = 1000 / 60) {
+      currentTime += delta;
+      const pending = [...frames];
+      for (const [id, timer] of [...timers]) {
+        if (timer.at <= currentTime) {
+          timers.delete(id);
+          timer.callback();
+        }
+      }
+      for (const [id, callback] of pending) {
+        if (frames.delete(id)) {
+          callback(currentTime);
+        }
+      }
+    },
     nativeListeners,
     emit(name, value) {
       for (const callback of [...(listeners.get(name) ?? [])]) {
@@ -247,6 +279,9 @@ function harness(options = {}) {
         (total, group) => total + group.size,
         0,
       );
+    },
+    get renders() {
+      return renders;
     },
     get viewDisposed() {
       return viewDisposed;
@@ -476,3 +511,65 @@ test("a stale targeting deadline cannot finish a newer targeting session", async
   );
   await h.app.dispose();
 });
+
+test("moving animation advances on display frames instead of missing alternate frames", async () => {
+  const h = harness({ animate: true });
+  await h.app.start();
+  for (let count = 0; count < 60; count++) {
+    h.displayFrame();
+  }
+  assert.equal(
+    h.steps.length,
+    61,
+    "movement should advance on all 60 display frames",
+  );
+  assert.ok(h.steps.slice(1).every((delta) => Math.abs(delta - 1 / 60) < 1e-9));
+  await h.app.dispose();
+  assert.equal(h.frames.size, 0);
+});
+
+test("idle animation keeps the low-frequency timer and hiding cancels display work", async () => {
+  const idle = harness();
+  await idle.app.start();
+  assert.equal(idle.frames.size, 0);
+  assert.ok([...idle.timers.values()].some((timer) => timer.delay === 100));
+  await idle.app.dispose();
+
+  const moving = harness({ animate: true });
+  await moving.app.start();
+  assert.equal(moving.frames.size, 1);
+  moving.emit("message", { type: "visible", visible: false });
+  assert.equal(moving.frames.size, 0);
+  const before = moving.steps.length;
+  moving.displayFrame();
+  assert.equal(moving.steps.length, before);
+  moving.emit("message", { type: "visible", visible: true });
+  assert.equal(moving.frames.size, 1);
+  await moving.app.dispose();
+  assert.equal(moving.frames.size, 0);
+});
+
+for (const animate of [false, true]) {
+  test(`cleanup pointer bursts render once per display frame (animate=${animate})`, async () => {
+    const h = harness({ animate });
+    await h.app.start();
+    h.emit("message", { type: "action", action: "target", purpose: "tidy" });
+    const before = h.renders;
+    for (let x = 0; x < 100; x++) {
+      h.emit("pointermove", pointerEvent({ x }));
+    }
+    h.displayFrame();
+    assert.equal(
+      h.renders - before,
+      1,
+      "100 mouse events need only one scene render",
+    );
+    h.emit("pointermove", pointerEvent({ x: 150 }));
+    const pending = [...h.frames.values()];
+    await h.app.dispose();
+    assert.equal(h.frames.size, 0);
+    const disposed = h.renders;
+    for (const callback of pending) callback();
+    assert.equal(h.renders, disposed);
+  });
+}

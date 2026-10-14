@@ -1,7 +1,7 @@
 import type { PreviewMessage } from "../../platform/bridge.js";
 import type { CaretSample, Point } from "../../simulation/model.js";
 import type { PetPresentation } from "../../simulation/presentation.js";
-import { requiredElement } from "../dom.js";
+import { requiredElement, updateText } from "../dom.js";
 import type {
   ApplicationBrowser,
   ApplicationEvents,
@@ -182,12 +182,12 @@ export class PetView implements ApplicationView {
 
   update(state: ApplicationViewState): void {
     const copy = targetDescriptions[state.purpose] ?? targetDescriptions.poop;
-    this.title.textContent = copy[0];
-    this.description.textContent = copy[1];
+    updateText(this.title, copy[0]);
+    updateText(this.description, copy[1]);
     if (state.purpose === "tidy") {
-      this.cancel.textContent = "Done";
+      updateText(this.cancel, "Done");
     } else {
-      this.cancel.textContent = "Never mind";
+      updateText(this.cancel, "Never mind");
     }
     this.world.hidden = !state.visible;
     this.banner.hidden = !state.targeting;
