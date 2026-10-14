@@ -200,9 +200,8 @@ export class GuestRoutine implements SceneOwner {
   clear(): void {
     this.#scene = null;
   }
-  start(name: string, point?: import("../model.js").Point): boolean {
+  start(name: string): boolean {
     const handled = this.#startGuest(name);
-    void point;
     if (handled && this.#scene) {
       this.#identity = Object.freeze({});
     }

@@ -47,7 +47,6 @@ import { CrimeRoutine } from "./behaviors/crime.js";
 import { CursorRoutine, cursorBeak } from "./behaviors/cursor.js";
 import { TypingRoutine } from "./behaviors/typing.js";
 import { SnackRoutine } from "./behaviors/snacks.js";
-// Simulation only: no browser, native APIs, network, or screen contents.
 
 const remarks = [
   "mine.",
@@ -323,14 +322,8 @@ export class Gullbert {
     this.#belongings.resize(this.#body.width, this.#body.height);
     this.#activity.resize();
   }
-  #safePoint(p: Point) {
-    return {
-      x: clamp(p.x, 0, this.#body.width - SIZE),
-      y: clamp(p.y, 0, this.#body.height - SIZE),
-    };
-  }
   #randomPoint() {
-    return this.#safePoint({
+    return this.#body.safePoint({
       x: 24 + this.#random() * (this.#body.width - 144),
       y: 70 + this.#random() * (this.#body.height - 240),
     });
@@ -398,7 +391,6 @@ export class Gullbert {
     this.#registry.interrupt();
   }
   #replaceActivity() {
-    // Every new command replaces the previous activity.
     this.#objects.discardFood();
     this.#cancelScene();
     this.#cancelFlight();
@@ -406,7 +398,6 @@ export class Gullbert {
     this.#body.resetMotion();
     this.#sounds = [];
     this.#speech.clear();
-    this.#objects.clearCrumb();
     this.#activity.clearPendingDrop();
     this.#activity.stopTravel();
   }
@@ -445,13 +436,10 @@ export class Gullbert {
     this.#pickup.cancel();
     this.#cleanup.cancel();
     this.#cancelScene();
-    this.#objects.discardFood();
-
     this.#food.clearRequest();
     this.#cancelFlight();
     this.#quiet.interrupt();
 
-    this.#objects.clearCrumb();
     this.#activity.clearPendingDrop();
     this.#rest();
     this.#cleanup.bulk();
@@ -503,12 +491,11 @@ export class Gullbert {
       return;
     }
     if (name === "summon") {
-      const p = this.#safePoint({
+      const destination = this.#body.safePoint({
         x: (point?.x ?? this.#body.width / 2) - SIZE / 2,
         y: (point?.y ?? this.#body.height / 2) - SIZE / 2,
       });
-      this.#body.place({ x: p.x, y: this.#body.y });
-      this.#body.place({ x: this.#body.x, y: p.y });
+      this.#body.place(destination);
       this.#rest(3);
       this.greet();
       return;
@@ -821,11 +808,7 @@ export class Gullbert {
     return this.#registry.presentation().pose ?? null;
   }
   get frame() {
-    if (this.pose in POSES) {
-      return POSES[this.pose as keyof typeof POSES];
-    } else {
-      return 0;
-    }
+    return frameFor(this.pose);
   }
 
   #routineProps: SceneProp[] = [];

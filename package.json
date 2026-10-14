@@ -12,8 +12,8 @@
     "preview": "node scripts/preview.mjs",
     "test": "npm run build:web && node --test tests/*.test.mjs",
     "check": "tsc --noEmit",
-    "format": "prettier --write src tests scripts .github package.json README.md CONTRIBUTING.md tsconfig.json",
-    "format:check": "prettier --check src tests scripts .github package.json README.md CONTRIBUTING.md tsconfig.json",
+    "format": "prettier --write src tests scripts .github package.json README.md CONTRIBUTING.md tsconfig.json src-tauri/tauri.conf.json src-tauri/capabilities",
+    "format:check": "prettier --check src tests scripts .github package.json README.md CONTRIBUTING.md tsconfig.json src-tauri/tauri.conf.json src-tauri/capabilities",
     "build:web": "node scripts/build.mjs",
     "watch:web": "node scripts/build.mjs --watch"
   },

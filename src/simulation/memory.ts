@@ -1,13 +1,9 @@
 import type { Memory } from "./model.js";
-import { isCollectible, type Collectible } from "./items.js";
+import { ITEMS, isCollectible, type Collectible } from "./items.js";
+import { clamp, SIZE } from "./geometry.js";
+
 // Durable belongings only. Scenes and animation clocks never enter the snapshot.
-const ITEMS: Collectible[] = [
-  "bottle_cap",
-  "bent_spoon",
-  "sock",
-  "glass_diamond",
-  "parking_ticket",
-];
+const collectibleIds = Object.keys(ITEMS).filter(isCollectible);
 function object(value: unknown): Record<string, unknown> {
   if (value != null && typeof value === "object" && !Array.isArray(value)) {
     return value as Record<string, unknown>;
@@ -31,27 +27,27 @@ export function normalizeMemory(
   } else {
     safeWidth = 1200;
   }
-  const maxX = Math.max(0, safeWidth - 96);
+  const maxX = Math.max(0, safeWidth - SIZE);
   let safeHeight;
   if (finite(height)) {
     safeHeight = height;
   } else {
     safeHeight = 800;
   }
-  const maxY = Math.max(0, safeHeight - 96);
+  const maxY = Math.max(0, safeHeight - SIZE);
   function point(value: unknown) {
     const p = object(value);
     if (!finite(p.x) || !finite(p.y)) {
       return null;
     }
     return {
-      x: Math.max(0, Math.min(maxX, p.x)),
-      y: Math.max(0, Math.min(maxY, p.y)),
+      x: clamp(p.x, 0, maxX),
+      y: clamp(p.y, 0, maxY),
     };
   }
   const collection: Memory["collection"] = {};
   const savedCollection = object(source.collection);
-  for (const id of ITEMS) {
+  for (const id of collectibleIds) {
     const count = savedCollection[id];
     if (finite(count) && count >= 1) {
       collection[id] = Math.min(999, Math.floor(count));
@@ -82,9 +78,9 @@ export function normalizeMemory(
     collection,
     greetings: {
       seen: greetings.seen === true,
-      lastAt: lastAt,
-      lastLine: lastLine,
-      lastDiscovery: lastDiscovery,
+      lastAt,
+      lastLine,
+      lastDiscovery,
     },
   };
 }

@@ -100,9 +100,8 @@ export class GiftRoutine implements SceneOwner {
   clear(): void {
     this.#scene = null;
   }
-  start(name: string, point?: import("../model.js").Point): boolean {
+  start(name: string): boolean {
     const handled = this.#startGift(name);
-    void point;
     if (handled && this.#scene) {
       this.#identity = Object.freeze({});
     }
@@ -135,9 +134,7 @@ export class GiftRoutine implements SceneOwner {
     this.#ground();
     this.#scene = null;
   }
-  visibility(visible: boolean): void {
-    void visible;
-  }
+  visibility(): void {}
 
   #ground(): void {
     if (!this.#scene) {

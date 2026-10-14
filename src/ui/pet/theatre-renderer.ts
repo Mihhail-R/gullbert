@@ -2,8 +2,6 @@ import type { Prop } from "../../simulation/model.js";
 import { requiredElement } from "../dom.js";
 import type { PetPresentation } from "../../simulation/presentation.js";
 
-// These toys share the existing click-through world and the bird's coordinate
-// system. Nodes are keyed and removed with the scene; none owns a timer.
 export function createTheatreRenderer(
   world: HTMLElement,
   gull: HTMLElement,
@@ -93,21 +91,16 @@ export function createTheatreRenderer(
       draw(hat, placement);
     }
     gull.dataset.hat = sim.hat;
-    // Keep the feet rigid through the walk cycle. The pet renderer supplies a
-    // one-pixel bob; the old extended-leg frames stay in the editable artwork.
+    // Walking uses the standing frame; the pet renderer adds the vertical bob.
     const walkingPose = sim.pose === "walkLeft" || sim.pose === "walkRight";
-    // New bath poses are editable pixel SVGs.
     const bathPose = ["bath-wet", "bath-shake-a", "bath-shake-b"].includes(
       sim.pose,
     );
     if (bathPose) {
       sprite.style.backgroundImage = `url("assets/theatre/${sim.pose}.svg")`;
-    } else {
-      sprite.style.backgroundImage = "";
-    }
-    if (bathPose) {
       sprite.style.backgroundPosition = "0 0";
     } else {
+      sprite.style.backgroundImage = "";
       let frame;
       if (walkingPose) {
         frame = 0;

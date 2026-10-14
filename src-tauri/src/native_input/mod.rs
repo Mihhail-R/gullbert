@@ -185,14 +185,7 @@ impl Input {
                 return Err("Encounter ended".into());
             }
             let (size, scale) = effects.geometry()?;
-            // Preserve the existing cursor bounds checks, distinct from placement validation.
-            if !point.x.is_finite()
-                || !point.y.is_finite()
-                || point.x < 0.0
-                || point.y < 0.0
-                || point.x >= f64::from(size.0) / scale
-                || point.y >= f64::from(size.1) / scale
-            {
+            if !targeting::valid_point(point.x, point.y, size, scale) {
                 return Err("Outside display".into());
             }
             let first = !input.cursor.holding();
@@ -272,7 +265,6 @@ impl Input {
             effects.schedule(Deadline::Target(generation), purpose.timeout());
             Ok(())
         })();
-        // Caller previously also cancelled on preparation errors; keep that rollback here.
         if result.is_err() {
             self.cancel_target(effects);
         }

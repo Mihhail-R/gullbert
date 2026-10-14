@@ -6,9 +6,12 @@ import {
   type PreviewMessage,
 } from "../../platform/bridge.js";
 import type { Settings } from "../../simulation/model.js";
-import { isCollectible, type Collectible } from "../../simulation/items.js";
+import {
+  ITEMS,
+  isCollectible,
+  type Collectible,
+} from "../../simulation/items.js";
 import { normalizeHat } from "../../simulation/behaviors/hats.js";
-import { ITEMS } from "../../simulation/items.js";
 
 let settings: Settings = {
   paused: false,
@@ -41,17 +44,11 @@ function render() {
   const visibilityButton = $("#visibility-toggle");
   if (visible) {
     visibilityButton.dataset.action = "hide";
-  } else {
-    visibilityButton.dataset.action = "show";
-  }
-  if (visible) {
     visibilityButton.textContent = "Send him away";
-  } else {
-    visibilityButton.textContent = "Return / resume";
-  }
-  if (visible) {
     $("#status-dot").style.background = "#637b60";
   } else {
+    visibilityButton.dataset.action = "show";
+    visibilityButton.textContent = "Return / resume";
     $("#status-dot").style.background = "#b2b7ac";
   }
   let pausedLabel;
@@ -218,9 +215,9 @@ function roommate(data: RoommateStatus) {
       return li;
     }),
   );
-  if (data.error) {
-    error(data.error);
-  }
+  const storageError = $("#storage-error");
+  storageError.textContent = data.error ?? "";
+  storageError.hidden = !data.error;
 }
 if (native) {
   await native.event.listen("gullbert-roommate", (e) => {
