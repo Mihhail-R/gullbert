@@ -2,14 +2,12 @@ import { observe } from "../observation.js";
 import type { ReadonlyValue } from "../presentation.js";
 import { scopeCapabilities } from "../capabilities.js";
 import { beakOffsetX } from "../geometry.js";
-import type { PointerSample } from "../model.js";
+import type { Point, PointerSample } from "../model.js";
 import type { Pose } from "../poses.js";
 import type { SimulationView, BehaviorCapabilities } from "../capabilities.js";
 import type { SceneOwner } from "../routine.js";
 import type { Scene, CursorScene as OwnedScene } from "../scenes.js";
-export function cursorBeak(
-  sim: Readonly<import("../model.js").Point> & { readonly facing: number },
-) {
+export function cursorBeak(sim: Readonly<Point> & { readonly facing: number }) {
   return { x: sim.x + beakOffsetX(sim.facing), y: sim.y + 48 };
 }
 export function cursorPose(
@@ -79,9 +77,8 @@ export class CursorRoutine implements SceneOwner {
   clear(): void {
     this.#scene = null;
   }
-  start(name: string, point?: import("../model.js").Point): boolean {
+  start(name: string): boolean {
     const handled = this.#startCursor(name);
-    void point;
     if (handled && this.#scene) {
       this.#identity = Object.freeze({});
     }

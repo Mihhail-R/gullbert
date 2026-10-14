@@ -33,8 +33,8 @@ export interface CleanupHost {
   splat(point: Point): void;
 }
 
-// Rectangles match the renderer's paint order. Eight extra pixels belong to
-// selection only, so highlights describe the actual object rather than its halo.
+// Selection extends beyond painted bounds; highlights use the unpadded shape.
+export const CLEANUP_HIT_PADDING = 8;
 export const CLEANUP_GEOMETRY = {
   bag: { width: 48, height: 48, offsetX: 0, offsetY: 0 },
   chip: { width: 18, height: 12, offsetX: 0, offsetY: 0 },
@@ -175,17 +175,22 @@ export function cleanupTarget(
   sim: Geometry,
   point: Point,
 ): CleanupTarget | null {
+  return findTarget(cleanupObjects(sim), point);
+}
+
+function findTarget(
+  objects: CleanupTarget[],
+  point: Point,
+): CleanupTarget | null {
   return (
-    cleanupObjects(sim)
-      .reverse()
-      .find((object) => {
-        return (
-          point.x >= object.x - 8 &&
-          point.x <= object.x + object.width + 8 &&
-          point.y >= object.y - 8 &&
-          point.y <= object.y + object.height + 8
-        );
-      }) ?? null
+    objects.reverse().find((object) => {
+      return (
+        point.x >= object.x - CLEANUP_HIT_PADDING &&
+        point.x <= object.x + object.width + CLEANUP_HIT_PADDING &&
+        point.y >= object.y - CLEANUP_HIT_PADDING &&
+        point.y <= object.y + object.height + CLEANUP_HIT_PADDING
+      );
+    }) ?? null
   );
 }
 // Everyday clicks only select loose, visible mess. Scene-owned food and
@@ -212,18 +217,7 @@ export function directCleanupObjects(sim: DirectGeometry): CleanupTarget[] {
   });
 }
 export function directCleanupTarget(sim: DirectGeometry, point: Point) {
-  return (
-    directCleanupObjects(sim)
-      .reverse()
-      .find((object) => {
-        return (
-          point.x >= object.x - 8 &&
-          point.x <= object.x + object.width + 8 &&
-          point.y >= object.y - 8 &&
-          point.y <= object.y + object.height + 8
-        );
-      }) ?? null
-  );
+  return findTarget(directCleanupObjects(sim), point);
 }
 /** Owns each tidy session and the reactions that may outlive its last click. */
 export class Cleanup {

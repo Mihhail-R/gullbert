@@ -206,9 +206,8 @@ export class GagRoutine implements SceneOwner {
   clear(): void {
     this.#scene = null;
   }
-  start(name: string, point?: import("../model.js").Point): boolean {
+  start(name: string): boolean {
     const handled = this.#startGag(name);
-    void point;
     if (handled && this.#scene) {
       this.#identity = Object.freeze({});
     }

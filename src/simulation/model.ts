@@ -7,7 +7,7 @@ export interface Point {
 export interface PointerSample extends Point {
   inside?: boolean;
 }
-/** Caret geometry and an opaque position marker; never document text. */
+/** Target geometry and a position marker; vision also supplies one display glyph. */
 export interface CaretSample extends Point {
   height: number;
   context: string;

@@ -22,7 +22,7 @@ type Environment = Pick<
   | "random"
 >;
 
-/** A bounded cosmetic caper. Only geometry enters; the source text is untouched. */
+/** A bounded cosmetic caper that never modifies the user's text. */
 export class TypingRoutine implements SceneOwner {
   #env: Environment;
   #scene: TypingScene | null = null;

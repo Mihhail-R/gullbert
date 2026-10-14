@@ -20,10 +20,7 @@ impl CursorBite {
         self.caught = None;
     }
     pub fn arm(&mut self, now: Instant) -> u64 {
-        self.arm_for(now, ENCOUNTER)
-    }
-    pub fn arm_for(&mut self, now: Instant, encounter: Duration) -> u64 {
-        self.arm_reaction(now, encounter, true)
+        self.arm_reaction(now, ENCOUNTER, true)
     }
     pub fn arm_reaction(&mut self, now: Instant, encounter: Duration, movable: bool) -> u64 {
         self.cancel();

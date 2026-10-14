@@ -95,8 +95,7 @@ export function createPetRenderer(world: HTMLElement) {
     gull.style.opacity = String(sim.visualOffset.opacity);
     gull.className = sim.mode;
     gull.dataset.pose = sim.pose;
-    // Bob the intact standing silhouette instead of stretching individual legs.
-    // Match the existing raised-step head position used by hatPlacement.
+    // Match the raised-step head position used by hatPlacement.
     let stepOffsetY;
     if (sim.pose === "walkLeft") {
       stepOffsetY = -3;
@@ -106,7 +105,6 @@ export function createPetRenderer(world: HTMLElement) {
     sprite.style.transform = `translateY(${stepOffsetY}px) scaleX(${sim.facing})`;
     renderTheatre(sim);
     speech.textContent = sim.bubble;
-    // Keep the bubble on screen even when its owner has no manners.
     speech.style.left = `${clamp(48, 95 - visualX, sim.width - visualX - 95)}px`;
     if (sim.y < 80) {
       speech.style.bottom = "-40px";
@@ -117,12 +115,10 @@ export function createPetRenderer(world: HTMLElement) {
     }
     if (sim.crumb) {
       crumb.style.display = "block";
-    } else {
-      crumb.style.display = "none";
-    }
-    if (sim.crumb) {
       crumb.style.left = `${Math.round(sim.crumb.x)}px`;
       crumb.style.top = `${Math.round(sim.crumb.y)}px`;
+    } else {
+      crumb.style.display = "none";
     }
     bag.hidden = sim.bagHidden;
     gull.dataset.pickups = String(sim.pickupCount);

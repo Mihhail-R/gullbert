@@ -77,7 +77,7 @@ export class PerchRoutine implements SceneOwner {
   clear(): void {
     this.#scene = null;
   }
-  start(name: string, point?: import("../model.js").Point): boolean {
+  start(name: string, point?: Point): boolean {
     const handled = this.#startPerch(name, point);
     if (handled && this.#scene) {
       this.#identity = Object.freeze({});
@@ -109,9 +109,7 @@ export class PerchRoutine implements SceneOwner {
   interrupt(): void {
     this.#scene = null;
   }
-  visibility(visible: boolean): void {
-    void visible;
-  }
+  visibility(): void {}
   get nextPerchVisit() {
     return this.#nextPerchVisit;
   }

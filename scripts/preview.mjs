@@ -1,10 +1,8 @@
 import http from "node:http";
 import { readFile } from "node:fs/promises";
 import { buildFrontend, watchFrontend, frontendRoot } from "./build.mjs";
+import { fileURLToPath } from "node:url";
 import path from "node:path";
-buildFrontend();
-watchFrontend();
-const root = frontendRoot;
 const mime = {
   ".html": "text/html",
   ".js": "text/javascript",
@@ -12,11 +10,17 @@ const mime = {
   ".png": "image/png",
   ".svg": "image/svg+xml",
 };
-http
-  .createServer(async (req, res) => {
-    const pathname = decodeURIComponent(
-      new URL(req.url, "http://localhost").pathname,
-    );
+export function createPreviewServer(root = frontendRoot) {
+  return http.createServer(async (req, res) => {
+    let pathname;
+    try {
+      pathname = decodeURIComponent(
+        new URL(req.url, "http://localhost").pathname,
+      );
+    } catch {
+      res.writeHead(400).end("Bad request");
+      return;
+    }
     const file = path.resolve(
       root,
       `.${pathname === "/" ? "/index.html" : pathname}`,
@@ -34,7 +38,18 @@ http
     } catch {
       res.writeHead(404).end("Not found");
     }
-  })
-  .listen(Number(process.env.PORT ?? 4173), "127.0.0.1", function () {
+  });
+}
+
+if (
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
+  buildFrontend();
+  const stopWatching = watchFrontend();
+  const server = createPreviewServer();
+  server.on("close", stopWatching);
+  server.listen(Number(process.env.PORT ?? 4173), "127.0.0.1", function () {
     console.log(`Gullbert preview: http://127.0.0.1:${this.address().port}`);
   });
+}

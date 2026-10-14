@@ -23,8 +23,7 @@ int32_t gullbert_vision_access(int32_t prompt) {
   return 0;
 }
 
-// Also used by the synthetic-image test; does not access the screen.
-GullbertVisionResult gullbert_recognize(CGImageRef image, CGRect crop, CGPoint pointer) {
+static GullbertVisionResult gullbert_recognize(CGImageRef image, CGRect crop, CGPoint pointer) {
   GullbertVisionResult result = { .status = 3 };
   @autoreleasepool {
     VNRecognizeTextRequest *request = [[VNRecognizeTextRequest alloc] init];

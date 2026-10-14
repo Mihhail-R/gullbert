@@ -211,7 +211,6 @@ pub(crate) fn report(result: Result<(), String>) {
 }
 
 pub(crate) fn from_cli(flag: Option<&str>) -> Action {
-    // Small CLI surface for local smoke tests and user launchers.
     match flag {
         Some("--summon") => Action::Summon,
         Some("--hide") => Action::Hide,

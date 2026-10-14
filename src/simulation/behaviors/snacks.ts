@@ -7,10 +7,7 @@ import type { Point } from "../model.js";
 import type { SimulationView, BehaviorCapabilities } from "../capabilities.js";
 import type { SceneOwner } from "../routine.js";
 import type { Scene, SnackScene as OwnedScene } from "../scenes.js";
-// Small, finite toy-prop scenes. All clocks advance only with the simulation.
-// Exported prop occupies 17 native pixels at 3×; reserve the serving badge too.
-export const BAG_SIZE = 51;
-export const BAG_SERVINGS = 3;
+
 export function bagGoal(sim: Pick<BehaviorCapabilities, "body" | "objects">) {
   const bag = sim.objects.snapshot().bag;
   if (!bag) {
@@ -97,7 +94,7 @@ export class SnackRoutine implements SceneOwner {
   clear(): void {
     this.#scene = null;
   }
-  start(name: string, point?: import("../model.js").Point): boolean {
+  start(name: string, point?: Point): boolean {
     const handled = this.#startSnack(name, point);
     if (handled && this.#scene) {
       this.#identity = Object.freeze({});
@@ -129,9 +126,7 @@ export class SnackRoutine implements SceneOwner {
   interrupt(): void {
     this.#scene = null;
   }
-  visibility(visible: boolean): void {
-    void visible;
-  }
+  visibility(): void {}
 
   #startSnack(name: string, point?: Point) {
     const sim = this.#environment;

@@ -1,9 +1,10 @@
 import type { SimulationView } from "./capabilities.js";
-import { directCleanupObjects } from "./behaviors/cleanup.js";
+import {
+  CLEANUP_HIT_PADDING,
+  directCleanupObjects,
+} from "./behaviors/cleanup.js";
 import { canPickup, pickupRect } from "./behaviors/pickup.js";
 import type { HitRect } from "./behaviors/touch.js";
-
-const CLEANUP_HIT_PADDING = 8;
 
 /** Shared by DOM hit regions and native capture. Keep geometry and order identical. */
 export function interactionRects(

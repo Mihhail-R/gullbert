@@ -1,1 +1,6 @@
-{"identifier":"local-ui","description":"Only local windows can listen for Gullbert events.","windows":["pet","controls"],"permissions":["core:event:allow-listen","core:event:allow-unlisten"]}
+{
+  "identifier": "local-ui",
+  "description": "Only local windows can listen for Gullbert events.",
+  "windows": ["pet", "controls"],
+  "permissions": ["core:event:allow-listen", "core:event:allow-unlisten"]
+}

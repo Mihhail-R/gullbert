@@ -1,6 +1,6 @@
 # Contributing to Gullbert
 
-Small, funny, local. Start with `npm ci` and `npm run preview` to work in the browser playground. For the desktop app, install the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/) and run `npm run dev`.
+Small, funny, local. Start with `npm ci` and `npm run preview` to work in the browser playground. For the desktop app, follow the [README's source setup](README.md#run-from-source) and run `npm run dev`.
 
 ## Before submitting
 
@@ -11,7 +11,7 @@ npm run format:check
 cargo test --manifest-path src-tauri/Cargo.toml --locked
 ```
 
-Use `npm run format` to apply frontend and documentation formatting. For native changes, test the desktop overlay and state which operating system you used. Check click-through, dragging, targeting, Escape, hiding, and shortcuts; browser mocks cannot verify OS input delivery. Include a screenshot or short clip for a new gag.
+Use `npm run format` to apply frontend and documentation formatting. For native changes, also run `cargo fmt --manifest-path src-tauri/Cargo.toml --check`, test the desktop overlay, and state which operating system you used. Check click-through, dragging, targeting, Escape, hiding, and shortcuts; browser mocks cannot verify OS input delivery. Include a screenshot or short clip for a new gag.
 
 Keep autonomous actions infrequent and bounded. Commands take priority, hidden time does not accumulate events, and remembered belongings survive cleanup. Keep the core offline, without telemetry, cloud AI services, auto-start, or background network calls. Screen capture is confined to the explicitly enabled local-vision feature: transient, cropped, and processed on-device. Discuss larger changes before adding dependencies.
 
@@ -48,6 +48,8 @@ Durable belongings have one simulation writer and a separate `roommate.json` sna
 
 Use explicit blocks for every `if`, `else`, and loop in the TypeScript runtime. Express value and action choices with `if` blocks instead of ternary expressions. Use function declarations for named functions, and explicit bodies for callbacks. Keep one variable declaration per statement. Optional property access and nullish defaults are useful for reading optional data; avoid hiding state transitions in expressions.
 
+Use comments for constraints, ownership, platform quirks, and decisions that the code cannot explain on its own. Remove comments that repeat a name or narrate a straightforward statement. Keep user-facing behaviour in the README and implementation guidance here.
+
 Use classes when a module owns a lifecycle: private state, a few public operations, and named private methods for transitions. Built-in routines share `Routine` for start, update, completion, interruption, visibility, and presentation. Keep phase transitions inside their owner. Prefer composition and focused capability interfaces; routine code must not receive the engine, native input, storage, or wall-clock scheduling. Use ordinary functions for stateless geometry and calculations. Do not add plugin discovery, loading, or distribution to the routine seam.
 
 Additional routines can be supplied as `routines` factories in the fourth `Gullbert` constructor argument. Each factory receives the limited `RoutineCapabilities` interface in `src/simulation/routine.ts`; built-in owners use the same lifecycle with focused internal domain operations. Core commands retain priority. Return `"complete"` from `update()` for normal completion; use `interrupt()` for cancellation cleanup and `visibility()` for hide/resume behavior. The runtime cleans up scoped props and disables effect capabilities when the routine ends. This is an in-process extension seam, not a plugin system.
@@ -79,7 +81,7 @@ Keep commands beside the responsibility they expose, and register their qualifie
 
 This follows [Rust's module organization](https://doc.rust-lang.org/book/ch07-05-separating-modules-into-different-files.html) and [Tauri's support for commands in separate modules](https://v2.tauri.app/develop/calling-rust/#defining-commands-in-a-separate-module). The desktop-only app does not currently need a separate library crate or workspace.
 
-Lifecycle tests use a recording adapter and a controlled clock through the same input module as the app. Run them locally with the Cargo command above. The build workflow runs these tests on Apple Silicon Mac, Intel Mac, and Windows runners for every push, pull request, and manual build. Each package is built and tested on its native architecture. CI checks do not replace hands-on desktop interaction testing.
+Lifecycle tests use a recording adapter and a controlled clock through the same input module as the app. Run them locally with the Cargo command above. The build workflow runs native tests on Apple Silicon Mac, Intel Mac, and Windows runners for main-branch pushes, `v*` tags, pull requests, and manual builds. Each package is built and tested on its native architecture. CI checks do not replace hands-on desktop interaction testing.
 
 Pickup timing uses elapsed wall time for its rolling history and revenge budget; animation and prop expiry use visible simulation time. `pickup-drag.ts` owns each gesture's IPC and fixed hold deadline. Stale acquisition, release, or heartbeat replies cannot change a newer gesture. Cursor movement requires its own bounded authorization; non-cursor retaliation may retain Escape without authorizing pointer movement.
 

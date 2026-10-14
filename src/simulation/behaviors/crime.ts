@@ -102,9 +102,8 @@ export class CrimeRoutine implements SceneOwner {
   clear(): void {
     this.#scene = null;
   }
-  start(name: string, point?: import("../model.js").Point): boolean {
+  start(name: string): boolean {
     const handled = this.#startCrime(name);
-    void point;
     if (handled && this.#scene) {
       this.#identity = Object.freeze({});
     }
@@ -135,9 +134,7 @@ export class CrimeRoutine implements SceneOwner {
   interrupt(): void {
     this.#scene = null;
   }
-  visibility(visible: boolean): void {
-    void visible;
-  }
+  visibility(): void {}
 
   #startCrime(name: string) {
     const sim = this.#environment;

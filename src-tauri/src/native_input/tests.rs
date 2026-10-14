@@ -10,6 +10,7 @@ struct Recording {
     focusable: Cell<bool>,
     escape: Cell<bool>,
     pointer: Cell<Option<(f64, f64, bool)>>,
+    scale: Cell<f64>,
     fail: Cell<Option<&'static str>>,
     events: RefCell<Vec<String>>,
     messages: RefCell<Vec<Message>>,
@@ -25,6 +26,7 @@ impl Default for Recording {
             focusable: Cell::new(false),
             escape: Cell::new(false),
             pointer: Cell::new(Some((20.0, 30.0, true))),
+            scale: Cell::new(2.0),
             fail: Cell::new(None),
             events: RefCell::new(vec![]),
             messages: RefCell::new(vec![]),
@@ -94,7 +96,7 @@ impl Effects for Recording {
     }
     fn geometry(&self) -> Result<((u32, u32), f64), String> {
         self.effect("geometry")?;
-        Ok(((1600, 1200), 2.0))
+        Ok(((1600, 1200), self.scale.get()))
     }
     fn pointer(&self) -> Option<CursorPoint> {
         if !self.visible() {
@@ -523,6 +525,27 @@ fn first_tug_requires_nearby_pointer_and_bounded_display_coordinates() {
         let id = cursor(&mut input, &effects);
         assert!(!input.tug_cursor(&effects, id, point));
         effects.assert_released();
+    }
+}
+
+#[test]
+fn invalid_display_scale_releases_cursor_authorization_without_moving() {
+    for scale in [0.0, -1.0, f64::NAN, f64::INFINITY] {
+        for holding in [false, true] {
+            let mut input = Input::default();
+            let effects = Recording::default();
+            let id = cursor(&mut input, &effects);
+            if holding {
+                assert!(input.tug_cursor(&effects, id, point()));
+            }
+            effects.scale.set(scale);
+            effects.clear();
+            assert!(!input.tug_cursor(&effects, id, point()));
+            assert!(!effects.events.borrow().iter().any(|event| event == "move"));
+            effects.assert_released();
+            effects.scale.set(2.0);
+            assert!(!input.tug_cursor(&effects, id, point()));
+        }
     }
 }
 

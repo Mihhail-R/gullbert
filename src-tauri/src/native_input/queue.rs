@@ -3,12 +3,19 @@ use std::{collections::VecDeque, sync::Mutex};
 // An effect can pump messages and reenter a shortcut callback. Queue that work
 // until the current lifecycle finishes, without holding a lock across effects.
 pub(super) struct Queue<T> {
-    state: Mutex<(bool, VecDeque<T>)>,
+    state: Mutex<QueueState<T>>,
+}
+struct QueueState<T> {
+    running: bool,
+    pending: VecDeque<T>,
 }
 impl<T> Default for Queue<T> {
     fn default() -> Self {
         Self {
-            state: Mutex::new((false, VecDeque::new())),
+            state: Mutex::new(QueueState {
+                running: false,
+                pending: VecDeque::new(),
+            }),
         }
     }
 }
@@ -24,19 +31,19 @@ impl<T> Queue<T> {
 
     fn push(&self, job: T) -> bool {
         let mut state = self.state.lock().unwrap();
-        state.1.push_back(job);
-        if state.0 {
+        state.pending.push_back(job);
+        if state.running {
             false
         } else {
-            state.0 = true;
+            state.running = true;
             true
         }
     }
     fn next(&self) -> Option<T> {
         let mut state = self.state.lock().unwrap();
-        let next = state.1.pop_front();
+        let next = state.pending.pop_front();
         if next.is_none() {
-            state.0 = false;
+            state.running = false;
         }
         next
     }

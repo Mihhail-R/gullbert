@@ -1,4 +1,3 @@
-// Original sheet stays compatible; appended Piskel poses are mapped here.
 export const POSES = {
   idle: 0,
   blink: 4,
