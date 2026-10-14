@@ -9,6 +9,7 @@ import { createTheatreRenderer } from "./theatre-renderer.js";
 export function createPetRenderer(world: HTMLElement) {
   const gull = requiredElement("#gull");
   const sprite = requiredElement(".sprite");
+  const bird = requiredElement("#bird");
   const speech = requiredElement("#speech");
   const crumb = requiredElement("#crumb");
   const splats = requiredElement("#splats");
@@ -95,6 +96,10 @@ export function createPetRenderer(world: HTMLElement) {
     gull.style.opacity = String(sim.visualOffset.opacity);
     gull.className = sim.mode;
     gull.dataset.pose = sim.pose;
+    gull.dataset.affection = sim.affection.kind;
+    gull.dataset.fluff = String(sim.affection.fluff);
+    bird.style.setProperty("--affection-x", `${sim.affection.x}px`);
+    bird.style.setProperty("--affection-y", `${sim.affection.y}px`);
     // Match the raised-step head position used by hatPlacement.
     let stepOffsetY;
     if (sim.pose === "walkLeft") {

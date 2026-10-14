@@ -71,7 +71,10 @@ fn save_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), String
     if settings.mischief > 2 {
         return Err("Mischief must be 0, 1 or 2".into());
     }
-    if !matches!(settings.hat.as_str(), "none" | "captain" | "cone") {
+    if !matches!(
+        settings.hat.as_str(),
+        "none" | "captain" | "cone" | "beanie" | "paper-crown" | "fried-egg"
+    ) {
         return Err("Unknown hat".into());
     }
     let dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
@@ -99,7 +102,10 @@ pub(crate) fn restore(app: &tauri::AppHandle) {
         if let Ok(bytes) = std::fs::read(dir.join("settings.json")) {
             if let Ok(mut settings) = serde_json::from_slice::<Settings>(&bytes) {
                 settings.mischief = settings.mischief.min(2);
-                if !matches!(settings.hat.as_str(), "none" | "captain" | "cone") {
+                if !matches!(
+                    settings.hat.as_str(),
+                    "none" | "captain" | "cone" | "beanie" | "paper-crown" | "fried-egg"
+                ) {
                     settings.hat = "none".into();
                 }
                 *app.state::<State>().settings.lock().unwrap() = settings;
@@ -117,7 +123,14 @@ mod tests {
         let old: Settings =
             serde_json::from_str(r#"{"paused":true,"sound":true,"mischief":2}"#).unwrap();
         assert_eq!(old.hat, "none");
-        for hat in ["none", "captain", "cone"] {
+        for hat in [
+            "none",
+            "captain",
+            "cone",
+            "beanie",
+            "paper-crown",
+            "fried-egg",
+        ] {
             let settings = Settings {
                 hat: hat.into(),
                 ..old.clone()

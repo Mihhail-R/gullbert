@@ -258,7 +258,7 @@ export class Activity {
         this.#goal = null;
         if (this.#mode === "fetch") {
           this.#mode = "eat";
-          this.#until = now + 1.6;
+          this.#until = now + 2.25;
           this.#effects.mood("snack-minded");
           this.#effects.emit("munch");
         } else if (this.#mode === "fly") {

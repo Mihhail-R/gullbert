@@ -14,6 +14,8 @@ This is an early v0.1 preview. Apple Silicon macOS has had local testing; Window
 - Let him roam, nap, preen, and develop passing opinions about his surroundings.
 - Send him to fetch questionable treasures and remember a favourite loitering spot.
 - Blow bubbles, run a bath, toss chips, choose a tiny hat, and invite rival birds.
+- Watch him lean into head scratches, give an offended look when you stop, and hop happily after a chip.
+- Dress him in a captain hat, traffic cone, fisherman’s beanie, paper crown, or fried egg.
 - Poke him, scratch his head, or drag him somewhere else. Repeated pickups provoke increasingly petty revenge.
 - Aim a poop run, clean up his mess, or start a baguette parade, a municipal inspection, or a questionable apology.
 - Fish for the typing caret, steal pretend letters, and build a punctuation nest. Approach with the pointer and he suddenly becomes a very innocent bird.
@@ -90,6 +92,16 @@ Open [http://127.0.0.1:4173](http://127.0.0.1:4173). The playground shares the a
 
 ## Build and release
 
+### Publish the browser preview and downloads
+
+GitHub Pages hosts the browser playground; GitHub Releases hosts the desktop downloads. In the repository's **Settings → Pages → Build and deployment**, select **GitHub Actions** as the source. After merging to `main`, the [Pages workflow](.github/workflows/pages.yml) tests and publishes `web-dist/` at [mihhail-r.github.io/gullbert/](https://mihhail-r.github.io/gullbert/). You can also run **Publish browser preview** manually on `main`.
+
+To release desktop packages, push a new version tag such as `v0.1.0-preview.1`. The existing build workflow creates a draft release containing Apple Silicon and Intel Mac ZIPs and a Windows x64 installer. Test the downloaded packages, edit the release notes, mark preview releases as **pre-release**, and publish the draft. Draft releases are not public downloads.
+
+The playground's download button opens [all releases](https://github.com/Mihhail-R/gullbert/releases), so preview releases remain discoverable without relying on GitHub's latest stable release redirect. Pages updates on `main` independently of desktop releases; publish a new tag when you want updated installers.
+
+### Build desktop packages locally
+
 ```sh
 # macOS, for the current machine's architecture
 npm run build -- --bundles app
@@ -100,7 +112,7 @@ npm run build -- --bundles nsis
 
 These commands write packages to `src-tauri/target/release/bundle/` unless you override the target directory. Passing `--target <triple>` adds that target beneath `src-tauri/target/`, as in CI. Quit any running Gullbert before testing a new build: a second launch communicates with the existing instance.
 
-The [GitHub Actions workflow](.github/workflows/build.yml) checks the frontend, runs native tests, and builds Apple Silicon, Intel Mac, and Windows x64 packages on matching runners. Main-branch pushes, pull requests, and manual runs produce workflow artifacts, retained for 14 days. Pushing a `v*` tag creates a **draft GitHub Release** with zipped Mac apps and a Windows installer after all jobs pass. Mac artifacts are ad-hoc signed; Windows installers are unsigned. Neither Developer ID signing nor notarization is configured. Review the draft before publishing.
+The [GitHub Actions workflow](.github/workflows/build.yml) runs frontend tests, type checks, and formatting checks on pull requests, main-branch pushes, and manual runs. Only pushing a `v*` tag also builds Apple Silicon, Intel Mac, and Windows x64 packages on matching runners and runs native tests. Workflow artifacts are retained for 14 days. After all jobs pass, the tag push creates a **draft GitHub Release** with zipped Mac apps and a Windows installer. Mac artifacts are ad-hoc signed; Windows installers are unsigned. Neither Developer ID signing nor notarization is configured. Review the draft before publishing.
 
 The macOS deployment target is 11.0; local vision requires 14.0 or newer. Linux desktop builds are not part of the supported build matrix. Before a stable release, test downloaded packages on each target platform, including installation, click-through, dragging, targeting, Escape, physical shortcuts, sound, permissions, and multiple displays. Browser tests and native unit tests do not establish desktop compatibility. Exclusive fullscreen apps and some virtual desktop configurations may hide the overlay. macOS transparency uses Tauri's private API option; distribution targets direct downloads rather than the Mac App Store.
 

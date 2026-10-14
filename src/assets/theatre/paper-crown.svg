@@ -1,0 +1,7 @@
+<!-- Original Gullbert artwork, CC0-1.0. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 12" shape-rendering="crispEdges" role="img" aria-label="wonky paper crown">
+  <path fill="#293344" d="M1 2h2v1h1v1h1V3h1V1h2v2h1v2h1V4h1V2h2v2h2v6H2V6H1Z"/>
+  <path fill="#f4bc53" d="M2 3h1v1h1v1h2V3h1V2h1v3h1v1h2V4h1V3h1v2h1v4H3V6H2Z"/>
+  <path fill="#ffe39a" d="M3 7h10v1H3ZM6 3h1v3H6Z"/>
+  <path fill="#df873d" d="M4 8h1v1H4Zm4-2h1v3H8Zm4 2h2v1h-2Z"/>
+</svg>
