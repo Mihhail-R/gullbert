@@ -10,3 +10,10 @@ export function requiredElement<T extends HTMLElement = HTMLElement>(
   }
   return node;
 }
+
+// Reassigning textContent replaces text nodes even when the text is unchanged.
+export function updateText(node: HTMLElement, text: string): void {
+  if (node.textContent !== text) {
+    node.textContent = text;
+  }
+}

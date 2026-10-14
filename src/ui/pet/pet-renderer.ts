@@ -1,7 +1,7 @@
 import type { PetPresentation } from "../../simulation/presentation.js";
 import { clamp } from "../../simulation/geometry.js";
 import type { Item } from "../../simulation/items.js";
-import { requiredElement } from "../dom.js";
+import { requiredElement, updateText } from "../dom.js";
 import { createTheatreRenderer } from "./theatre-renderer.js";
 
 // Rendering projects simulation state into the DOM. It never advances time,
@@ -109,7 +109,7 @@ export function createPetRenderer(world: HTMLElement) {
     }
     sprite.style.transform = `translateY(${stepOffsetY}px) scaleX(${sim.facing})`;
     renderTheatre(sim);
-    speech.textContent = sim.bubble;
+    updateText(speech, sim.bubble);
     speech.style.left = `${clamp(48, 95 - visualX, sim.width - visualX - 95)}px`;
     if (sim.y < 80) {
       speech.style.bottom = "-40px";

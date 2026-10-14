@@ -18,6 +18,8 @@ export interface ApplicationClock {
   wallNow(): number;
   schedule: typeof setTimeout;
   cancel: typeof clearTimeout;
+  requestFrame(callback: FrameRequestCallback): number;
+  cancelFrame(id: number): void;
 }
 
 export interface ApplicationPointerEvent extends Point {
