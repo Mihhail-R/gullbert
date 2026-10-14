@@ -1,3 +1,4 @@
+import { dialogue } from "../dialogue.js";
 import type { Body } from "../body.js";
 import type { Point, PointerSample } from "../model.js";
 import type { Pose } from "../poses.js";
@@ -181,9 +182,9 @@ export class Touch {
       if (state.pokes.length === 3) {
         state.nextRemark = now;
       }
-      this.#remark("this gull is not a button.");
+      this.#remark(dialogue.gullbert.touch.thisGullIsNotAButton);
     } else {
-      this.#remark("personal space. ever heard of it?");
+      this.#remark(dialogue.gullbert.touch.personalSpaceEverHeardOfIt);
     }
   }
 
@@ -234,7 +235,7 @@ export class Touch {
     }
     if (zone === "head" && dwell >= 0.45) {
       state.reaction = "pet";
-      this.#remark("fine. one head scratch.");
+      this.#remark(dialogue.gullbert.touch.fineOneHeadScratch);
       return true;
     }
     if (zone === "body" && dwell >= 0.2 && !context.sleeping()) {

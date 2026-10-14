@@ -1,3 +1,4 @@
+import { dialogue } from "../dialogue.js";
 import type { MoodName, QuietName } from "../model.js";
 import type { Pose } from "../poses.js";
 // A little recent-event colour, measured only in visible simulation seconds.
@@ -10,52 +11,31 @@ const moods: Record<
     duration: 35,
     routine: "tilt",
     pose: "bag-offended",
-    lines: [
-      "that was load-bearing.",
-      "I object on gull grounds.",
-      "an atmosphere of betrayal.",
-      "unauthorised tidiness.",
-    ],
+    lines: dialogue.gullbert.moods.offended,
   },
   sleepy: {
     duration: 38,
     routine: "nap",
     pose: "nap-wake",
-    lines: [
-      "just resting my opinions.",
-      "a very demanding nap.",
-      "five more gull minutes.",
-    ],
+    lines: dialogue.gullbert.moods.sleepy,
   },
   curious: {
     duration: 32,
     routine: "tilt",
     pose: "tilt",
-    lines: [
-      "hm. suspiciously interesting.",
-      "what's all this, then?",
-      "requires further staring.",
-    ],
+    lines: dialogue.gullbert.moods.curious,
   },
   smug: {
     duration: 40,
     routine: "preen",
     pose: "preen",
-    lines: [
-      "a masterpiece, frankly.",
-      "precision. no notes.",
-      "another flawless contribution.",
-    ],
+    lines: dialogue.gullbert.moods.smug,
   },
   "snack-minded": {
     duration: 35,
     routine: "tilt",
     pose: "bag-inspect",
-    lines: [
-      "thinking about chips.",
-      "a crisp line of thought.",
-      "all roads lead to snacks.",
-    ],
+    lines: dialogue.gullbert.moods["snack-minded"],
   },
 };
 
@@ -89,9 +69,12 @@ export class Mood {
     if (!this.#mood) {
       return null;
     }
-    const choices = moods[this.#mood.name].lines.filter((line) => {
+    let choices = moods[this.#mood.name].lines.filter((line) => {
       return line !== this.#lastMoodLine;
     });
+    if (choices.length === 0) {
+      choices = moods[this.#mood.name].lines;
+    }
     const line =
       choices[
         Math.min(

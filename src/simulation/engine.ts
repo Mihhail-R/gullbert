@@ -1,3 +1,4 @@
+import { dialogue } from "./dialogue.js";
 import { Body } from "./body.js";
 import { Props } from "./props.js";
 import { Activity } from "./activity.js";
@@ -48,14 +49,7 @@ import { CursorRoutine, cursorBeak } from "./behaviors/cursor.js";
 import { TypingRoutine } from "./behaviors/typing.js";
 import { SnackRoutine } from "./behaviors/snacks.js";
 
-const remarks = [
-  "mine.",
-  "chip?",
-  "absolutely not.",
-  "I live here now.",
-  "you saw nothing.",
-  "rent is due. in chips.",
-];
+const remarks = dialogue.gullbert.general.remarks;
 export class Gullbert {
   #objects: Props;
   #body: Body;
@@ -413,7 +407,7 @@ export class Gullbert {
     this.#sounds = [];
     this.#rest();
     this.#cleanup.begin();
-    this.#say("I was using that mess.");
+    this.#say(dialogue.gullbert.general.iWasUsingThatMess);
   }
   #beginDragging(): void {
     this.#cancelScene();
@@ -425,9 +419,11 @@ export class Gullbert {
     this.#sounds = [];
     this.#rest();
     this.#say(
-      ["oh. relocation.", "excuse me?!", "put. me. down."][
-        this.#settings.mischief
-      ] ?? "excuse me?!",
+      [
+        dialogue.gullbert.general.ohRelocation,
+        dialogue.gullbert.general.excuseMe,
+        dialogue.gullbert.general.putMeDown,
+      ][this.#settings.mischief] ?? dialogue.gullbert.general.excuseMe,
     );
   }
   clean() {
@@ -504,9 +500,9 @@ export class Gullbert {
       this.#food.clearRequest();
       this.#activity.fetch(this.#randomPoint());
       if (wasOffended) {
-        this.#say("we can settle out of court.", 2);
+        this.#say(dialogue.gullbert.general.weCanSettleOutOfCourt, 2);
       } else {
-        this.#say("CHIP DETECTED.", 2);
+        this.#say(dialogue.gullbert.general.chipDetected, 2);
       }
       return;
     }
@@ -525,7 +521,7 @@ export class Gullbert {
         point ?? { x: this.#body.x + 48, y: this.#body.y + 86 },
         this.#time,
       );
-      this.#say("precision. artistry.", 2);
+      this.#say(dialogue.gullbert.general.precisionArtistry, 2);
     }
   }
   #startRoutine(name: string, point?: Point): boolean {
@@ -634,7 +630,7 @@ export class Gullbert {
         this.#food.requestDue(this.#time)
       ) {
         this.#food.request(this.#time, this.#random);
-        this.#say("a chip? for a hardworking gull?", 4);
+        this.#say(dialogue.gullbert.general.aChipForAHardworkingGull, 4);
         this.#activity.linger(this.#time + 3);
         return;
       }

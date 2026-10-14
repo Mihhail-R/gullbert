@@ -1,3 +1,4 @@
+import { dialogue } from "../dialogue.js";
 import { observe } from "../observation.js";
 import {
   scopeCapabilities,
@@ -178,7 +179,7 @@ export class TypingRoutine implements SceneOwner {
     };
     this.#identity = Object.freeze({});
     env.activity.beginRoutine("typing");
-    env.speech.say("something's biting.");
+    env.speech.say(dialogue.gullbert.typing.somethingsBiting);
     return true;
   }
   #fresh(): boolean {
@@ -238,7 +239,7 @@ export class TypingRoutine implements SceneOwner {
       if (scene.phase !== "innocent") {
         scene.resume = scene.phase;
         scene.phase = "innocent";
-        env.speech.say("just a normal bird.", 2);
+        env.speech.say(dialogue.gullbert.typing.justANormalBird, 2);
       }
       scene.until = env.clock.now + 1.1;
       return "running";
@@ -249,7 +250,7 @@ export class TypingRoutine implements SceneOwner {
       }
       scene.phase = scene.resume;
       scene.until = env.clock.now + 0.7;
-      env.speech.say("...", 0.8);
+      env.speech.say(dialogue.gullbert.typing.pause, 0.8);
       return "running";
     }
     if (scene.phase === "approach") {
@@ -276,14 +277,14 @@ export class TypingRoutine implements SceneOwner {
       }
     } else if (scene.phase === "pounce" && env.clock.now >= scene.until) {
       if (!scene.steal) {
-        env.speech.say("it was here a second ago.");
+        env.speech.say(dialogue.gullbert.typing.itWasHereASecondAgo);
         return this.#finish();
       }
       scene.carrying = true;
       this.#catches++;
       scene.phase = "carry";
       env.events.emit("pop");
-      env.speech.say("you weren't using this.");
+      env.speech.say(dialogue.gullbert.typing.youWerentUsingThis);
     } else if (scene.phase === "carry") {
       if (env.body.moveToward(this.#nestPoint(), 230, dt)) {
         scene.phase = "deposit";
@@ -297,9 +298,9 @@ export class TypingRoutine implements SceneOwner {
         }
         this.#nest.push(twig);
         this.#nest = this.#nest.slice(-12);
-        env.speech.say("structural punctuation.");
+        env.speech.say(dialogue.gullbert.typing.structuralPunctuation);
       } else {
-        env.speech.say("o. delicious.");
+        env.speech.say(dialogue.gullbert.typing.oDelicious);
         env.events.emit("munch");
       }
       scene.carrying = false;

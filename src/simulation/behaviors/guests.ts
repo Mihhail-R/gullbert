@@ -1,3 +1,4 @@
+import { dialogue } from "../dialogue.js";
 import { observe } from "../observation.js";
 import type { ReadonlyValue } from "../presentation.js";
 import { scopeCapabilities } from "../capabilities.js";
@@ -166,7 +167,24 @@ type Environment = Pick<
   | "events"
   | "commands"
 >;
+interface GuestExchange {
+  readonly gullbert: string;
+  readonly visitor: string;
+}
+
 export class GuestRoutine implements SceneOwner {
+  #visits = { pigeon: 0, gull: 0 };
+  #dialogueIndex = 0;
+
+  #exchange(
+    phase: GuestScene["phase"],
+    duration: number,
+    lines: readonly GuestExchange[],
+  ): void {
+    const pair = lines[this.#dialogueIndex % lines.length];
+    this.#stage(phase, duration, pair.gullbert, pair.visitor);
+  }
+
   #environment: Environment;
   #scene: OwnedScene | null = null;
   #identity: object = Object.freeze({});
@@ -352,10 +370,11 @@ export class GuestRoutine implements SceneOwner {
     sim.activity.beginRoutine("guest");
     sim.activity.stopTravel();
     this.#cooldown();
+    this.#dialogueIndex = this.#visits[species]++;
     if (species === "pigeon") {
-      this.#stage("arrival", 2.6, "you weren't invited. technically.");
+      this.#exchange("arrival", 2.6, dialogue.guests.pigeon.arrival);
     } else {
-      this.#stage("arrival", 2.6, "that chip is spoken for.");
+      this.#exchange("arrival", 2.6, dialogue.guests.seagull.arrival);
     }
     return true;
   }
@@ -370,14 +389,14 @@ export class GuestRoutine implements SceneOwner {
     this.#cooldown();
     return true;
   }
-  #depart(mainText: string, guestText = "") {
+  #depart(lines: readonly GuestExchange[]) {
     const scene = this.#scene;
     if (scene?.kind !== "guest") {
       return;
     }
     scene.departureOrigin = { x: scene.guest.x, y: scene.guest.y - 35 };
     scene.guest.facing = 1;
-    this.#stage("departure", 2.4, mainText, guestText);
+    this.#exchange("departure", 2.4, lines);
   }
   #finish() {
     const sim = this.#environment;
@@ -419,9 +438,9 @@ export class GuestRoutine implements SceneOwner {
         guest.x = guestTarget.x;
         sim.body.face(1 as -1 | 1);
         if (scene.species === "pigeon") {
-          this.#stage("inspect", 2, "...", "just browsing.");
+          this.#exchange("inspect", 2, dialogue.guests.pigeon.inspect);
         } else {
-          this.#stage("stare", 2, "...", "that one.");
+          this.#exchange("stare", 2, dialogue.guests.seagull.stare);
         }
       }
     } else if (scene.phase === "departure") {
@@ -469,7 +488,7 @@ export class GuestRoutine implements SceneOwner {
           !((sim.objects.snapshot().bag?.servings ?? 0) > 0))
       ) {
         scene.hasSnack = false;
-        this.#stage("inspect", 1.5, "the buffet is closed.", "noted.");
+        this.#exchange("inspect", 1.5, dialogue.guests.pigeon.snackRemoved);
       }
       if (sim.clock.now >= scene.until) {
         if (scene.species === "pigeon") {
@@ -488,23 +507,34 @@ export class GuestRoutine implements SceneOwner {
     }
     if (scene.phase === "inspect") {
       if (scene.hasSnack) {
-        this.#stage("faceoff", 2.4, "private chips.", "communal chips?");
+        this.#exchange(
+          "faceoff",
+          2.4,
+          dialogue.guests.pigeon.faceoffWithSnacks,
+        );
       } else {
-        this.#stage("faceoff", 2.4, "nothing to see here.", "clearly.");
+        this.#exchange(
+          "faceoff",
+          2.4,
+          dialogue.guests.pigeon.faceoffWithoutSnacks,
+        );
       }
     } else if (scene.phase === "faceoff") {
       if (scene.hasSnack) {
-        this.#stage(
+        this.#exchange(
           "judgment",
           1.8,
-          "I have standards.",
-          "apparently not sharing.",
+          dialogue.guests.pigeon.judgmentWithSnacks,
         );
       } else {
-        this.#stage("judgment", 1.8, "I have standards.", "debatable.");
+        this.#exchange(
+          "judgment",
+          1.8,
+          dialogue.guests.pigeon.judgmentWithoutSnacks,
+        );
       }
     } else if (scene.phase === "judgment") {
-      this.#depart("and stay politely gone.", "poor service.");
+      this.#depart(dialogue.guests.pigeon.departure);
     }
   }
   #stepArgument() {
@@ -514,25 +544,28 @@ export class GuestRoutine implements SceneOwner {
       return;
     }
     if (scene.phase === "stare") {
-      this.#stage("posture", 1.8, "I saw it first.", "I saw it louder.");
+      this.#exchange("posture", 1.8, dialogue.guests.seagull.posture);
     } else if (scene.phase === "posture") {
-      this.#stage("squawk-main", 1.4, "MINE.");
+      this.#exchange(
+        "squawk-main",
+        1.4,
+        dialogue.guests.seagull.gullbertSquawk,
+      );
       sim.events.emit("squawk");
     } else if (scene.phase === "squawk-main") {
-      this.#stage("squawk-guest", 1.4, "", "MINE, ACTUALLY.");
+      this.#exchange(
+        "squawk-guest",
+        1.4,
+        dialogue.guests.seagull.visitorSquawk,
+      );
       sim.events.emit("squawk");
     } else if (scene.phase === "squawk-guest") {
-      this.#stage("snatch", 0.8, "wait—", "yoink.");
+      this.#exchange("snatch", 0.8, dialogue.guests.seagull.snatch);
     } else if (scene.phase === "snatch") {
       scene.chipTaken = true;
-      this.#stage(
-        "reaction",
-        2,
-        "there were FIVE others.",
-        "this one tastes like winning.",
-      );
+      this.#exchange("reaction", 2, dialogue.guests.seagull.reaction);
     } else if (scene.phase === "reaction") {
-      this.#depart("I didn't want it anyway.");
+      this.#depart(dialogue.guests.seagull.departure);
     }
   }
   maybeGuest() {

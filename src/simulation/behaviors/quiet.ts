@@ -1,3 +1,4 @@
+import { dialogue } from "../dialogue.js";
 import type { Quiet, QuietName } from "../model.js";
 import type { Pose } from "../poses.js";
 import type { Routine, RoutineCapabilities } from "../routine.js";
@@ -98,7 +99,7 @@ export class QuietRoutine implements Routine {
       quiet.woke = true;
       if (quiet.startled) {
         this.#host.events.emit("squawk");
-        this.#host.speech.say("who did that?", 2.4);
+        this.#host.speech.say(dialogue.gullbert.quiet.whoDidThat, 2.4);
       }
     }
     if (now >= activity.until) {

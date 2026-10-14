@@ -1,3 +1,4 @@
+import { dialogue } from "../dialogue.js";
 import { observe } from "../observation.js";
 import type { ReadonlyValue } from "../presentation.js";
 import { scopeCapabilities } from "../capabilities.js";
@@ -16,10 +17,10 @@ const automatic = [
   "postcards",
 ] as const;
 const postcards = [
-  { photo: "liberty", caption: "liberty. with a little something from me." },
-  { photo: "giza", caption: "giza. left my mark on history." },
-  { photo: "car", caption: "freshly washed. perfectly timed." },
-  { photo: "eiffel", caption: "paris. my finest work." },
+  { photo: "liberty", caption: dialogue.gullbert.gags.postcards.liberty },
+  { photo: "giza", caption: dialogue.gullbert.gags.postcards.giza },
+  { photo: "car", caption: dialogue.gullbert.gags.postcards.car },
+  { photo: "eiffel", caption: dialogue.gullbert.gags.postcards.eiffel },
 ] as const;
 export function gagPose(
   sim: Pick<SimulationView, "scene" | "motionTime">,
@@ -337,7 +338,7 @@ export class GagRoutine implements SceneOwner {
           y: clamp(sim.body.y, 0, sim.body.height - 126),
         }),
       };
-      sim.speech.say("wait. I have holiday photos.");
+      sim.speech.say(dialogue.gullbert.gags.waitIHaveHolidayPhotos);
     } else if (name === "pretend_leave") {
       let side: -1 | 1;
       if (sim.body.x + SIZE / 2 < sim.body.width / 2) {
@@ -352,7 +353,7 @@ export class GagRoutine implements SceneOwner {
         side,
         origin: { x: sim.body.x, y: sim.body.y },
       };
-      sim.speech.say("fine. I shall leave.");
+      sim.speech.say(dialogue.gullbert.gags.fineIShallLeave);
     } else if (name === "cursor_egg") {
       this.#scene = {
         ...clock,
@@ -364,7 +365,7 @@ export class GagRoutine implements SceneOwner {
         nest: null,
         until: sim.clock.now + 8,
       };
-      sim.speech.say("a promising egg.");
+      sim.speech.say(dialogue.gullbert.gags.aPromisingEgg);
     } else if (name === "municipal_gull") {
       sim.objects.clearCones();
       const patch = this.#onScreen({ x: sim.body.x + 48, y: sim.body.y + 78 });
@@ -385,7 +386,7 @@ export class GagRoutine implements SceneOwner {
         movedId: null,
         target: sim.body.safePoint({ x: patch.x + 90, y: patch.y - 78 }),
       };
-      sim.speech.say("essential infrastructure.");
+      sim.speech.say(dialogue.gullbert.gags.essentialInfrastructure);
     } else {
       let sidestepDistance;
       if (sim.body.x < sim.body.width / 2) {
@@ -403,7 +404,7 @@ export class GagRoutine implements SceneOwner {
           y: sim.body.y,
         }),
       };
-      sim.speech.say("a gesture of goodwill.");
+      sim.speech.say(dialogue.gullbert.gags.aGestureOfGoodwill);
     }
     if (this.#scene) {
       sim.activity.beginRoutine(this.#scene.kind);
@@ -497,7 +498,7 @@ export class GagRoutine implements SceneOwner {
       point.x > sim.body.width ||
       point.y > sim.body.height
     ) {
-      this.#finish("the egg has other commitments.");
+      this.#finish(dialogue.gullbert.gags.theEggHasOtherCommitments);
       return;
     }
     scene.pointer = { x: point.x, y: point.y };
@@ -515,7 +516,7 @@ export class GagRoutine implements SceneOwner {
       Math.hypot(point.x - scene.nest.x, point.y - scene.nest.y) > 24
     ) {
       this.#phase("inspect", 1.3);
-      sim.speech.say("it hatched.", 2.5);
+      sim.speech.say(dialogue.gullbert.gags.itHatched, 2.5);
     }
   }
   #stepGag(dt: number) {
@@ -569,7 +570,7 @@ export class GagRoutine implements SceneOwner {
       } else if (scene.phase === "show" && sim.clock.now >= scene.until) {
         this.#phase("tuck", 0.6);
       } else if (scene.phase === "tuck" && sim.clock.now >= scene.until) {
-        this.#finish("a well-travelled bird.");
+        this.#finish(dialogue.gullbert.gags.aWelltravelledBird);
       }
     } else if (scene.kind === "pretend_leave") {
       let edge;
@@ -592,7 +593,7 @@ export class GagRoutine implements SceneOwner {
         this.#phase("away", 2);
       } else if (scene.phase === "away" && sim.clock.now >= scene.until) {
         this.#phase("peek", 1.3);
-        sim.speech.say("forgot something.", 3);
+        sim.speech.say(dialogue.gullbert.gags.forgotSomething, 3);
       } else if (scene.phase === "peek" && sim.clock.now >= scene.until) {
         this.#phase("reenter", 0.5);
       } else if (scene.phase === "reenter" && sim.clock.now >= scene.until) {
@@ -619,10 +620,10 @@ export class GagRoutine implements SceneOwner {
     } else if (scene.kind === "cursor_egg") {
       if (scene.phase === "approach") {
         if (sim.clock.now >= scene.until) {
-          this.#finish("not ready for parenthood.");
+          this.#finish(dialogue.gullbert.gags.notReadyForParenthood);
         } else if (!scene.pointer) {
           if (sim.clock.now - scene.started >= 1.5) {
-            this.#finish("where did my egg go?");
+            this.#finish(dialogue.gullbert.gags.whereDidMyEggGo);
           }
         } else {
           const reached = sim.body.moveToward(
@@ -640,13 +641,13 @@ export class GagRoutine implements SceneOwner {
           ) {
             scene.nest = { ...scene.pointer };
             this.#phase("settle", 5);
-            sim.speech.say("do not disturb. parenting.", 2.5);
+            sim.speech.say(dialogue.gullbert.gags.doNotDisturbParenting, 2.5);
           }
         }
       } else if (scene.phase === "settle" && sim.clock.now >= scene.until) {
-        this.#finish("incubation postponed.");
+        this.#finish(dialogue.gullbert.gags.incubationPostponed);
       } else if (scene.phase === "inspect" && sim.clock.now >= scene.until) {
-        this.#finish("it hatched.");
+        this.#finish(dialogue.gullbert.gags.itHatched);
       }
     } else if (scene.kind === "municipal_gull") {
       if (scene.phase === "place") {
@@ -697,26 +698,26 @@ export class GagRoutine implements SceneOwner {
         }
         if (reached || sim.clock.now >= scene.until) {
           this.#phase("leave", 3);
-          sim.speech.say("works ongoing.", 3);
+          sim.speech.say(dialogue.gullbert.gags.worksOngoing, 3);
         }
       } else if (scene.phase === "leave") {
         if (
           sim.body.moveToward(scene.target, 90, dt) ||
           sim.clock.now >= scene.until
         ) {
-          this.#finish("works ongoing.");
+          this.#finish(dialogue.gullbert.gags.worksOngoing);
         }
       }
     } else if (scene.phase === "carry") {
       if (sim.body.moveToward(scene.target, 120, dt)) {
         this.#phase("offer", 2);
-        sim.speech.say("for you.", 2);
+        sim.speech.say(dialogue.gullbert.gags.forYou, 2);
       }
     } else if (scene.phase === "offer" && sim.clock.now >= scene.until) {
       this.#phase("eat", 1);
       sim.events.emit("munch");
     } else if (scene.phase === "eat" && sim.clock.now >= scene.until) {
-      this.#finish("glad we resolved that.");
+      this.#finish(dialogue.gullbert.gags.gladWeResolvedThat);
     }
     return true;
   }

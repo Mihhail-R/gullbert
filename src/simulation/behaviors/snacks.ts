@@ -1,3 +1,4 @@
+import { dialogue } from "../dialogue.js";
 import { observe } from "../observation.js";
 import type { ReadonlyValue } from "../presentation.js";
 import { scopeCapabilities } from "../capabilities.js";
@@ -154,7 +155,7 @@ export class SnackRoutine implements SceneOwner {
         target: sim.destinations.randomPoint(),
       };
       sim.activity.beginRoutine("snack");
-      sim.speech.say("surely there are chips.", 2.5);
+      sim.speech.say(dialogue.gullbert.snacks.surelyThereAreChips, 2.5);
     }
     return true;
   }
@@ -173,7 +174,7 @@ export class SnackRoutine implements SceneOwner {
       until: sim.clock.now + 18,
     };
     sim.activity.beginRoutine("snack");
-    sim.speech.say("CHIPS. plural.", 2);
+    sim.speech.say(dialogue.gullbert.snacks.chipsPlural, 2);
     sim.food.found();
   }
   #stepSnack(dt: number) {
@@ -208,9 +209,9 @@ export class SnackRoutine implements SceneOwner {
         sim.food.failed(sim.clock.now);
         sim.moods.set("snack-minded", sim.clock.now, { speak: false });
         if (sim.objects.snapshot().bag) {
-          sim.speech.say("a bag of betrayal.", 2.5);
+          sim.speech.say(dialogue.gullbert.snacks.aBagOfBetrayal, 2.5);
         } else {
-          sim.speech.say("no chips. scandalous.", 2.5);
+          sim.speech.say(dialogue.gullbert.snacks.noChipsScandalous, 2.5);
         }
       }
     } else if (sim.clock.now >= scene.until) {

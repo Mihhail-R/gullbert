@@ -1,3 +1,4 @@
+import { dialogue } from "../dialogue.js";
 import { observe } from "../observation.js";
 import type { ReadonlyValue } from "../presentation.js";
 import { scopeCapabilities } from "../capabilities.js";
@@ -121,7 +122,7 @@ export class PerchRoutine implements SceneOwner {
     const sim = this.#environment;
     if (!sim.belongings.snapshot().memory.perch) {
       sim.lifecycle.rest(3);
-      sim.speech.say("pick my loitering spot first.");
+      sim.speech.say(dialogue.gullbert.perch.pickMyLoiteringSpotFirst);
       return;
     }
     this.#scene = {
@@ -131,7 +132,7 @@ export class PerchRoutine implements SceneOwner {
     };
     sim.activity.beginRoutine("perch");
     this.#nextPerchVisit = sim.clock.now + 90 + sim.random() * 60;
-    sim.speech.say("my usual spot.");
+    sim.speech.say(dialogue.gullbert.perch.myUsualSpot);
   }
   #startPerch(name: string, point?: Point) {
     const sim = this.#environment;
@@ -140,7 +141,7 @@ export class PerchRoutine implements SceneOwner {
         sim.belongings.clearPerch();
       }
       sim.lifecycle.rest(3);
-      sim.speech.say("loitering rights revoked.");
+      sim.speech.say(dialogue.gullbert.perch.loiteringRightsRevoked);
       return true;
     }
     if (name === "place_perch") {
@@ -190,7 +191,7 @@ export class PerchRoutine implements SceneOwner {
         scene.phase = "settle";
         scene.until = sim.clock.now + 1.2;
         sim.body.resetMotion();
-        sim.speech.say("reserved. for me.");
+        sim.speech.say(dialogue.gullbert.perch.reservedForMe);
       } else if (sim.clock.now >= scene.until) {
         sim.lifecycle.complete();
         sim.lifecycle.rest(3);

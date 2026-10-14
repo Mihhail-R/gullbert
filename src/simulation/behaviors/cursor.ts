@@ -1,3 +1,4 @@
+import { dialogue } from "../dialogue.js";
 import { observe } from "../observation.js";
 import type { ReadonlyValue } from "../presentation.js";
 import { scopeCapabilities } from "../capabilities.js";
@@ -132,7 +133,7 @@ export class CursorRoutine implements SceneOwner {
     sim.food.clearRequest();
     if (sim.policy.settings().paused || !sim.policy.visible()) {
       sim.lifecycle.rest();
-      sim.speech.say("pointer inspection on hold.");
+      sim.speech.say(dialogue.gullbert.cursor.pointerInspectionOnHold);
       return true;
     }
     this.#scene = {
@@ -145,7 +146,7 @@ export class CursorRoutine implements SceneOwner {
       pointer: null,
     };
     sim.activity.beginRoutine("cursor");
-    sim.speech.say("...chip?", 1.6);
+    sim.speech.say(dialogue.gullbert.cursor.chip, 1.6);
     return true;
   }
   pointerSample(point: PointerSample | null) {
@@ -167,9 +168,9 @@ export class CursorRoutine implements SceneOwner {
       sim.lifecycle.complete();
       sim.lifecycle.rest();
       if (point) {
-        sim.speech.say("too slippery.");
+        sim.speech.say(dialogue.gullbert.cursor.tooSlippery);
       } else {
-        sim.speech.say("where did it go?");
+        sim.speech.say(dialogue.gullbert.cursor.whereDidItGo);
       }
       return;
     }
@@ -181,15 +182,15 @@ export class CursorRoutine implements SceneOwner {
     sim.lifecycle.rest(3);
     sim.speech.say(text, 2.5);
   }
-  releaseCursor(text = "not a chip.") {
+  releaseCursor(text = dialogue.gullbert.cursor.notAChip) {
     const sim = this.#environment;
     if (this.#scene?.kind !== "cursor") {
       return;
     }
     this.#scene.phase = "recoil";
     this.#scene.until = sim.clock.now + 1.35;
-    if (this.#scene.retaliation && text === "not a chip.") {
-      sim.speech.say("consider us even.", 2);
+    if (this.#scene.retaliation && text === dialogue.gullbert.cursor.notAChip) {
+      sim.speech.say(dialogue.gullbert.cursor.considerUsEven, 2);
     } else {
       sim.speech.say(text, 2);
     }
@@ -231,7 +232,7 @@ export class CursorRoutine implements SceneOwner {
       return false;
     }
     if (sim.clock.now >= scene.deadline) {
-      this.#finish("not worth the effort.");
+      this.#finish(dialogue.gullbert.cursor.notWorthTheEffort);
       return true;
     }
     if ((sim.objects.snapshot().bag?.servings ?? 0) > 0) {
@@ -240,7 +241,7 @@ export class CursorRoutine implements SceneOwner {
     }
     if (!scene.pointer) {
       if (sim.clock.now - scene.started >= 1.5) {
-        this.#finish("where did it go?");
+        this.#finish(dialogue.gullbert.cursor.whereDidItGo);
       }
       return true;
     }
@@ -271,9 +272,9 @@ export class CursorRoutine implements SceneOwner {
         scene.phase = "peck";
         scene.until = sim.clock.now + 0.38;
         if (scene.retaliation) {
-          sim.speech.say("got you.", 0.65);
+          sim.speech.say(dialogue.gullbert.cursor.gotYou, 0.65);
         } else {
-          sim.speech.say("nom?", 0.65);
+          sim.speech.say(dialogue.gullbert.cursor.nom, 0.65);
         }
       }
     } else if (scene.phase === "peck" && sim.clock.now >= scene.until) {
@@ -283,9 +284,9 @@ export class CursorRoutine implements SceneOwner {
       ) {
         scene.phase = "stalk";
         if (scene.retaliation) {
-          sim.speech.say("come back here.", 1);
+          sim.speech.say(dialogue.gullbert.cursor.comeBackHere, 1);
         } else {
-          sim.speech.say("hold still, lunch.", 1);
+          sim.speech.say(dialogue.gullbert.cursor.holdStillLunch, 1);
         }
         return true;
       }
@@ -293,7 +294,7 @@ export class CursorRoutine implements SceneOwner {
         scene.phase = "chew";
         scene.caughtAt = sim.clock.now;
         scene.until = sim.clock.now + 1.2;
-        sim.speech.say("MINE. Esc to escape.", 1.2);
+        sim.speech.say(dialogue.gullbert.cursor.mineEscToEscape, 1.2);
         sim.events.emit("munch");
         return true;
       }
@@ -303,7 +304,7 @@ export class CursorRoutine implements SceneOwner {
         140,
         0.1,
       );
-      sim.speech.say("not a chip.", 2);
+      sim.speech.say(dialogue.gullbert.cursor.notAChip, 2);
       sim.events.emit("munch");
     } else if (scene.phase === "chew") {
       if (sim.clock.now >= scene.until) {
@@ -319,9 +320,9 @@ export class CursorRoutine implements SceneOwner {
       }
     } else if (scene.phase === "recoil" && sim.clock.now >= scene.until) {
       if (scene.retaliation) {
-        this.#finish("consider us even.");
+        this.#finish(dialogue.gullbert.cursor.considerUsEven);
       } else {
-        this.#finish("not a chip.");
+        this.#finish(dialogue.gullbert.cursor.notAChip);
       }
     }
     return true;

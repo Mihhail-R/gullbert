@@ -1,3 +1,4 @@
+import { dialogue } from "../dialogue.js";
 import { observe } from "../observation.js";
 import type { ReadonlyValue } from "../presentation.js";
 import { scopeCapabilities } from "../capabilities.js";
@@ -183,7 +184,7 @@ export class GiftRoutine implements SceneOwner {
       speed: Math.max(360, sim.body.width / 1.8),
     };
     sim.activity.beginRoutine("gift");
-    sim.speech.say("back soon. excellent judgement awaits.", 2);
+    sim.speech.say(dialogue.gullbert.gifts.backSoonExcellentJudgementAwaits, 2);
     return true;
   }
   #flyTo(target: Point, speed: number, dt: number) {
@@ -258,7 +259,7 @@ export class GiftRoutine implements SceneOwner {
         sim.body.place({ x: sim.body.width, y: sim.body.y });
       }
       sim.body.place({ x: sim.body.x, y: airborneY });
-      sim.speech.say("behold my impeccable taste.", 2);
+      sim.speech.say(dialogue.gullbert.gifts.beholdMyImpeccableTaste, 2);
     } else if (scene.phase === "return") {
       if (this.#flyTo({ x: origin.x, y: airborneY }, speed, dt)) {
         scene.phase = "land";

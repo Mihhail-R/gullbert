@@ -1,3 +1,4 @@
+import { dialogue } from "../dialogue.js";
 import { observe } from "../observation.js";
 import type { ReadonlyValue } from "../presentation.js";
 import { scopeCapabilities } from "../capabilities.js";
@@ -438,7 +439,7 @@ export class TheatreRoutine implements SceneOwner {
       });
       this.#scene = { ...clock, kind, phase: "chase", bubbles, pops: [] };
       this.#phase("chase", 14);
-      sim.speech.say("floating trespassers.");
+      sim.speech.say(dialogue.gullbert.theatre.floatingTrespassers);
     } else if (kind === "bath") {
       const target = sim.body.safePoint({
         x: (point?.x ?? sim.body.x + 100) - 48,
@@ -453,7 +454,7 @@ export class TheatreRoutine implements SceneOwner {
         exit: target,
       };
       this.#phase("approach", 7);
-      sim.speech.say("a private seaside resort.");
+      sim.speech.say(dialogue.gullbert.theatre.aPrivateSeasideResort);
     } else if (kind === "toss") {
       const end = this.#pointOnScreen(
         point ?? { x: sim.body.width * 0.7, y: sim.body.y + 75 },
@@ -487,7 +488,7 @@ export class TheatreRoutine implements SceneOwner {
         recoilFrom: { x: sim.body.x, y: sim.body.y },
       };
       this.#phase("takeoff", this.#scene.reaction);
-      sim.speech.say("airborne lunch.");
+      sim.speech.say(dialogue.gullbert.theatre.airborneLunch);
     } else {
       const memory = this.#rareMemory();
       memory.nextAllowed = sim.clock.now + 1200;
@@ -629,7 +630,7 @@ export class TheatreRoutine implements SceneOwner {
         }
       }, null);
       if (!target) {
-        this.#finish("airspace secured.");
+        this.#finish(dialogue.gullbert.theatre.airspaceSecured);
         return;
       }
       let facing;
@@ -661,10 +662,10 @@ export class TheatreRoutine implements SceneOwner {
     } else if (sim.clock.now >= scene.until) {
       if (scene.phase === "peck") {
         this.#phase("startle", 0.55);
-        sim.speech.say("AMBUSH.", 0.8);
+        sim.speech.say(dialogue.gullbert.theatre.ambush, 0.8);
       } else if (scene.phase === "startle") {
         this.#phase("proud", 0.8);
-        sim.speech.say("exactly as planned.", 1.2);
+        sim.speech.say(dialogue.gullbert.theatre.exactlyAsPlanned, 1.2);
       } else {
         this.#phase("chase", 14);
       }
@@ -679,13 +680,13 @@ export class TheatreRoutine implements SceneOwner {
     if (scene.phase === "approach") {
       if (sim.body.moveToward(scene.target, 220, dt)) {
         this.#phase("splash", 2.8);
-        sim.speech.say("luxury.", 2);
+        sim.speech.say(dialogue.gullbert.theatre.luxury, 2);
       } else if (sim.clock.now >= scene.until) {
-        this.#finish("the sea is too far away.");
+        this.#finish(dialogue.gullbert.theatre.theSeaIsTooFarAway);
       }
     } else if (scene.phase === "splash" && sim.clock.now >= scene.until) {
       this.#phase("shake", 2.2);
-      sim.speech.say("every feather. individually.", 2.5);
+      sim.speech.say(dialogue.gullbert.theatre.everyFeatherIndividually, 2.5);
     } else if (scene.phase === "shake" && sim.clock.now >= scene.until) {
       this.#phase("exit", 2);
       let exitOffsetX;
@@ -703,7 +704,7 @@ export class TheatreRoutine implements SceneOwner {
         sim.body.moveToward(scene.exit, 90, dt) ||
         sim.clock.now >= scene.until
       ) {
-        this.#finish("naturally immaculate.");
+        this.#finish(dialogue.gullbert.theatre.naturallyImmaculate);
       }
     }
   }
@@ -736,9 +737,9 @@ export class TheatreRoutine implements SceneOwner {
       scene.chip = null;
       sim.events.emit("munch");
       sim.food.clearRequest();
-      sim.speech.say("beak of the match.");
+      sim.speech.say(dialogue.gullbert.theatre.beakOfTheMatch);
     } else {
-      sim.speech.say("the wind cheated.", 2.5);
+      sim.speech.say(dialogue.gullbert.theatre.theWindCheated, 2.5);
     }
   }
   #stepToss(dt: number) {
@@ -825,7 +826,7 @@ export class TheatreRoutine implements SceneOwner {
       }
     } else if (scene.phase === "miss" && sim.clock.now >= scene.until) {
       this.#phase("retrieve", 8);
-      sim.speech.say("ground lunch is still lunch.");
+      sim.speech.say(dialogue.gullbert.theatre.groundLunchIsStillLunch);
     } else if (scene.phase === "retrieve" && scene.chip) {
       let facing;
       if (scene.chip.x >= sim.body.x + 48) {
@@ -854,7 +855,7 @@ export class TheatreRoutine implements SceneOwner {
         sim.events.emit("munch");
         this.#phase("eat", 1.1);
       } else if (sim.clock.now >= scene.until) {
-        this.#finish("saving that for later.");
+        this.#finish(dialogue.gullbert.theatre.savingThatForLater);
       }
     } else if (scene.phase === "eat" && sim.clock.now >= scene.until) {
       this.#finish();

@@ -1,3 +1,4 @@
+import { dialogue } from "../dialogue.js";
 import { observe } from "../observation.js";
 import type { ReadonlyValue } from "../presentation.js";
 import type { Body } from "../body.js";
@@ -286,9 +287,12 @@ export class Pickup implements SceneOwner {
     }
     if (level === 0) {
       if (count === 1) {
-        context.speech.say("wrong place. wrong time. fair enough.", 3);
+        context.speech.say(
+          dialogue.gullbert.pickup.wrongPlaceWrongTimeFairEnough,
+          3,
+        );
       } else {
-        context.speech.say("yes. here is also fine.", 3);
+        context.speech.say(dialogue.gullbert.pickup.yesHereIsAlsoFine, 3);
       }
       return;
     }
@@ -296,9 +300,9 @@ export class Pickup implements SceneOwner {
     context.events.emit("squawk");
     if (level === 1) {
       if (count === 1) {
-        context.speech.say("you could have asked.", 3);
+        context.speech.say(dialogue.gullbert.pickup.youCouldHaveAsked, 3);
       } else {
-        context.speech.say("I am not furniture.", 3);
+        context.speech.say(dialogue.gullbert.pickup.iAmNotFurniture, 3);
       }
       if (count === 1 && context.random() < 0.35) {
         this.#mess(0.55);
@@ -317,11 +321,11 @@ export class Pickup implements SceneOwner {
         installed.revenge = "trash";
       }
       if (count === 1) {
-        context.speech.say("your turn.", 3);
+        context.speech.say(dialogue.gullbert.pickup.yourTurn, 3);
       } else if (count < 4) {
-        context.speech.say("this is now personal.", 3);
+        context.speech.say(dialogue.gullbert.pickup.thisIsNowPersonal, 3);
       } else {
-        context.speech.say("I will redecorate.", 3);
+        context.speech.say(dialogue.gullbert.pickup.iWillRedecorate, 3);
       }
     }
     if (!settings.paused && installed.revenge !== "none") {
@@ -383,7 +387,10 @@ export class Pickup implements SceneOwner {
       } else {
         if (scene.revenge === "big") {
           this.#mess(2.5);
-          context.speech.say("a proportionate response.", 3);
+          context.speech.say(
+            dialogue.gullbert.pickup.aProportionateResponse,
+            3,
+          );
         }
         scene.phase = "sulk";
         let duration = 2.5;
@@ -398,7 +405,7 @@ export class Pickup implements SceneOwner {
     } else if (scene.phase === "collect") {
       if (context.body.moveToward(scene.target, 450, delta)) {
         scene.phase = "return";
-        context.speech.say("since we're moving things.", 3);
+        context.speech.say(dialogue.gullbert.pickup.sinceWereMovingThings, 3);
       }
     } else if (
       scene.phase === "return" &&
@@ -408,7 +415,7 @@ export class Pickup implements SceneOwner {
         { x: context.body.x + 24, y: context.body.y + 48 },
         now,
       );
-      context.speech.say("I've improved it.", 3);
+      context.speech.say(dialogue.gullbert.pickup.iveImprovedIt, 3);
       context.cancel();
       context.rest(3);
     }

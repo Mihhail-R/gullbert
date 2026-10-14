@@ -92,3 +92,26 @@ While Gullbert is running, a second invocation of its executable accepts local c
 ## Local vision checks
 
 `cargo test --manifest-path src-tauri/Cargo.toml --locked` also checks OCR result validation. Actual ScreenCaptureKit capture and permission delivery require manual desktop testing. The build compiles `native/vision.m` with Apple clang for the selected architecture; ScreenCaptureKit is weak-linked so the base app can still launch on macOS 11–13 with vision unavailable.
+
+## Giving the birds something to say
+
+Edit [`src/simulation/dialogue.json`](src/simulation/dialogue.json) for character speech, postcard captions, and treasure descriptions. No TypeScript edits are needed to change existing lines or add alternatives to a pool. The catalog is bundled locally at build time; rebuild or use the preview watcher to see edits. Installed copies do not hot-load this source file.
+
+- `gullbert.general`, `greetings`, `moods`, and `hats` contain everyday remarks. Other blocks match the interaction or routine: `cleanup`, `crime`, `cursor`, `gags`, `gifts`, `perch`, `pickup`, `quiet`, `snacks`, `theatre`, `touch`, and `typing`.
+- Arrays of strings are pools of alternatives. Append a line to add variety. Keep at least one nonblank, distinct entry. Greetings and moods avoid immediate repeats when multiple options exist; cleanup cycles its responses; hats and general remarks use the simulation's random selection.
+- Single strings are fixed cues for a particular action or punchline. Edit their values while retaining the keys. Adding a new situation or turning a fixed cue into a pool needs a corresponding behavior change.
+- `gullbert.greetings.treasure` uses `{item}` for the name of an actually owned treasure. Keep that placeholder in each alternative; other placeholders are not supported.
+- `guests.pigeon` and `guests.seagull` group conversations by scene beat. Each beat is an array of paired `{ "gullbert": "...", "visitor": "..." }` exchanges. Append a complete pair to add an alternative. An empty string means that speaker stays silent; at least one must speak. Keep replies together so the joke makes sense.
+
+Guest alternatives cycle by visit, separately for each species, starting with the first pair. The same visit index is used across beats, wrapping within each beat's array. For a linked conversation, add a matching alternative at the same index in every beat; standalone pairs can be added to just one beat. Rotation resets when the app restarts. Interruption still clears both bubbles.
+
+Keep lines short enough to read in the existing bubble duration. Gullbert is a territorial, self-important snack enthusiast; the pigeon is a dry, unimpressed visitor; the rival seagull is loudly competitive. For example, a pigeon exchange can be:
+
+```json
+{
+  "gullbert": "this is a private potato estate.",
+  "visitor": "I shall inform the flock."
+}
+```
+
+Run `npm test` and `npm run check` after editing. The build rejects empty pools, blank speech, duplicate alternatives, and invalid placeholders with a catalog path. Type checking catches missing or incompatible entries used by the behaviors. Behavior timings, poses, and sound effects stay in TypeScript.

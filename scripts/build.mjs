@@ -1,4 +1,13 @@
-import { cpSync, mkdtempSync, renameSync, rmSync, watch } from "node:fs";
+import { validateDialogue } from "./dialogue.mjs";
+import {
+  readFileSync,
+  writeFileSync,
+  cpSync,
+  mkdtempSync,
+  renameSync,
+  rmSync,
+  watch,
+} from "node:fs";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -12,6 +21,10 @@ export function buildFrontend() {
   // intact; successful builds remove stale files, including nested modules.
   const staging = mkdtempSync(path.join(project, ".web-build-"));
   try {
+    const catalog = JSON.parse(
+      readFileSync(path.join(source, "simulation/dialogue.json"), "utf8"),
+    );
+    validateDialogue(catalog);
     const result = spawnSync(
       process.execPath,
       [
@@ -27,6 +40,12 @@ export function buildFrontend() {
       recursive: true,
       filter: (file) => !file.endsWith(".ts"),
     });
+    // Emit ordinary ESM so older desktop WebViews need no JSON-module support.
+    // TypeScript checks the source JSON import; this embeds that same catalog.
+    writeFileSync(
+      path.join(staging, "simulation/dialogue.js"),
+      `export const dialogue = ${JSON.stringify(catalog)};\n`,
+    );
     rmSync(frontendRoot, { recursive: true, force: true });
     renameSync(staging, frontendRoot);
   } finally {
