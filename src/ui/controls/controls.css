@@ -408,6 +408,7 @@ body.preview .panel {
   color: #667e76;
 }
 .desktop-note h2 {
+  margin: 16px 0;
   font:
     38px/1.15 Georgia,
     serif;
@@ -419,11 +420,35 @@ body.preview .panel {
   line-height: 1.6;
   color: #647970;
 }
-.toy-car {
-  font-size: 90px;
+.download-link {
+  position: relative;
+  z-index: 1;
+  display: inline-block;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #304f47;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.preview-downloads {
   position: absolute;
-  right: 65px;
-  bottom: 95px;
+  bottom: 24px;
+  left: 32px;
+  right: 32px;
+}
+.preview-downloads p {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #304f47;
+}
+.download-link:hover {
+  background: #213c35;
+}
+.download-link:focus-visible {
+  outline: 3px solid #304f47;
+  outline-offset: 4px;
 }
 iframe {
   position: absolute;
@@ -446,7 +471,13 @@ iframe {
   }
   #demo {
     width: 100%;
-    height: 450px;
+    height: 650px;
+  }
+  .desktop-note {
+    padding: 24px 32px;
+  }
+  .desktop-note h2 {
+    font-size: 30px;
   }
 }
 @media (max-width: 420px) {
