@@ -66,6 +66,12 @@ fn main() {
         })
         .setup(|app| {
             native_input::Runtime::watch(app.handle().clone());
+            // Protect even initially hidden controls before their first show.
+            // Capture rechecks visible windows and fails closed on any error.
+            #[cfg(target_os = "windows")]
+            for window in app.webview_windows().values() {
+                let _ = window.set_content_protected(true);
+            }
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             roommate::restore(app.handle());

@@ -56,3 +56,7 @@ __pycache__/
 ._*
 Thumbs.db
 Desktop.ini
+
+# Checksum-pinned OCR models downloaded only at build time
+/src-tauri/models/*.rten
+/src-tauri/models/*.tmp

@@ -64,18 +64,18 @@ Native input capture must expire independently of frontend updates. Ordinary pla
 
 The Rust desktop shell uses responsibility-based modules within one binary crate:
 
-| Module                          | Responsibility                                                               |
-| ------------------------------- | ---------------------------------------------------------------------------- |
-| `main.rs`                       | Startup, plugin and command registration, window lifecycle                   |
-| `actions.rs`                    | Shared action routing, action messages, and launcher flags                   |
-| `windows.rs`                    | Window lookup, monitor selection, and cursor coordinate conversion           |
-| `vision.rs` / `native/vision.m` | Opt-in local screen OCR, throttling, permission and detection status         |
-| `caret.rs`                      | Read-only caret geometry, Accessibility access, and coordinate normalization |
-| `state.rs`                      | Application state, preference persistence, and control-room snapshots        |
-| `roommate.rs`                   | Belongings persistence and roommate status messages                          |
-| `tray.rs`                       | Tray menus, labels, and menu events                                          |
-| `shortcuts.rs`                  | Global shortcut registration and event routing                               |
-| `native_input/`                 | Input ownership, deadlines, OS effects, and serialized dispatch              |
+| Module                                      | Responsibility                                                               |
+| ------------------------------------------- | ---------------------------------------------------------------------------- |
+| `main.rs`                                   | Startup, plugin and command registration, window lifecycle                   |
+| `actions.rs`                                | Shared action routing, action messages, and launcher flags                   |
+| `windows.rs`                                | Window lookup, monitor selection, and cursor coordinate conversion           |
+| `vision.rs` / `vision/` / `native/vision.m` | Opt-in local screen OCR, throttling, permission and detection status         |
+| `caret.rs`                                  | Read-only caret geometry, Accessibility access, and coordinate normalization |
+| `state.rs`                                  | Application state, preference persistence, and control-room snapshots        |
+| `roommate.rs`                               | Belongings persistence and roommate status messages                          |
+| `tray.rs`                                   | Tray menus, labels, and menu events                                          |
+| `shortcuts.rs`                              | Global shortcut registration and event routing                               |
+| `native_input/`                             | Input ownership, deadlines, OS effects, and serialized dispatch              |
 
 Keep commands beside the responsibility they expose, and register their qualified paths in `main.rs`; frontend command names stay unchanged. Keep implementation helpers private and use `pub(crate)` only where another module needs access. Group related types and behavior together rather than creating one file per type. Unit tests stay with their owning module; the larger input lifecycle suite remains in `native_input/tests.rs`.
 
@@ -92,6 +92,28 @@ While Gullbert is running, a second invocation of its executable accepts local c
 ## Local vision checks
 
 `cargo test --manifest-path src-tauri/Cargo.toml --locked` also checks OCR result validation. Actual ScreenCaptureKit capture and permission delivery require manual desktop testing. The build compiles `native/vision.m` with Apple clang for the selected architecture; ScreenCaptureKit is weak-linked so the base app can still launch on macOS 11–13 with vision unavailable.
+
+### Windows text vision
+
+Windows uses Ocrs + RTen compiled into the executable, with two embedded, checksum-pinned models. Run `npm run prepare:vision` before direct Windows Cargo builds/tests; npm dev/build does this automatically on Windows. `models/manifest.json` pins the upstream runtime-model URLs and SHA-256 hashes, and `build.rs` verifies them without network access. Do not commit model binaries or screen captures. Include the model notice/license when distributing; model weights are CC BY-SA 4.0, distinct from the MIT application code.
+
+Microsoft's [Windows.Media.Ocr documentation](https://learn.microsoft.com/en-us/uwp/api/windows.media.ocr) requires package identity for desktop apps. Ocrs avoids adding MSIX identity or a runtime installer to the existing NSIS distribution. Its English-oriented models differ from Apple Vision; exact OCR output is not expected to match.
+
+`vision/ocr.rs` owns model loading and recognition; `vision/windows.rs` captures only a 640 × 360 physical-pixel crop using GDI, on a worker thread temporarily set to per-monitor DPI awareness v2. Monitor selection, negative origins, and OCR boxes stay in physical screen coordinates; `caret.rs` converts once using the overlay scale. Capture excludes this process's visible top-level windows using `WDA_EXCLUDEFROMCAPTURE` and requires DWM composition and Windows build 19041+. Failure to exclude a window fails the entire scan. Affinity remains set for those windows for their lifetime. GDI objects and thread DPI are restored on every exit. Model weights are cached, but images and recognition results are dropped after each scan. No text, pixels, or OCR errors containing text are logged or persisted.
+
+The shared runtime retains its single-flight slot until OCR completes. Cancellation invalidates the generation and clears cached targets; it does not forcibly interrupt the OCR library. Pause, hide/show, Polite-ish, and vision-setting changes discard late results. The final caret gate also rejects a result if the overlay moved or its DPI changed. Window awareness and image recognition are outside this feature.
+
+Automated coverage includes crop clipping, nearest-word selection, printable-character fallback, physical-to-logical DPI conversion, stale-result cancellation, and throttling. The Windows native suite additionally loads both embedded models, checks a blank image, and recognizes a synthetic HELLO WORLD fixture through nearest-word selection and screen-coordinate conversion. CI builds the NSIS installer and runs native tests on Windows; these checks cannot establish capture behavior.
+
+**Native Windows testing still required before release:**
+
+- Install the NSIS build on a clean Windows 10 2004+ / Windows 11 machine, disconnect the network, and scan visible text without OCR DLLs, language packs, or package identity.
+- Check light/dark browser pages and chat text, small fonts, unsupported scripts, and the carried character's landing position.
+- Verify the pet, bubbles, nest, and control room never become OCR targets, including when the overlay covers the monitor. Confirm underlying text is visible in captures; GDI/compositor behavior must be tested on real hardware.
+- Use 100%, 125%, 150%, and 200% displays, negative monitor origins, monitors above/left, pointer positions at seams, summon between monitors, DPI changes, and monitor disconnect during a scan.
+- Pause, hide then show, switch vision off/on, select Polite-ish, and issue commands during slow scans. Verify no stale hunt, overlapping scans, or catch-up burst occurs.
+- Check protected video, lock/secure desktop, remote desktop, and capture failure recovery; no target is preferable to capturing Gullbert or using stale geometry.
+- Measure first-scan latency, steady-state CPU/memory, and GDI handle counts during repeated scans and failures. Check Windows builds older than 19041 report unsupported while ordinary caret mode remains usable.
 
 ## Giving the birds something to say
 

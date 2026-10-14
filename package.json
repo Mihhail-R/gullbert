@@ -15,7 +15,10 @@
     "format": "prettier --write src tests scripts .github package.json README.md CONTRIBUTING.md tsconfig.json src-tauri/tauri.conf.json src-tauri/capabilities",
     "format:check": "prettier --check src tests scripts .github package.json README.md CONTRIBUTING.md tsconfig.json src-tauri/tauri.conf.json src-tauri/capabilities",
     "build:web": "node scripts/build.mjs",
-    "watch:web": "node scripts/build.mjs --watch"
+    "watch:web": "node scripts/build.mjs --watch",
+    "prepare:vision": "node scripts/prepare-vision.mjs",
+    "predev": "node scripts/prepare-vision.mjs --if-windows",
+    "prebuild": "node scripts/prepare-vision.mjs --if-windows"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.12.0",

@@ -4,7 +4,7 @@
 
 ![Gullbert, an original pixel seagull](art/gullbert.gif)
 
-Gullbert waddles across your desktop, demands chips, has opinions, and occasionally leaves a little gift. An offline desktop toy for macOS and Windows, built with Tauri and TypeScript. No account, analytics, cloud AI service, or background network requests. Optional local vision on macOS reads a small screen region with your permission.
+Gullbert waddles across your desktop, demands chips, has opinions, and occasionally leaves a little gift. An offline desktop toy for macOS and Windows, built with Tauri and TypeScript. No account, analytics, cloud AI service, or background network requests. Optional local vision on macOS and Windows reads a small screen region when enabled.
 
 This is an early v0.1 preview. Apple Silicon macOS has had local testing; Windows and Intel Mac still need native testing before a stable release. Current packages are unsigned or ad-hoc signed and are not notarized, so downloaded builds may trigger platform security prompts.
 
@@ -60,19 +60,25 @@ On macOS, choose **Preferences → Caret fishing → Enable access**, then allow
 
 Some apps, including some web-based editors, do not expose usable caret geometry. Enabling permission alone does not guarantee detection. This mode reads the focused field's identity, caret geometry, and position marker; it does not capture screenshots, read document text, or monitor keystrokes. Arrow keys or scrolling can also attract him by moving the caret. The stolen glyphs are decorative.
 
-### Local vision (macOS 14+)
+### Local vision (macOS 14+ and Windows 10 version 2004+)
 
-Turn on **Preferences → Local vision** to use screen text instead of the caret. Grant screen-recording permission when prompted, or use **Allow screen access** to request it again. Restart if macOS requests it. Vision does not need Accessibility access, but it replaces caret sensing while enabled; turn it off to return to caret mode.
+Turn on **Preferences → Local vision** to use screen text instead of the caret. On macOS, grant screen-recording permission when prompted, or use **Allow screen access** to request it again. Restart if macOS requests it. Vision does not need Accessibility access, but it replaces caret sensing while enabled; turn it off to return to caret mode.
+
+On Windows, no screen permission prompt or separate OCR installation is needed. The existing NSIS installer includes the OCR engine and models; first use works offline.
 
 Point near visible text on Gullbert's display. He can hunt existing chat messages and other words without waiting for typing. The control room reports scanning, text found, no text, or missing permission. Keep the pointer still to let him approach; moving it toward him makes him act innocent.
 
-Vision captures a region of up to 640 × 360 logical pixels around the pointer, clipped to the pointer's display, with at least two seconds between a completed scan and the next one. Gullbert's own windows are excluded. Apple Vision recognizes text on-device, selects the nearest word, and passes its position plus one printable ASCII character to the routine; unsupported characters become `o`. Screenshots and recognized strings stay in memory only during processing; nothing is saved or sent.
+Vision captures a region around the pointer, clipped to that monitor: up to 640 × 360 logical pixels on macOS, or 640 × 360 physical pixels on Windows to bound work at high DPI. There are at least two seconds between a completed scan and the next one, with only one scan in flight. Gullbert's own windows are excluded. On Windows, exclusion also keeps his visible windows out of other supported screen captures while Gullbert is running; if exclusion cannot be applied, the scan fails without returning a target.
+
+Apple Vision on macOS and [Ocrs](https://github.com/robertknight/ocrs) on Windows recognize text on-device, select the nearest word, and pass its position plus one printable ASCII character to the routine; unsupported characters become `o`. Windows uses bundled English-oriented OCR models and may misread small, stylized, or non-English text. Screenshots and recognized text stay in memory only during processing; nothing is saved or sent. Only geometry and one character are cached. This feature does not identify windows, images, or the meaning of text.
 
 He carries a cosmetic copy of the character. At **Public enemy**, he adds it to his nest, turning letters and digits into punctuation; at **Menace**, he eats it. Vision does not determine whether the text is editable or understand its meaning. Pausing, hiding, **Polite-ish**, or switching vision off stops new scans.
 
 ## Run from source
 
-Install Node.js 22+, the current stable Rust toolchain (at least 1.90), and the [Tauri platform prerequisites](https://v2.tauri.app/start/prerequisites/): Xcode Command Line Tools on macOS; Microsoft C++ Build Tools with the desktop C++ workload and WebView2 on Windows. The macOS build also needs an SDK with the macOS 14 ScreenCaptureKit APIs, even when building for an older macOS version.
+Install Node.js 22+, the current stable Rust toolchain (at least 1.90), and the [Tauri platform prerequisites](https://v2.tauri.app/start/prerequisites/): Xcode Command Line Tools on macOS; Microsoft C++ Build Tools with the desktop C++ workload and WebView2 on Windows. Windows `npm run dev` and `npm run build` prepare checksum-pinned OCR models before compilation (about 12 MB, downloaded once and reusable offline). For direct Cargo commands or cross-compilation, first run `npm run prepare:vision`. These build-time downloads are never performed by the installed app. Model attribution and licenses are in `src-tauri/models/NOTICE.txt` and included in Windows bundles.
+
+The macOS build also needs an SDK with the macOS 14 ScreenCaptureKit APIs, even when building for an older macOS version.
 
 ```sh
 npm ci

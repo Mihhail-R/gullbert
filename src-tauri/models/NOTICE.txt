@@ -1,0 +1,18 @@
+Gullbert Windows OCR model attribution
+
+Text detection (text-detection.rten) and text recognition
+(text-recognition.rten) models by Robert Knight / Ocrs.
+Runtime model source: https://ocrs-models.s3-accelerate.amazonaws.com/
+Model project/license: https://huggingface.co/robertknight/ocrs
+Exact redistributed files are SHA-256 pinned in manifest.json.
+License: Creative Commons Attribution-ShareAlike 4.0 International
+https://creativecommons.org/licenses/by-sa/4.0/
+See LICENSE-CC-BY-SA-4.0.txt for the full license.
+Models are redistributed unchanged, embedded in the Windows executable.
+No endorsement by the model author is implied.
+
+Ocrs and RTen code by Robert Knight and contributors:
+https://github.com/robertknight/ocrs
+https://github.com/robertknight/rten
+Dual-licensed MIT OR Apache-2.0; distributed under the MIT license.
+See LICENSE-OCRS-MIT.txt and LICENSE-RTEN-MIT.txt.
