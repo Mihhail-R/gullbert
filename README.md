@@ -90,6 +90,16 @@ Open [http://127.0.0.1:4173](http://127.0.0.1:4173). The playground shares the a
 
 ## Build and release
 
+### Publish the browser preview and downloads
+
+GitHub Pages hosts the browser playground; GitHub Releases hosts the desktop downloads. In the repository's **Settings → Pages → Build and deployment**, select **GitHub Actions** as the source. After merging to `main`, the [Pages workflow](.github/workflows/pages.yml) tests and publishes `web-dist/` at [mihhail-r.github.io/gullbert/](https://mihhail-r.github.io/gullbert/). You can also run **Publish browser preview** manually on `main`.
+
+To release desktop packages, push a new version tag such as `v0.1.0-preview.1`. The existing build workflow creates a draft release containing Apple Silicon and Intel Mac ZIPs and a Windows x64 installer. Test the downloaded packages, edit the release notes, mark preview releases as **pre-release**, and publish the draft. Draft releases are not public downloads.
+
+The playground's download button opens [all releases](https://github.com/Mihhail-R/gullbert/releases), so preview releases remain discoverable without relying on GitHub's latest stable release redirect. Pages updates on `main` independently of desktop releases; publish a new tag when you want updated installers.
+
+### Build desktop packages locally
+
 ```sh
 # macOS, for the current machine's architecture
 npm run build -- --bundles app
