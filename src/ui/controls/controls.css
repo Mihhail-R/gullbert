@@ -494,3 +494,21 @@ iframe {
     display: none;
   }
 }
+
+.update-content {
+  padding: 12px 16px;
+}
+.update-content p {
+  font-size: 12px;
+}
+#update-notes {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 180px;
+  overflow: auto;
+  font: inherit;
+  font-size: 12px;
+}
+#update-progress {
+  width: 100%;
+}
