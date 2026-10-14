@@ -1,4 +1,4 @@
-//! Optional macOS screen OCR. The cache contains geometry and one display glyph only.
+//! Optional local screen OCR. The cache contains geometry and one display glyph only.
 use crate::{caret::DesktopCaret, state::State};
 use serde::Serialize;
 use std::{
@@ -7,6 +7,12 @@ use std::{
     time::{Duration, Instant},
 };
 use tauri::Manager;
+#[cfg(any(target_os = "windows", test))]
+mod geometry;
+#[cfg(target_os = "windows")]
+mod ocr;
+#[cfg(target_os = "windows")]
+mod windows;
 
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
@@ -24,22 +30,31 @@ unsafe extern "C" {
     fn gullbert_vision_read() -> RawResult;
 }
 fn access(prompt: bool) -> i32 {
+    #[cfg(target_os = "windows")]
+    {
+        let _ = prompt;
+        windows::access()
+    }
     #[cfg(target_os = "macos")]
     unsafe {
         gullbert_vision_access(i32::from(prompt))
     }
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     {
         let _ = prompt;
         0
     }
 }
 fn capture() -> RawResult {
+    #[cfg(target_os = "windows")]
+    {
+        windows::capture()
+    }
     #[cfg(target_os = "macos")]
     unsafe {
         gullbert_vision_read()
     }
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     {
         RawResult {
             status: 1,
@@ -99,47 +114,62 @@ pub(crate) fn vision_status(app: tauri::AppHandle, prompt: bool) -> Status {
 pub(crate) fn reset(app: &tauri::AppHandle) {
     let runtime = app.state::<Runtime>();
     let mut cache = runtime.cache.lock().unwrap();
-    cache.generation += 1;
-    cache.at = None;
-    cache.sample = None;
-    cache.status = "waiting";
-    // A running capture owns its slot until its callback returns.
+    cache.reset();
+}
+impl Cache {
+    fn reset(&mut self) {
+        self.generation += 1;
+        self.at = None;
+        self.sample = None;
+        self.status = "waiting";
+        // A running capture owns its slot until its callback returns.
+    }
+    fn begin(&mut self, now: Instant) -> Option<u64> {
+        if self.pending
+            || self
+                .at
+                .is_some_and(|at| now.duration_since(at) < Duration::from_secs(2))
+        {
+            return None;
+        }
+        self.pending = true;
+        Some(self.generation)
+    }
+    fn finish(&mut self, generation: u64, raw: RawResult, now: Instant) -> Option<DesktopCaret> {
+        self.pending = false;
+        if self.generation != generation {
+            return None;
+        }
+        self.at = Some(now);
+        self.status = match raw.status {
+            1 => "unsupported",
+            2 => "permission",
+            3 => "no_text",
+            4 => "text_found",
+            _ => "failed",
+        };
+        self.sample = sample(raw);
+        self.sample.clone()
+    }
 }
 pub(crate) async fn read(app: &tauri::AppHandle) -> Option<DesktopCaret> {
     let generation;
     {
         let runtime = app.state::<Runtime>();
         let mut cache = runtime.cache.lock().unwrap();
-        if cache.pending
-            || cache
-                .at
-                .is_some_and(|at| at.elapsed() < Duration::from_secs(2))
-        {
+        let Some(started) = cache.begin(Instant::now()) else {
             return cache.sample.clone();
-        }
-        cache.pending = true;
-        generation = cache.generation;
+        };
+        generation = started;
     }
     let raw = tauri::async_runtime::spawn_blocking(capture)
         .await
         .unwrap_or_default();
     let runtime = app.state::<Runtime>();
     let mut cache = runtime.cache.lock().unwrap();
-    cache.pending = false;
-    if cache.generation != generation {
-        return None;
-    }
-    cache.at = Some(Instant::now());
-    cache.status = match raw.status {
-        1 => "unsupported",
-        2 => "permission",
-        3 => "no_text",
-        4 => "text_found",
-        _ => "failed",
-    };
-    cache.sample = sample(raw);
-    cache.sample.clone()
+    cache.finish(generation, raw, Instant::now())
 }
+
 fn sample(raw: RawResult) -> Option<DesktopCaret> {
     if raw.status != 4
         || !raw.x.is_finite()
@@ -165,6 +195,63 @@ fn sample(raw: RawResult) -> Option<DesktopCaret> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn cancellation_discards_late_result_but_keeps_single_flight_slot() {
+        let now = Instant::now();
+        let mut cache = Cache::default();
+        let old = cache.begin(now).unwrap();
+        cache.reset(); // pause, hide/show, or settings change
+        assert!(cache.begin(now + Duration::from_secs(10)).is_none());
+        assert!(cache
+            .finish(
+                old,
+                RawResult {
+                    status: 4,
+                    height: 20.0,
+                    glyph: 'a' as u32,
+                    ..RawResult::default()
+                },
+                now
+            )
+            .is_none());
+        assert!(cache.sample.is_none());
+        assert_eq!(cache.status, "waiting");
+        assert!(cache.begin(now).is_some());
+    }
+    #[test]
+    fn throttles_from_completion_and_failure_clears_old_target() {
+        let now = Instant::now();
+        let mut cache = Cache::default();
+        let generation = cache.begin(now).unwrap();
+        assert!(cache.begin(now + Duration::from_secs(10)).is_none());
+        let completed = now + Duration::from_secs(20);
+        assert!(cache
+            .finish(
+                generation,
+                RawResult {
+                    status: 4,
+                    height: 20.0,
+                    ..RawResult::default()
+                },
+                completed
+            )
+            .is_some());
+        assert!(cache
+            .begin(completed + Duration::from_millis(1999))
+            .is_none());
+        let generation = cache.begin(completed + Duration::from_secs(2)).unwrap();
+        assert!(cache
+            .finish(
+                generation,
+                RawResult::default(),
+                completed + Duration::from_secs(3)
+            )
+            .is_none());
+        assert!(cache.sample.is_none());
+        assert_eq!(cache.status, "failed");
+        cache.reset();
+        assert!(cache.sample.is_none());
+    }
     #[test]
     fn failed_or_invalid_ocr_never_becomes_a_target() {
         assert!(sample(RawResult::default()).is_none());

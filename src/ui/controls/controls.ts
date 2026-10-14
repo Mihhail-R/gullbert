@@ -342,7 +342,7 @@ async function visionStatus(prompt = false): Promise<void> {
     button.hidden = !status.supported || status.granted || !settings.vision;
     const messages: Record<string, string> = {
       unsupported:
-        "Local vision needs macOS 14 or newer. Caret sensing is still available.",
+        "Local vision needs macOS 14+ or Windows 10 version 2004+. Caret sensing is still available.",
       off: "Vision is off. Enable it to hunt visible words, including chat messages.",
       permission:
         "Allow Gullbert in System Settings → Privacy & Security → Screen & System Audio Recording, then restart him if macOS asks.",
@@ -353,7 +353,7 @@ async function visionStatus(prompt = false): Promise<void> {
         "Text spotted! He’ll investigate when free. Move the mouse away once he approaches.",
       no_text: "No text spotted near the mouse. Try pointing beside a word.",
       failed:
-        "Screen reading did not finish. Check screen access; Gullbert will retry.",
+        "Screen capture or local OCR failed. Protected screens may be unavailable; Gullbert will retry.",
     };
     label.textContent = messages[status.state] ?? "Waiting for vision status.";
   } catch {

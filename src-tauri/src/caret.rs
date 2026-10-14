@@ -410,6 +410,19 @@ mod tests {
         assert_eq!((caret.x, caret.y, caret.height), (600.0, 200.0, 16.0));
     }
     #[test]
+    fn vision_pixels_convert_once_at_each_windows_display_scale() {
+        for scale in [1.0, 1.25, 1.5, 2.0] {
+            let mut target = sample(-1200.0, -600.0);
+            target.source = "vision";
+            target.glyph = Some("x".into());
+            let result = local(target, (-1600, -900), (1600, 900), scale, scale).unwrap();
+            assert!((result.x - 400.0 / scale).abs() < 0.001);
+            assert!((result.y - 300.0 / scale).abs() < 0.001);
+            assert_eq!(result.height, 20.0 / scale);
+            assert_eq!(result.glyph.as_deref(), Some("x"));
+        }
+    }
+    #[test]
     fn rejects_offscreen_and_invalid_geometry() {
         for (x, y) in [
             (-1.0, 20.0),

@@ -148,6 +148,7 @@ impl Effects for Desktop {
             .map_err(|error| error.to_string())
     }
     fn visibility(&self, visible: bool) -> Result<(), String> {
+        crate::vision::reset(&self.0);
         self.0
             .state::<State>()
             .visible
@@ -164,6 +165,7 @@ impl Effects for Desktop {
             .map_err(|error| error.to_string())
     }
     fn emergency_hide(&self, error: &str) {
+        crate::vision::reset(&self.0);
         eprintln!("Gullbert: unable to change input capture: {error}");
         if let Ok(window) = pet(&self.0) {
             let _ = window.hide();

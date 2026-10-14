@@ -1,5 +1,22 @@
 use std::{env, path::PathBuf, process::Command};
 fn main() {
+    if env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") {
+        use sha2::{Digest, Sha256};
+        println!("cargo:rerun-if-changed=models/manifest.json");
+        let manifest: serde_json::Value =
+            serde_json::from_str(include_str!("models/manifest.json")).unwrap();
+        for model in manifest["models"].as_array().unwrap() {
+            let path = format!("models/{}", model["file"].as_str().unwrap());
+            println!("cargo:rerun-if-changed={path}");
+            let bytes = std::fs::read(&path)
+                .expect("Run npm run prepare:vision before building Windows OCR");
+            assert_eq!(
+                format!("{:x}", Sha256::digest(&bytes)),
+                model["sha256"].as_str().unwrap(),
+                "OCR model checksum mismatch; run npm run prepare:vision"
+            );
+        }
+    }
     println!("cargo:rerun-if-changed=native/vision.m");
     if env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("macos") {
         let out = PathBuf::from(env::var_os("OUT_DIR").unwrap());

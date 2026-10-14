@@ -1,0 +1,9 @@
+{
+  "bundle": {
+    "resources": [
+      "models/NOTICE.txt",
+      "models/LICENSE-*.txt",
+      "models/manifest.json"
+    ]
+  }
+}

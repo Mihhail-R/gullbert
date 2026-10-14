@@ -1,0 +1,2 @@
+# Raw RGB fixture bytes must survive Windows checkout unchanged.
+src-tauri/src/vision/fixtures/*.rgb binary
