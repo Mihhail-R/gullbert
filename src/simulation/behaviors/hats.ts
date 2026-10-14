@@ -3,7 +3,13 @@ import type { Hat, Settings } from "../model.js";
 import type { SimulationView } from "../capabilities.js";
 /** Hats are presentation only: selection never owns or interrupts a scene. */
 export function normalizeHat(value: unknown): Hat {
-  if (value === "captain" || value === "cone") {
+  if (
+    value === "captain" ||
+    value === "cone" ||
+    value === "beanie" ||
+    value === "paper-crown" ||
+    value === "fried-egg"
+  ) {
     return value;
   } else {
     return "none";

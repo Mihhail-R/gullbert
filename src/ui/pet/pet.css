@@ -419,8 +419,14 @@ body.interactive-hover {
   border-style: solid;
   background: #f4bc5312;
 }
-#gull[data-touch="pet"] #bird {
-  transform: translateY(2px) rotate(-3deg);
+#gull[data-affection="scratch"][data-hat] #bird,
+#gull[data-affection="hop"][data-hat] #bird {
+  animation: none;
+  transform: translate(var(--affection-x), var(--affection-y));
+}
+#gull[data-fluff="true"] .sprite {
+  /* Two tiny feather tufts, on the same 3px grid as the original sprite. */
+  filter: drop-shadow(3px 0 0 #f6f3e855) drop-shadow(-3px 0 0 #f6f3e855);
 }
 #gull[data-touch="poke"] #bird {
   transform: translateY(-4px);

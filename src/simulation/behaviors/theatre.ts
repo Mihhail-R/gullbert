@@ -819,7 +819,7 @@ export class TheatreRoutine implements SceneOwner {
       });
       if (sim.clock.now >= scene.until) {
         if (scene.caught) {
-          this.#phase("eat", 1.1);
+          this.#phase("eat", 1.75);
         } else {
           this.#phase("miss", 1.1);
         }
@@ -853,7 +853,7 @@ export class TheatreRoutine implements SceneOwner {
       ) {
         scene.chip = null;
         sim.events.emit("munch");
-        this.#phase("eat", 1.1);
+        this.#phase("eat", 1.75);
       } else if (sim.clock.now >= scene.until) {
         this.#finish(dialogue.gullbert.theatre.savingThatForLater);
       }

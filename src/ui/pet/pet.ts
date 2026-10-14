@@ -34,6 +34,12 @@ const application = new PetApplication({
     },
   },
   clock: {
+    requestFrame: (callback) => {
+      return requestAnimationFrame(callback);
+    },
+    cancelFrame: (id) => {
+      cancelAnimationFrame(id);
+    },
     now: () => {
       return performance.now();
     },

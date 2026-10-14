@@ -38,6 +38,8 @@ export class PetApplication {
   #targetTimer: ReturnType<typeof setTimeout> | undefined;
   #biteTimer: ReturnType<typeof setTimeout> | undefined;
   #last = 0;
+  #frame: number | undefined;
+  #renderFrame: number | undefined;
   #initialized = false;
   #savedRevision = -1;
   #statusKey = "";
@@ -90,7 +92,7 @@ export class PetApplication {
       },
       move: (point) => {
         this.#dependencies.simulation.movePickup(point);
-        this.#render();
+        this.#requestRender();
         this.#syncBite();
       },
       finish: (cancelled, pointerId) => {
@@ -204,7 +206,8 @@ export class PetApplication {
     this.#lifecycle = "disposed";
     this.#generation++;
     this.#targetGeneration++;
-    this.#dependencies.clock.cancel(this.#timer);
+    this.#cancelTick();
+    this.#cancelRender();
     this.#dependencies.clock.cancel(this.#targetTimer);
     this.#dependencies.clock.cancel(this.#biteTimer);
     this.#timer = undefined;
@@ -478,7 +481,31 @@ export class PetApplication {
     void this.#memoryWriter.save(this.#dependencies.simulation.exportMemory());
   }
 
+  #requestRender(): void {
+    if (
+      !this.#running() ||
+      this.#renderFrame !== undefined ||
+      this.#frame !== undefined
+    ) {
+      return;
+    }
+    // Input can arrive faster than the display can paint. Keep the latest
+    // simulation state, and project it only once for a burst of input.
+    this.#renderFrame = this.#dependencies.clock.requestFrame(() => {
+      this.#renderFrame = undefined;
+      this.#render();
+    });
+  }
+
+  #cancelRender(): void {
+    if (this.#renderFrame !== undefined) {
+      this.#dependencies.clock.cancelFrame(this.#renderFrame);
+      this.#renderFrame = undefined;
+    }
+  }
+
   #render(): void {
+    this.#cancelRender();
     if (!this.#running()) {
       return;
     }
@@ -550,20 +577,32 @@ export class PetApplication {
     this.#last = now;
     this.#render();
     this.#syncPointer();
-    let delay = 100;
     if (sim.status().animate) {
-      delay = 33;
+      this.#frame = this.#dependencies.clock.requestFrame(() => {
+        this.#frame = undefined;
+        this.#tick();
+      });
+    } else {
+      this.#timer = this.#dependencies.clock.schedule(() => {
+        this.#tick();
+      }, 100);
     }
-    this.#timer = this.#dependencies.clock.schedule(() => {
-      this.#tick();
-    }, delay);
+  }
+
+  #cancelTick(): void {
+    this.#dependencies.clock.cancel(this.#timer);
+    this.#timer = undefined;
+    if (this.#frame !== undefined) {
+      this.#dependencies.clock.cancelFrame(this.#frame);
+      this.#frame = undefined;
+    }
   }
 
   #wake(): void {
     if (!this.#running()) {
       return;
     }
-    this.#dependencies.clock.cancel(this.#timer);
+    this.#cancelTick();
     this.#timer = undefined;
     this.#last = this.#dependencies.clock.now();
     this.#dependencies.simulation.setVisible(this.#visible);
@@ -769,7 +808,7 @@ export class PetApplication {
     if (this.#targeting && this.#targetPurpose === "tidy") {
       this.#tidyPoint = { x: event.x, y: event.y };
       this.#dependencies.simulation.tidyPointer(this.#tidyPoint);
-      this.#render();
+      this.#requestRender();
     }
   }
 

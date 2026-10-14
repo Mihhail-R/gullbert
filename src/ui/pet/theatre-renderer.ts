@@ -1,5 +1,5 @@
 import type { Prop } from "../../simulation/model.js";
-import { requiredElement } from "../dom.js";
+import { requiredElement, updateText } from "../dom.js";
 import type { PetPresentation } from "../../simulation/presentation.js";
 
 export function createTheatreRenderer(
@@ -30,7 +30,7 @@ export function createTheatreRenderer(
       }
     }
     if (prop.text !== undefined) {
-      node.textContent = prop.text;
+      updateText(node, prop.text);
     }
     node.style.left = `${Math.round(prop.x)}px`;
     node.style.top = `${Math.round(prop.y)}px`;
@@ -79,11 +79,11 @@ export function createTheatreRenderer(
     const message = sim.guestSpeech;
     dialogue.hidden = !message;
     if (message) {
-      dialogue.textContent = message.text;
+      updateText(dialogue, message.text);
       dialogue.style.left = `${Math.max(90, Math.min(sim.width - 90, message.x))}px`;
       dialogue.style.top = `${Math.max(6, Math.min(sim.height - 45, message.y))}px`;
     } else {
-      dialogue.textContent = "";
+      updateText(dialogue, "");
     }
     const placement = sim.hatPlacement;
     hat.hidden = !placement;

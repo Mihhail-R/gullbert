@@ -16,7 +16,8 @@ export interface CaretSample extends Point {
   glyph?: string | null;
 }
 export type Direction = -1 | 1;
-export type Hat = "none" | "captain" | "cone";
+export type Hat =
+  "none" | "captain" | "cone" | "beanie" | "paper-crown" | "fried-egg";
 export interface Settings {
   paused: boolean;
   vision?: boolean;
