@@ -14,10 +14,11 @@ const bird = (extra = {}) => ({
   ...extra,
 });
 
-test("hat settings admit only the two supplied hats and none", () => {
+test("hat settings admit only the supplied hats and none", () => {
   for (const value of [null, undefined, {}, "CAPTAIN", "crown", "none"])
     assert.equal(normalizeHat(value), "none");
-  for (const hat of ["captain", "cone"]) assert.equal(normalizeHat(hat), hat);
+  for (const hat of ["captain", "cone", "beanie", "paper-crown", "fried-egg"])
+    assert.equal(normalizeHat(hat), hat);
   assert.equal(hatPlacement(bird({ settings: {} })), null);
 });
 
@@ -79,7 +80,14 @@ test("configure changes hats during real scenes without canceling their activity
     const scene = sim.inspect().scene;
     const mode = sim.inspect().mode;
     assert.ok(scene);
-    for (const hat of ["captain", "cone", "none"]) {
+    for (const hat of [
+      "captain",
+      "cone",
+      "beanie",
+      "paper-crown",
+      "fried-egg",
+      "none",
+    ]) {
       sim.configure({ hat });
       assert.equal(sim.inspect().settings.hat, hat);
       assert.deepEqual(sim.inspect().scene, scene);

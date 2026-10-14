@@ -14,6 +14,8 @@ This is an early v0.1 preview. Apple Silicon macOS has had local testing; Window
 - Let him roam, nap, preen, and develop passing opinions about his surroundings.
 - Send him to fetch questionable treasures and remember a favourite loitering spot.
 - Blow bubbles, run a bath, toss chips, choose a tiny hat, and invite rival birds.
+- Watch him lean into head scratches, give an offended look when you stop, and hop happily after a chip.
+- Dress him in a captain hat, traffic cone, fisherman’s beanie, paper crown, or fried egg.
 - Poke him, scratch his head, or drag him somewhere else. Repeated pickups provoke increasingly petty revenge.
 - Aim a poop run, clean up his mess, or start a baguette parade, a municipal inspection, or a questionable apology.
 - Fish for the typing caret, steal pretend letters, and build a punctuation nest. Approach with the pointer and he suddenly becomes a very innocent bird.
