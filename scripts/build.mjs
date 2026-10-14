@@ -40,6 +40,14 @@ export function buildFrontend() {
       recursive: true,
       filter: (file) => !file.endsWith(".ts"),
     });
+    const version = JSON.parse(
+      readFileSync(path.join(project, "package.json"), "utf8"),
+    ).version;
+    const index = path.join(staging, "index.html");
+    writeFileSync(
+      index,
+      readFileSync(index, "utf8").replaceAll("__APP_VERSION__", version),
+    );
     // Emit ordinary ESM so older desktop WebViews need no JSON-module support.
     // TypeScript checks the source JSON import; this embeds that same catalog.
     writeFileSync(

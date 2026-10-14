@@ -4,9 +4,19 @@
 
 ![Gullbert, an original pixel seagull](art/gullbert.gif)
 
-Gullbert waddles across your desktop, demands chips, has opinions, and occasionally leaves a little gift. An offline desktop toy for macOS and Windows, built with Tauri and TypeScript. No account, analytics, cloud AI service, or background network requests. Optional local vision on macOS and Windows reads a small screen region when enabled.
+Gullbert waddles across your desktop, demands chips, has opinions, and occasionally leaves a little gift. An offline desktop toy for macOS and Windows, built with Tauri and TypeScript. No account, analytics, cloud AI service, or background network requests. App updates contact GitHub only when you explicitly check or install. Optional local vision on macOS and Windows reads a small screen region when enabled.
 
-This is an early v0.1 preview. Apple Silicon macOS has had local testing; Windows and Intel Mac still need native testing before a stable release. Current packages are unsigned or ad-hoc signed and are not notarized, so downloaded builds may trigger platform security prompts.
+This is an early preview. Apple Silicon macOS has had local testing; Windows and Intel Mac still need native testing before a stable release. Current packages are unsigned or ad-hoc signed and are not notarized, so downloaded builds may trigger platform security prompts.
+
+## Install and update
+
+On Mac, download the `.dmg` for Apple Silicon (`aarch64`) or Intel (`x86_64`), open it, and drag Gullbert into Applications. Quit an older running Gullbert using its menu before replacing it, then launch the copy in Applications. Opening an app inside Downloads or the disk image does not install it. On Windows, download and run the `setup.exe`.
+
+In the control room or tray, open **App updates**, choose **Check for updates**, then **Install and restart**. The app shows the available version, release notes, progress, and errors. Checks and downloads contact GitHub only on request; update signatures are verified before installation. Preferences and belongings remain in their existing data directory. Mac copies launched from a mounted disk image or macOS App Translocation must be moved to Applications and relaunched before updating.
+
+**Include beta releases** defaults on in a beta build and off in a stable build. Stable checks exclude prereleases; beta checks consider both stable and beta releases and select the highest newer version among the most recent 100 published releases. There are no downgrades. Channel selection lasts for the current app session. An error or failed install can be retried by checking again.
+
+Versions before 0.3.0-beta.1 need one manual replacement to receive the updater. DMGs are for first installation; `.app.tar.gz`, `.sig`, and `latest.json` assets are used by the updater. Update signing is separate from Apple Developer ID: these Mac builds remain ad-hoc signed and unnotarized, and Windows installers remain unsigned.
 
 ## Meet your new nuisance
 
@@ -110,7 +120,7 @@ The playground's download button opens [all releases](https://github.com/Mihhail
 
 ```sh
 # macOS, for the current machine's architecture
-npm run build -- --bundles app
+npm run build -- --bundles app,dmg
 
 # Windows, on Windows
 npm run build -- --bundles nsis
@@ -118,7 +128,13 @@ npm run build -- --bundles nsis
 
 These commands write packages to `src-tauri/target/release/bundle/` unless you override the target directory. Passing `--target <triple>` adds that target beneath `src-tauri/target/`, as in CI. Quit any running Gullbert before testing a new build: a second launch communicates with the existing instance.
 
-The [GitHub Actions workflow](.github/workflows/build.yml) runs frontend tests, type checks, and formatting checks on pull requests, main-branch pushes, and manual runs. Only pushing a `v*` tag also builds Apple Silicon, Intel Mac, and Windows x64 packages on matching runners and runs native tests. Workflow artifacts are retained for 14 days. After all jobs pass, the tag push creates a **draft GitHub Release** with zipped Mac apps and a Windows installer. Mac artifacts are ad-hoc signed; Windows installers are unsigned. Neither Developer ID signing nor notarization is configured. Review the draft before publishing.
+The [GitHub Actions workflow](.github/workflows/build.yml) checks the frontend on pushes and pull requests. Version-tag pushes additionally run native tests and build Apple Silicon, Intel Mac, and Windows x64 packages. All embedded versions and the tag must agree; the build rejects mismatches. Set the version in `package.json`, `package-lock.json` (including its root package), `src-tauri/Cargo.toml`, the Gullbert entry in `src-tauri/Cargo.lock`, and `src-tauri/tauri.conf.json`, then run `node scripts/release.mjs check`. The visible version is generated from this metadata; native builds display the running app's version.
+
+Release builds require the `TAURI_SIGNING_PRIVATE_KEY` GitHub Actions secret. The matching public key is embedded in `tauri.conf.json`. Back up the private key securely outside the repository: losing it prevents updates to existing installations. Local release builds also need `TAURI_SIGNING_PRIVATE_KEY` (key contents or file path) and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` if the key is encrypted. For a local build without update artifacts, pass `--config '{"bundle":{"createUpdaterArtifacts":false}}'` to Tauri.
+
+Push a tag such as `v0.3.0-beta.1` only after merging the intended source. CI produces a **draft GitHub Release** containing versioned Mac DMGs, a Windows installer, signed update packages, and a combined `latest.json` manifest with all three platforms. Tags containing a hyphen are marked prerelease. Review and publish the draft to make it discoverable by the app; drafts are never offered. The updater discovers published releases through GitHub's API, so beta releases do not depend on GitHub's stable-only `/latest` redirect. Mac code signing happens before update archives are generated; do not modify packaged binaries after signing.
+
+Before publishing the first updater release, test a signed upgrade between two distinct versions on each supported platform, including a rejected signature, an interrupted download, and preserved settings. GitHub API rate limits, connectivity failures, and missing update assets surface as errors rather than an “up to date” result.
 
 The macOS deployment target is 11.0; local vision requires 14.0 or newer. Linux desktop builds are not part of the supported build matrix. Before a stable release, test downloaded packages on each target platform, including installation, click-through, dragging, targeting, Escape, physical shortcuts, sound, permissions, and multiple displays. Browser tests and native unit tests do not establish desktop compatibility. Exclusive fullscreen apps and some virtual desktop configurations may hide the overlay. macOS transparency uses Tauri's private API option; distribution targets direct downloads rather than the Mac App Store.
 

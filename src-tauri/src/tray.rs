@@ -7,13 +7,14 @@ use std::sync::atomic::Ordering;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem, Submenu},
     tray::TrayIconBuilder,
-    Listener, Manager,
+    Emitter, Listener, Manager,
 };
 
 pub(crate) fn install(app: &tauri::App) -> tauri::Result<()> {
     let menu = Menu::new(app)?;
     for (id, label) in [
         ("controls", "Open control room"),
+        ("updates", "App updates…"),
         ("summon", "Summon Gullbert  ·  Ctrl+Alt+G"),
     ] {
         menu.append(&MenuItem::with_id(app, id, label, true, None::<&str>)?)?;
@@ -132,6 +133,13 @@ pub(crate) fn install(app: &tauri::App) -> tauri::Result<()> {
         .menu(&menu)
         .show_menu_on_left_click(true)
         .on_menu_event(|app, e| {
+            if e.id.as_ref() == "updates" {
+                dispatch_action(app, Action::Controls);
+                if let Some(window) = app.get_webview_window("controls") {
+                    let _ = window.emit("gullbert-open-updates", ());
+                }
+                return;
+            }
             let action = match e.id.as_ref() {
                 "visibility" => {
                     if app.state::<State>().visible.load(Ordering::SeqCst) {

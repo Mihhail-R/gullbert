@@ -1,3 +1,4 @@
+import { setupUpdates } from "./updates.js";
 import { requiredElement } from "../dom.js";
 import {
   native,
@@ -375,3 +376,5 @@ window.addEventListener("pagehide", () => {
   clearInterval(visionStatusTimer);
 });
 void visionStatus();
+
+setupUpdates();

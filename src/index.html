@@ -11,7 +11,7 @@
       <header>
         <div class="eyebrow">
           <span class="dot"></span> YOUR LOCAL NUISANCE
-          <span class="version">v0.1</span>
+          <span class="version">v__APP_VERSION__</span>
         </div>
         <div class="intro">
           <div>
@@ -261,6 +261,30 @@
               </div>
             </section>
           </div>
+        </details>
+        <details
+          id="updates"
+          class="control-section"
+          name="control-room"
+          hidden
+        >
+          <summary>App updates</summary>
+          <section class="update-content">
+            <p id="update-status" role="status">
+              Check for a newer Gullbert release.
+            </p>
+            <label
+              ><input id="update-beta" type="checkbox" /> Include beta
+              releases</label
+            >
+            <p>Connects to GitHub only when you check or install.</p>
+            <progress id="update-progress" hidden></progress>
+            <button id="update-check" type="button">Check for updates</button>
+            <button id="update-install" type="button" hidden>
+              Install and restart
+            </button>
+            <pre id="update-notes" hidden></pre>
+          </section>
         </details>
       </div>
       <div class="bottom-bar">

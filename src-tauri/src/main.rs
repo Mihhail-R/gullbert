@@ -7,6 +7,7 @@ mod roommate;
 mod shortcuts;
 mod state;
 mod tray;
+mod updates;
 mod vision;
 mod windows;
 
@@ -25,6 +26,8 @@ fn prepare_pet(app: tauri::AppHandle) -> Result<Snapshot, String> {
 fn main() {
     tauri::Builder::default()
         .manage(State::default())
+        .manage(updates::Runtime::default())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(vision::Runtime::default())
         .manage(native_input::Runtime::default())
         .plugin(tauri_plugin_single_instance::init(|app, args, _| {
@@ -33,6 +36,9 @@ fn main() {
         .plugin(shortcuts::plugin())
         .invoke_handler(tauri::generate_handler![
             state::snapshot,
+            updates::app_version,
+            updates::check_update,
+            updates::install_update,
             pet_ready,
             state::update_settings,
             actions::act,

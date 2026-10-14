@@ -24,6 +24,9 @@ interface Snapshot {
   shortcut_errors: string[];
 }
 interface Commands {
+  app_version: [undefined, string];
+  check_update: [{ beta: boolean }, { version: string; notes: string } | null];
+  install_update: [undefined, void];
   act: [{ action: string }, void];
   update_settings: [{ settings: Settings }, void];
   snapshot: [undefined, Snapshot];
@@ -57,6 +60,12 @@ interface Commands {
   target_picked: [Point, void];
 }
 interface Events {
+  "gullbert-update-progress": {
+    downloaded: number;
+    total: number | null;
+    installing: boolean;
+  };
+  "gullbert-open-updates": unknown;
   "gullbert-action": ActionMessage;
   "gullbert-settings": Settings;
   "gullbert-visible": boolean;

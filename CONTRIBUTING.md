@@ -13,7 +13,7 @@ cargo test --manifest-path src-tauri/Cargo.toml --locked
 
 Use `npm run format` to apply frontend and documentation formatting. For native changes, also run `cargo fmt --manifest-path src-tauri/Cargo.toml --check`, test the desktop overlay, and state which operating system you used. Check click-through, dragging, targeting, Escape, hiding, and shortcuts; browser mocks cannot verify OS input delivery. Include a screenshot or short clip for a new gag.
 
-Keep autonomous actions infrequent and bounded. Commands take priority, hidden time does not accumulate events, and remembered belongings survive cleanup. Keep the core offline, without telemetry, cloud AI services, auto-start, or background network calls. Screen capture is confined to the explicitly enabled local-vision feature: transient, cropped, and processed on-device. Discuss larger changes before adding dependencies.
+Keep autonomous actions infrequent and bounded. Commands take priority, hidden time does not accumulate events, and remembered belongings survive cleanup. Keep the core offline, without telemetry, cloud AI services, auto-start, or background network calls. Screen capture is confined to the explicitly enabled local-vision feature: transient, cropped, and processed on-device. The explicit App updates flow may contact GitHub to discover and download signed releases. Discuss larger changes before adding dependencies.
 
 Code contributions use MIT; artwork must declare its license. Do not submit third-party character packs without permission.
 
