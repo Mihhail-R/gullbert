@@ -25,7 +25,7 @@ interface TouchState {
   since: number;
   zone: "" | "near" | "head" | "body";
   until: number;
-  reaction: "" | "pet" | "poke" | "ruffled";
+  reaction: "" | "pet" | "poke" | "ruffled" | "miss-scratch";
   pokes: number[];
   nextRemark: number;
   nextPoke: number;
@@ -205,6 +205,10 @@ export class Touch {
     if (point) {
       zone = zoneAt(context.body, point);
     }
+    if (state.reaction === "pet" && zone !== "head") {
+      state.reaction = "miss-scratch";
+      state.until = now + 0.65;
+    }
     if (zone !== state.zone) {
       state.zone = zone;
       state.since = now;
@@ -252,7 +256,7 @@ export class Touch {
       return null;
     }
     if (state.until > now) {
-      if (state.reaction === "ruffled") {
+      if (state.reaction === "ruffled" || state.reaction === "miss-scratch") {
         return "bag-offended";
       }
       return "nap-startle";

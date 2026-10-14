@@ -1,0 +1,9 @@
+<!-- Original Gullbert artwork, CC0-1.0. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 12" shape-rendering="crispEdges" role="img" aria-label="fisherman's beanie">
+  <path fill="#293344" d="M5 1h5v1h2v1h1v2h1v2h1v3H2V7h1V4h1V2h1Z"/>
+  <path fill="#bc644b" d="M5 3h2V2h3v1h2v2h1v3H4V4h1Z"/>
+  <path fill="#e58c63" d="M6 3h1v4H6Zm3 0h1v4H9Z"/>
+  <path fill="#e58c63" d="M3 7h11v2H3Z"/>
+  <path fill="#bc644b" d="M4 7h1v2H4Zm3 0h1v2H7Zm3 0h1v2h-1Z"/>
+  <path fill="#f6f3e8" d="M12 7h2v2h-2Z"/>
+</svg>

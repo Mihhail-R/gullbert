@@ -192,7 +192,7 @@ export class SnackRoutine implements SceneOwner {
     if (scene.phase === "approach" && bag) {
       if (sim.body.moveToward(bagGoal(sim), 180, dt)) {
         scene.phase = "eat";
-        scene.until = sim.clock.now + 1.4;
+        scene.until = sim.clock.now + 2.05;
         sim.objects.consumeBag(bag.id);
         sim.food.clearRequest();
         sim.events.emit("munch");

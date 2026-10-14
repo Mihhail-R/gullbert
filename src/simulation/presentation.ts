@@ -7,6 +7,8 @@ import {
   cleanupTarget,
   directCleanupTarget,
 } from "./behaviors/cleanup.js";
+import { affectionMotion } from "./behaviors/affection.js";
+import { POSES } from "./poses.js";
 import { hatPlacement, hatPosture } from "./behaviors/hats.js";
 
 export type ReadonlyValue<T> = T extends readonly (infer Item)[]
@@ -35,7 +37,20 @@ export function projectPresentation(
       highlight = directCleanupTarget(sim, pointer);
     }
   }
+  const affection = affectionMotion(sim);
+  let pose = sim.pose;
+  let frame = sim.frame;
+  if (affection.kind === "hop") {
+    pose = "blink";
+    if (affection.y > 0) {
+      pose = "crouch";
+    } else if (affection.y < 0) {
+      pose = "wingUp";
+    }
+    frame = POSES[pose];
+  }
   const view = {
+    affection,
     width: sim.width,
     height: sim.height,
     time: sim.time,
@@ -43,8 +58,8 @@ export function projectPresentation(
     y: sim.y,
     facing: sim.facing,
     mode: sim.mode,
-    pose: sim.pose,
-    frame: sim.frame,
+    pose,
+    frame,
     bubble: sim.bubble,
     hat: hatPosture(sim),
     perch: sim.memory.perch,
@@ -75,7 +90,7 @@ export function projectPresentation(
     hitRegions: interactionRects(sim, interactive),
     props: routine.props ?? [],
     guestSpeech: routine.guestSpeech ?? null,
-    hatPlacement: hatPlacement(sim),
+    hatPlacement: hatPlacement({ ...sim, pose }),
   };
   return structuredClone(view);
 }

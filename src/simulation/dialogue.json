@@ -124,7 +124,7 @@
           "reveal": "a sleeping bag. probably."
         },
         "glass_diamond": {
-          "name": "Glass ‘diamond’",
+          "name": "Glass \u2018diamond\u2019",
           "description": "Priceless. According to me.",
           "reveal": "a completely real diamond."
         },
@@ -152,6 +152,18 @@
         "unauthorised feet detected.",
         "diverting traffic. towards chips.",
         "hard hat. soft potato policy."
+      ],
+      "beanie": [
+        "weatherproof. emotionally unavailable.",
+        "local fisherman. no licence."
+      ],
+      "paper-crown": [
+        "king of the chip queue.",
+        "my kingdom for another chip."
+      ],
+      "fried-egg": [
+        "breakfast is a state of mind.",
+        "no questions about the egg."
       ]
     },
     "moods": {
@@ -422,11 +434,11 @@
       ],
       "snatch": [
         {
-          "gullbert": "wait—",
+          "gullbert": "wait\u2014",
           "visitor": "yoink."
         },
         {
-          "gullbert": "objection—",
+          "gullbert": "objection\u2014",
           "visitor": "overruled."
         }
       ],
