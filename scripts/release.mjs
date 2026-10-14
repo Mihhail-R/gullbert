@@ -14,18 +14,18 @@ const targets = {
   "x86_64-apple-darwin": "darwin-x86_64",
   "x86_64-pc-windows-msvc": "windows-x86_64",
 };
-export function checkVersion(tag) {
+export function checkVersion(tag, directory = root) {
   const read = (file) =>
-    JSON.parse(readFileSync(path.join(root, file), "utf8"));
+    JSON.parse(readFileSync(path.join(directory, file), "utf8"));
   const version = read("package.json").version;
   const cargo = readFileSync(
-    path.join(root, "src-tauri/Cargo.toml"),
+    path.join(directory, "src-tauri/Cargo.toml"),
     "utf8",
   ).match(/^version = "([^"]+)"/m)?.[1];
   const lock = readFileSync(
-    path.join(root, "src-tauri/Cargo.lock"),
+    path.join(directory, "src-tauri/Cargo.lock"),
     "utf8",
-  ).match(/name = "gullbert"\nversion = "([^"]+)"/)?.[1];
+  ).match(/name = "gullbert"\r?\nversion = "([^"]+)"/)?.[1];
   if (
     [
       read("src-tauri/tauri.conf.json").version,

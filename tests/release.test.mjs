@@ -1,6 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  readFileSync,
+  rmSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { collect, merge, checkVersion } from "../scripts/release.mjs";
@@ -55,4 +61,39 @@ test("release tags must agree with all embedded versions", () => {
   const version = checkVersion();
   assert.equal(checkVersion(`v${version}`), version);
   assert.throws(() => checkVersion("v99.0.0"), /must match/);
+});
+
+test("release validation accepts Windows CRLF checkouts and still catches mismatches", () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "gullbert-crlf-"));
+  try {
+    mkdirSync(path.join(directory, "src-tauri"));
+    for (const file of [
+      "package.json",
+      "package-lock.json",
+      "src-tauri/Cargo.toml",
+      "src-tauri/Cargo.lock",
+      "src-tauri/tauri.conf.json",
+    ]) {
+      const content = readFileSync(
+        new URL(`../${file}`, import.meta.url),
+        "utf8",
+      );
+      writeFileSync(
+        path.join(directory, file),
+        content.replace(/\r?\n/g, "\r\n"),
+      );
+    }
+    const version = checkVersion();
+    assert.equal(checkVersion(`v${version}`, directory), version);
+    writeFileSync(
+      path.join(directory, "src-tauri/Cargo.lock"),
+      '[[package]]\r\nname = "gullbert"\r\nversion = "99.0.0"\r\n',
+    );
+    assert.throws(
+      () => checkVersion(undefined, directory),
+      /versions must match/,
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
