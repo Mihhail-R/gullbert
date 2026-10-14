@@ -1,6 +1,6 @@
 [package]
 name = "gullbert"
-version = "0.3.0-beta.2"
+version = "0.3.0-beta.3"
 description = "A tiny desktop seagull"
 authors = ["Gullbert contributors"]
 license = "MIT"
@@ -20,6 +20,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri-plugin-updater = "2"
 semver = "1"
+rustls = { version = "0.23", default-features = false, features = ["ring"] }
 reqwest = { version = "0.13", default-features = false, features = ["json", "rustls-no-provider"] }
 
 [profile.release]

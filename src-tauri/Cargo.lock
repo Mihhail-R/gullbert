@@ -1517,11 +1517,12 @@ dependencies = [
 
 [[package]]
 name = "gullbert"
-version = "0.3.0-beta.2"
+version = "0.3.0-beta.3"
 dependencies = [
  "ocrs",
  "reqwest",
  "rten",
+ "rustls",
  "semver",
  "serde",
  "serde_json",

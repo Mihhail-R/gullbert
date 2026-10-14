@@ -84,6 +84,16 @@ fn newest<'a>(
         })
         .max_by(|a, b| a.1.cmp(&b.1))
 }
+fn github_client() -> Result<reqwest::Client, String> {
+    // Release discovery runs before Tauri's updater initializes its TLS provider.
+    // Reuse its ring provider, leaving an existing process-wide choice intact.
+    let _ = rustls::crypto::ring::default_provider().install_default();
+    reqwest::Client::builder()
+        .timeout(Duration::from_secs(30))
+        .user_agent(concat!("Gullbert/", env!("CARGO_PKG_VERSION")))
+        .build()
+        .map_err(|e| e.to_string())
+}
 #[tauri::command]
 pub(crate) async fn check_update(
     app: tauri::AppHandle,
@@ -94,11 +104,7 @@ pub(crate) async fn check_update(
     controls(&window)?;
     let _operation = runtime.begin()?;
     *runtime.pending.lock().unwrap() = None;
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(30))
-        .user_agent(concat!("Gullbert/", env!("CARGO_PKG_VERSION")))
-        .build()
-        .map_err(|e| e.to_string())?;
+    let client = github_client()?;
     let releases: Vec<Release> = client
         .get("https://api.github.com/repos/Mihhail-R/gullbert/releases?per_page=100")
         .send()
@@ -199,6 +205,10 @@ pub(crate) async fn install_update(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn github_client_initializes_before_any_updater_check() {
+        assert!(github_client().is_ok());
+    }
     fn release(tag: &str, prerelease: bool, draft: bool) -> Release {
         Release {
             tag_name: tag.into(),
