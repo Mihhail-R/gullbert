@@ -1,3 +1,4 @@
+import { dialogue } from "../dialogue.js";
 import type { Hat, Settings } from "../model.js";
 import type { SimulationView } from "../capabilities.js";
 /** Hats are presentation only: selection never owns or interrupts a scene. */
@@ -69,18 +70,7 @@ export function hatRemark(sim: {
   if (hat === "none") {
     return null;
   }
-  const lines = {
-    captain: [
-      "captain. obviously.",
-      "all chips aboard.",
-      "port side is also mine.",
-    ],
-    cone: [
-      "safety has arrived.",
-      "unauthorised feet detected.",
-      "diverting traffic. towards chips.",
-    ],
-  }[hat];
+  const lines = dialogue.gullbert.hats[hat];
   if (!lines) {
     return null;
   }

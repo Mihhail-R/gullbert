@@ -1,0 +1,455 @@
+{
+  "gullbert": {
+    "cleanup": {
+      "reactions": {
+        "rubbish": [
+          "I brought that especially.",
+          "my interior design. ruined."
+        ],
+        "splat": [
+          "that was load-bearing.",
+          "you've ruined the atmosphere.",
+          "a historic dropping.",
+          "my finest work. gone."
+        ],
+        "chip": [
+          "that was my emergency chip.",
+          "there was still flavour in that.",
+          "evidence of lunch.",
+          "you owe me one potato."
+        ],
+        "bag": [
+          "there was still smell in that.",
+          "that was a residence.",
+          "my bag of possibilities.",
+          "I was saving that air."
+        ],
+        "cone": [
+          "unauthorised works.",
+          "you lack a gull permit.",
+          "that cone was structural.",
+          "the council will hear of this."
+        ],
+        "escalation": [
+          "I am supervising this outrage.",
+          "this is now a formal dispute.",
+          "your technique is unacceptable.",
+          "consider yourself observed."
+        ],
+        "sulk": [
+          "we are not speaking.",
+          "I preferred the atmosphere before.",
+          "I am facing away on purpose.",
+          "yes. still offended."
+        ]
+      },
+      "youveRuinedTheAtmosphere": "you've ruined the atmosphere.",
+      "iPutItBack": "I put it back.",
+      "aReplacementAtmosphere": "a replacement atmosphere."
+    },
+    "crime": {
+      "aModelCitizen": "a model citizen.",
+      "firstProvideTheEvidence": "first, provide the evidence.",
+      "justPassingThrough": "just passing through.",
+      "oneLastChip": "one last chip?",
+      "thisBagFollowedMe": "this bag followed me.",
+      "theEvidenceHasVanished": "the evidence has vanished.",
+      "nothingToSeeHere": "nothing to see here.",
+      "mineQuietly": "mine. quietly.",
+      "aThoroughInspection": "a thorough inspection.",
+      "tooFarBringItHere": "too far. bring it here.",
+      "pause": "...",
+      "relocationService": "relocation service.",
+      "asIWasSaying": "as I was saying.",
+      "hello": "...hello?",
+      "bagHasGull": "BAG HAS GULL.",
+      "releaseTheSeagull": "release the seagull!",
+      "thatWasDeliberate": "that was deliberate."
+    },
+    "cursor": {
+      "pointerInspectionOnHold": "pointer inspection on hold.",
+      "chip": "...chip?",
+      "tooSlippery": "too slippery.",
+      "whereDidItGo": "where did it go?",
+      "notAChip": "not a chip.",
+      "considerUsEven": "consider us even.",
+      "notWorthTheEffort": "not worth the effort.",
+      "gotYou": "got you.",
+      "nom": "nom?",
+      "comeBackHere": "come back here.",
+      "holdStillLunch": "hold still, lunch.",
+      "mineEscToEscape": "MINE. Esc to escape."
+    },
+    "gags": {
+      "postcards": {
+        "liberty": "liberty. with a little something from me.",
+        "giza": "giza. left my mark on history.",
+        "car": "freshly washed. perfectly timed.",
+        "eiffel": "paris. my finest work."
+      },
+      "waitIHaveHolidayPhotos": "wait. I have holiday photos.",
+      "fineIShallLeave": "fine. I shall leave.",
+      "aPromisingEgg": "a promising egg.",
+      "essentialInfrastructure": "essential infrastructure.",
+      "aGestureOfGoodwill": "a gesture of goodwill.",
+      "theEggHasOtherCommitments": "the egg has other commitments.",
+      "itHatched": "it hatched.",
+      "aWelltravelledBird": "a well-travelled bird.",
+      "forgotSomething": "forgot something.",
+      "notReadyForParenthood": "not ready for parenthood.",
+      "whereDidMyEggGo": "where did my egg go?",
+      "doNotDisturbParenting": "do not disturb. parenting.",
+      "incubationPostponed": "incubation postponed.",
+      "worksOngoing": "works ongoing.",
+      "forYou": "for you.",
+      "gladWeResolvedThat": "glad we resolved that."
+    },
+    "gifts": {
+      "backSoonExcellentJudgementAwaits": "back soon. excellent judgement awaits.",
+      "beholdMyImpeccableTaste": "behold my impeccable taste.",
+      "items": {
+        "bottle_cap": {
+          "name": "Bottle cap",
+          "description": "A crown. For a very small king.",
+          "reveal": "royal treasure."
+        },
+        "bent_spoon": {
+          "name": "Bent spoon",
+          "description": "A shovel with ambition issues.",
+          "reveal": "cutlery. improved."
+        },
+        "sock": {
+          "name": "One sock",
+          "description": "The other one lacked vision.",
+          "reveal": "a sleeping bag. probably."
+        },
+        "glass_diamond": {
+          "name": "Glass ‘diamond’",
+          "description": "Priceless. According to me.",
+          "reveal": "a completely real diamond."
+        },
+        "parking_ticket": {
+          "name": "Parking ticket",
+          "description": "An official invitation to pay me in chips.",
+          "reveal": "you have won a fine."
+        },
+        "chip": {
+          "description": "I brought lunch. My lunch.",
+          "reveal": "for you. actually, for me.",
+          "name": "Chip"
+        }
+      }
+    },
+    "hats": {
+      "captain": [
+        "captain. obviously.",
+        "all chips aboard.",
+        "port side is also mine.",
+        "I go down with the chips."
+      ],
+      "cone": [
+        "safety has arrived.",
+        "unauthorised feet detected.",
+        "diverting traffic. towards chips.",
+        "hard hat. soft potato policy."
+      ]
+    },
+    "moods": {
+      "offended": [
+        "that was load-bearing.",
+        "I object on gull grounds.",
+        "an atmosphere of betrayal.",
+        "unauthorised tidiness.",
+        "I shall be writing to the pier."
+      ],
+      "sleepy": [
+        "just resting my opinions.",
+        "a very demanding nap.",
+        "five more gull minutes.",
+        "office hours resume after this feather settles."
+      ],
+      "curious": [
+        "hm. suspiciously interesting.",
+        "what's all this, then?",
+        "requires further staring.",
+        "could be food. could be a legal matter."
+      ],
+      "smug": [
+        "a masterpiece, frankly.",
+        "precision. no notes.",
+        "another flawless contribution.",
+        "the council of me is delighted."
+      ],
+      "snack-minded": [
+        "thinking about chips.",
+        "a crisp line of thought.",
+        "all roads lead to snacks.",
+        "one potato away from greatness."
+      ]
+    },
+    "perch": {
+      "pickMyLoiteringSpotFirst": "pick my loitering spot first.",
+      "myUsualSpot": "my usual spot.",
+      "loiteringRightsRevoked": "loitering rights revoked.",
+      "reservedForMe": "reserved. for me."
+    },
+    "pickup": {
+      "wrongPlaceWrongTimeFairEnough": "wrong place. wrong time. fair enough.",
+      "yesHereIsAlsoFine": "yes. here is also fine.",
+      "youCouldHaveAsked": "you could have asked.",
+      "iAmNotFurniture": "I am not furniture.",
+      "yourTurn": "your turn.",
+      "thisIsNowPersonal": "this is now personal.",
+      "iWillRedecorate": "I will redecorate.",
+      "aProportionateResponse": "a proportionate response.",
+      "sinceWereMovingThings": "since we're moving things.",
+      "iveImprovedIt": "I've improved it."
+    },
+    "quiet": {
+      "whoDidThat": "who did that?"
+    },
+    "snacks": {
+      "surelyThereAreChips": "surely there are chips.",
+      "chipsPlural": "CHIPS. plural.",
+      "aBagOfBetrayal": "a bag of betrayal.",
+      "noChipsScandalous": "no chips. scandalous."
+    },
+    "theatre": {
+      "floatingTrespassers": "floating trespassers.",
+      "aPrivateSeasideResort": "a private seaside resort.",
+      "airborneLunch": "airborne lunch.",
+      "airspaceSecured": "airspace secured.",
+      "ambush": "AMBUSH.",
+      "exactlyAsPlanned": "exactly as planned.",
+      "luxury": "luxury.",
+      "theSeaIsTooFarAway": "the sea is too far away.",
+      "everyFeatherIndividually": "every feather. individually.",
+      "naturallyImmaculate": "naturally immaculate.",
+      "beakOfTheMatch": "beak of the match.",
+      "theWindCheated": "the wind cheated.",
+      "groundLunchIsStillLunch": "ground lunch is still lunch.",
+      "savingThatForLater": "saving that for later."
+    },
+    "touch": {
+      "thisGullIsNotAButton": "this gull is not a button.",
+      "personalSpaceEverHeardOfIt": "personal space. ever heard of it?",
+      "fineOneHeadScratch": "fine. one head scratch."
+    },
+    "typing": {
+      "somethingsBiting": "something's biting.",
+      "justANormalBird": "just a normal bird.",
+      "pause": "...",
+      "itWasHereASecondAgo": "it was here a second ago.",
+      "youWerentUsingThis": "you weren't using this.",
+      "structuralPunctuation": "structural punctuation.",
+      "oDelicious": "o. delicious."
+    },
+    "general": {
+      "remarks": [
+        "mine.",
+        "chip?",
+        "absolutely not.",
+        "I live here now.",
+        "you saw nothing.",
+        "rent is due. in chips.",
+        "I have consulted myself. approved.",
+        "your desktop has excellent nesting potential.",
+        "this meeting could have been a chip."
+      ],
+      "iWasUsingThatMess": "I was using that mess.",
+      "ohRelocation": "oh. relocation.",
+      "excuseMe": "excuse me?!",
+      "putMeDown": "put. me. down.",
+      "weCanSettleOutOfCourt": "we can settle out of court.",
+      "chipDetected": "CHIP DETECTED.",
+      "precisionArtistry": "precision. artistry.",
+      "aChipForAHardworkingGull": "a chip? for a hardworking gull?"
+    },
+    "greetings": {
+      "first": [
+        "Gullbert. I live here now.",
+        "hello. excellent place for a gull.",
+        "new perch. same strong opinions.",
+        "hello. I represent the local gull council."
+      ],
+      "return": [
+        "ah, hello again.",
+        "you rang? splendid.",
+        "hello. still a gull.",
+        "ah. my favourite snack administrator."
+      ],
+      "treasure": [
+        "hello again. admire my {item}.",
+        "welcome back. my {item} is magnificent.",
+        "ah, hello. behold my {item}.",
+        "back already? my {item} has been expecting applause."
+      ]
+    }
+  },
+  "guests": {
+    "pigeon": {
+      "arrival": [
+        {
+          "gullbert": "you weren't invited. technically.",
+          "visitor": ""
+        },
+        {
+          "gullbert": "ah. the pavement inspector.",
+          "visitor": ""
+        }
+      ],
+      "inspect": [
+        {
+          "gullbert": "...",
+          "visitor": "just browsing."
+        },
+        {
+          "gullbert": "please browse with your eyes.",
+          "visitor": "my eyes say chips."
+        }
+      ],
+      "snackRemoved": [
+        {
+          "gullbert": "the buffet is closed.",
+          "visitor": "noted."
+        },
+        {
+          "gullbert": "the kitchen has disappeared.",
+          "visitor": "one star."
+        }
+      ],
+      "faceoffWithSnacks": [
+        {
+          "gullbert": "private chips.",
+          "visitor": "communal chips?"
+        },
+        {
+          "gullbert": "members only. one member.",
+          "visitor": "I brought my own beak."
+        }
+      ],
+      "faceoffWithoutSnacks": [
+        {
+          "gullbert": "nothing to see here.",
+          "visitor": "clearly."
+        },
+        {
+          "gullbert": "a private viewing of nothing.",
+          "visitor": "bold menu."
+        }
+      ],
+      "judgmentWithSnacks": [
+        {
+          "gullbert": "I have standards.",
+          "visitor": "apparently not sharing."
+        },
+        {
+          "gullbert": "this is a private potato estate.",
+          "visitor": "I shall inform the flock."
+        }
+      ],
+      "judgmentWithoutSnacks": [
+        {
+          "gullbert": "I have standards.",
+          "visitor": "debatable."
+        },
+        {
+          "gullbert": "I run a very exclusive establishment.",
+          "visitor": "exclusively empty."
+        }
+      ],
+      "departure": [
+        {
+          "gullbert": "and stay politely gone.",
+          "visitor": "poor service."
+        },
+        {
+          "gullbert": "do leave a review. privately.",
+          "visitor": "coo. and not a good coo."
+        }
+      ]
+    },
+    "seagull": {
+      "arrival": [
+        {
+          "gullbert": "that chip is spoken for.",
+          "visitor": ""
+        },
+        {
+          "gullbert": "that chip has a landlord. me.",
+          "visitor": ""
+        }
+      ],
+      "stare": [
+        {
+          "gullbert": "...",
+          "visitor": "that one."
+        },
+        {
+          "gullbert": "the others are available.",
+          "visitor": "I like this address."
+        }
+      ],
+      "posture": [
+        {
+          "gullbert": "I saw it first.",
+          "visitor": "I saw it louder."
+        },
+        {
+          "gullbert": "I have a verbal lease.",
+          "visitor": "I have a louder lawyer."
+        }
+      ],
+      "gullbertSquawk": [
+        {
+          "gullbert": "MINE.",
+          "visitor": ""
+        },
+        {
+          "gullbert": "MINE. LEGALLY.",
+          "visitor": ""
+        }
+      ],
+      "visitorSquawk": [
+        {
+          "gullbert": "",
+          "visitor": "MINE, ACTUALLY."
+        },
+        {
+          "gullbert": "",
+          "visitor": "COUNTER-SQUAWK."
+        }
+      ],
+      "snatch": [
+        {
+          "gullbert": "wait—",
+          "visitor": "yoink."
+        },
+        {
+          "gullbert": "objection—",
+          "visitor": "overruled."
+        }
+      ],
+      "reaction": [
+        {
+          "gullbert": "there were FIVE others.",
+          "visitor": "this one tastes like winning."
+        },
+        {
+          "gullbert": "an entire buffet. you chose theft.",
+          "visitor": "seasoned with victory."
+        }
+      ],
+      "departure": [
+        {
+          "gullbert": "I didn't want it anyway.",
+          "visitor": ""
+        },
+        {
+          "gullbert": "keeping the other five. out of principle.",
+          "visitor": ""
+        }
+      ]
+    }
+  }
+}

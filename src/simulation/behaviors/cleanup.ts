@@ -1,3 +1,4 @@
+import { dialogue } from "../dialogue.js";
 import type { Bag, Point, Settings, Flight } from "../model.js";
 import type { Pose } from "../poses.js";
 import type { Mood } from "./moods.js";
@@ -84,45 +85,7 @@ export function createCleanupState(): CleanupState {
     lines: {},
   };
 }
-const lines = {
-  rubbish: ["I brought that especially.", "my interior design. ruined."],
-  splat: [
-    "that was load-bearing.",
-    "you've ruined the atmosphere.",
-    "a historic dropping.",
-    "my finest work. gone.",
-  ],
-  chip: [
-    "that was my emergency chip.",
-    "there was still flavour in that.",
-    "evidence of lunch.",
-    "you owe me one potato.",
-  ],
-  bag: [
-    "there was still smell in that.",
-    "that was a residence.",
-    "my bag of possibilities.",
-    "I was saving that air.",
-  ],
-  cone: [
-    "unauthorised works.",
-    "you lack a gull permit.",
-    "that cone was structural.",
-    "the council will hear of this.",
-  ],
-  escalation: [
-    "I am supervising this outrage.",
-    "this is now a formal dispute.",
-    "your technique is unacceptable.",
-    "consider yourself observed.",
-  ],
-  sulk: [
-    "we are not speaking.",
-    "I preferred the atmosphere before.",
-    "I am facing away on purpose.",
-    "yes. still offended.",
-  ],
-};
+const lines = dialogue.gullbert.cleanup.reactions;
 export function cleanupObjects(sim: Geometry): CleanupTarget[] {
   const objects: CleanupTarget[] = [];
   function add(kind: CleanupKind, point: Point, id?: number) {
@@ -404,7 +367,7 @@ export class Cleanup {
     this.#state.reactionUntil = sim.time + 2;
     this.#state.level = 2;
     this.#host.moods.set("offended", sim.time, { speak: false });
-    this.#host.speech.say("you've ruined the atmosphere.");
+    this.#host.speech.say(dialogue.gullbert.cleanup.youveRuinedTheAtmosphere);
   }
   configure() {
     const sim = this.#host.observe();
@@ -436,12 +399,14 @@ export class Cleanup {
       if (!sim.scene && sim.mode === "idle" && !sim.settings.paused) {
         if (retaliation.kind === "bag" && !sim.bag && retaliation.bag) {
           this.#host.objects.restoreBag(retaliation.bag);
-          this.#host.speech.say("I put it back.");
+          this.#host.speech.say(dialogue.gullbert.cleanup.iPutItBack);
         } else if (retaliation.kind === "splat" && sim.settings.mischief >= 2) {
           this.#host.splat({ x: sim.x + 48, y: sim.y + 86 });
           this.#host.rest();
           this.#host.moods.set("offended", sim.time, { speak: false });
-          this.#host.speech.say("a replacement atmosphere.");
+          this.#host.speech.say(
+            dialogue.gullbert.cleanup.aReplacementAtmosphere,
+          );
         }
       }
     }

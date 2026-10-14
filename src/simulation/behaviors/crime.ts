@@ -1,3 +1,4 @@
+import { dialogue } from "../dialogue.js";
 import { observe } from "../observation.js";
 import type { ReadonlyValue } from "../presentation.js";
 import { scopeCapabilities } from "../capabilities.js";
@@ -148,9 +149,9 @@ export class CrimeRoutine implements SceneOwner {
     if (name === "caught" || !bag) {
       sim.lifecycle.rest(3);
       if (name === "caught") {
-        sim.speech.say("a model citizen.");
+        sim.speech.say(dialogue.gullbert.crime.aModelCitizen);
       } else {
-        sim.speech.say("first, provide the evidence.");
+        sim.speech.say(dialogue.gullbert.crime.firstProvideTheEvidence);
       }
       return true;
     }
@@ -176,9 +177,9 @@ export class CrimeRoutine implements SceneOwner {
     };
     sim.activity.beginRoutine(kind);
     if (kind === "theft") {
-      sim.speech.say("just passing through.", 2);
+      sim.speech.say(dialogue.gullbert.crime.justPassingThrough, 2);
     } else {
-      sim.speech.say("one last chip?", 2);
+      sim.speech.say(dialogue.gullbert.crime.oneLastChip, 2);
     }
     return true;
   }
@@ -199,7 +200,7 @@ export class CrimeRoutine implements SceneOwner {
     }
     scene.phase = "innocent";
     scene.until = Math.min(sim.clock.now + 2.2, scene.deadline - 0.5);
-    sim.speech.say("this bag followed me.", 2.2);
+    sim.speech.say(dialogue.gullbert.crime.thisBagFollowedMe, 2.2);
     return true;
   }
   #phase(name: CrimeScene["phase"], duration: number) {
@@ -257,11 +258,11 @@ export class CrimeRoutine implements SceneOwner {
     }
     const bag = sim.objects.snapshot().bag;
     if (!bag || scene.bagId !== bag.id) {
-      this.#finish("the evidence has vanished.");
+      this.#finish(dialogue.gullbert.crime.theEvidenceHasVanished);
       return true;
     }
     if (sim.clock.now >= scene.deadline) {
-      this.#finish("nothing to see here.");
+      this.#finish(dialogue.gullbert.crime.nothingToSeeHere);
       return true;
     }
     if (scene.phase === "approach") {
@@ -272,12 +273,12 @@ export class CrimeRoutine implements SceneOwner {
           this.#phase("inspect", 1);
         }
         if (scene.kind === "theft") {
-          sim.speech.say("mine. quietly.");
+          sim.speech.say(dialogue.gullbert.crime.mineQuietly);
         } else {
-          sim.speech.say("a thorough inspection.");
+          sim.speech.say(dialogue.gullbert.crime.aThoroughInspection);
         }
       } else if (sim.clock.now >= scene.until) {
-        this.#finish("too far. bring it here.");
+        this.#finish(dialogue.gullbert.crime.tooFarBringItHere);
       }
     } else if (scene.kind === "theft") {
       this.#stepTheft(dt);
@@ -316,11 +317,11 @@ export class CrimeRoutine implements SceneOwner {
       if (!scene.pausedOnce && (scene.dragged >= 1.8 || arrived)) {
         scene.pausedOnce = true;
         this.#phase("suspicious", 1.1);
-        sim.speech.say("...", 1.1);
+        sim.speech.say(dialogue.gullbert.crime.pause, 1.1);
       } else if (arrived || sim.clock.now >= scene.until) {
         sim.objects.releaseBag();
         this.#phase("release", 1.2);
-        sim.speech.say("relocation service.", 2.5);
+        sim.speech.say(dialogue.gullbert.crime.relocationService, 2.5);
       }
     } else if (scene.phase === "innocent" || scene.phase === "suspicious") {
       if (sim.clock.now >= scene.until) {
@@ -335,7 +336,7 @@ export class CrimeRoutine implements SceneOwner {
         } else {
           this.#phase(resume, 5);
         }
-        sim.speech.say("as I was saying.", 1.5);
+        sim.speech.say(dialogue.gullbert.crime.asIWasSaying, 1.5);
       }
     } else if (scene.phase === "release" && sim.clock.now >= scene.until) {
       this.#finish();
@@ -353,7 +354,7 @@ export class CrimeRoutine implements SceneOwner {
     if (scene.phase === "inspect" && sim.clock.now >= scene.until) {
       attachBag(sim);
       this.#phase("trapped", 1.1);
-      sim.speech.say("...hello?", 1.1);
+      sim.speech.say(dialogue.gullbert.crime.hello, 1.1);
     } else if (scene.phase === "trapped" && sim.clock.now >= scene.until) {
       this.#phase("panic", 4);
       if (sim.body.x < (sim.body.width - 96) / 2) {
@@ -362,7 +363,7 @@ export class CrimeRoutine implements SceneOwner {
         scene.direction = -1;
       }
       scene.target = this.#panicPoint(scene.direction);
-      sim.speech.say("BAG HAS GULL.", 2);
+      sim.speech.say(dialogue.gullbert.crime.bagHasGull, 2);
       sim.events.emit("squawk");
     } else if (scene.phase === "panic") {
       if (sim.body.moveToward(scene.target, 270, dt)) {
@@ -375,12 +376,12 @@ export class CrimeRoutine implements SceneOwner {
       }
       if (sim.clock.now >= scene.until) {
         this.#phase("shake", 1.5);
-        sim.speech.say("release the seagull!", 1.5);
+        sim.speech.say(dialogue.gullbert.crime.releaseTheSeagull, 1.5);
       }
     } else if (scene.phase === "shake" && sim.clock.now >= scene.until) {
       sim.objects.releaseBag({ x: sim.body.facing * 36, y: 24 });
       this.#phase("offended", 2.2);
-      sim.speech.say("that was deliberate.", 2.5);
+      sim.speech.say(dialogue.gullbert.crime.thatWasDeliberate, 2.5);
     } else if (scene.phase === "offended" && sim.clock.now >= scene.until) {
       this.#finish();
     }

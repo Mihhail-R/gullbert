@@ -1,18 +1,11 @@
+import { dialogue } from "./dialogue.js";
 import { normalizeMemory } from "./memory.js";
 import { ITEMS, isCollectible, type Collectible } from "./items.js";
 import type { Memory, Point } from "./model.js";
 
 export const GREETING_COOLDOWN_MS = 5 * 60 * 1000;
-const firstLines = [
-  "Gullbert. I live here now.",
-  "hello. excellent place for a gull.",
-  "new perch. same strong opinions.",
-];
-const returnLines = [
-  "ah, hello again.",
-  "you rang? splendid.",
-  "hello. still a gull.",
-];
+const firstLines = dialogue.gullbert.greetings.first;
+const returnLines = dialogue.gullbert.greetings.return;
 
 /** The sole writer of durable belongings and greeting history. */
 export class Belongings {
@@ -95,18 +88,19 @@ export class Belongings {
     if (history.seen) {
       const name = item && ITEMS[item].name.toLowerCase();
       if (name) {
-        lines = [
-          `hello again. admire my ${name}.`,
-          `welcome back. my ${name} is magnificent.`,
-          `ah, hello. behold my ${name}.`,
-        ];
+        lines = dialogue.gullbert.greetings.treasure.map((line) => {
+          return line.replaceAll("{item}", name);
+        });
       } else {
         lines = returnLines;
       }
     }
-    const choices = lines.filter((line) => {
+    let choices = lines.filter((line) => {
       return line !== history.lastLine;
     });
+    if (choices.length === 0) {
+      choices = lines;
+    }
     const line =
       choices[
         Math.min(choices.length - 1, Math.floor(random() * choices.length))

@@ -1,3 +1,4 @@
+import { dialogue } from "../../simulation/dialogue.js";
 import type { ActionMessage, PreviewMessage } from "../../platform/bridge.js";
 import { createPickupDrag } from "../../platform/pickup-drag.js";
 import { createCursorBiteBridge } from "../../platform/cursor-bite.js";
@@ -139,7 +140,7 @@ export class PetApplication {
         }
         const owned = scene as CursorLeaseScene;
         this.#dependencies.simulation.releaseCursor(
-          "too slippery.",
+          dialogue.gullbert.cursor.tooSlippery,
           owned.token,
         );
         this.#render();
@@ -782,7 +783,9 @@ export class PetApplication {
       !this.#dependencies.native &&
       this.#dependencies.simulation.cursorEncounter()?.phase === "chew"
     ) {
-      this.#dependencies.simulation.releaseCursor("too slippery.");
+      this.#dependencies.simulation.releaseCursor(
+        dialogue.gullbert.cursor.tooSlippery,
+      );
       this.#syncPointer();
     }
     this.#render();
