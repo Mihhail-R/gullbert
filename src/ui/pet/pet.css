@@ -1,0 +1,542 @@
+:root {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  color: #293344;
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent !important;
+  user-select: none;
+}
+#world {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+#gull {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 96px;
+  height: 96px;
+  will-change: transform;
+}
+#bird {
+  width: 96px;
+  height: 96px;
+  transform-origin: 50% 90%;
+}
+.sprite {
+  width: 96px;
+  height: 96px;
+  background: url("../../assets/gullbert-capers.png") 0 0 / auto 96px no-repeat;
+  image-rendering: pixelated;
+}
+#gull.eat #bird {
+  animation: peck 0.25s steps(1, end) infinite;
+}
+#gull.squawk #bird {
+  animation: shout 0.2s steps(1, end) infinite;
+}
+#speech {
+  position: absolute;
+  bottom: 86px;
+  left: 48px;
+  transform: translateX(-50%);
+  background: #fffdf3;
+  border: 2px solid #293344;
+  border-radius: 9px;
+  padding: 8px 11px;
+  font-size: 12px;
+  line-height: 1.3;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 3px 3px 0 #29334422;
+}
+#speech:empty {
+  display: none;
+}
+#speech:after {
+  content: "";
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  background: #fffdf3;
+  border-right: 2px solid #293344;
+  border-bottom: 2px solid #293344;
+  transform: rotate(45deg);
+}
+#crumb {
+  position: absolute;
+  width: 18px;
+  height: 12px;
+  display: none;
+}
+#crumb::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #f4bc53;
+  box-shadow: inset 0 -3px #df873d;
+  clip-path: polygon(
+    3px 0,
+    12px 0,
+    12px 3px,
+    15px 3px,
+    15px 6px,
+    18px 6px,
+    18px 9px,
+    15px 9px,
+    15px 12px,
+    6px 12px,
+    6px 9px,
+    3px 9px,
+    3px 6px,
+    0 6px,
+    0 3px,
+    3px 3px
+  );
+}
+#crumb::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 3px;
+  height: 3px;
+  background: #f6f3e8;
+  box-shadow:
+    3px 0 #f6f3e8,
+    18px 6px #df873d,
+    12px 12px #f4bc53;
+}
+.splat {
+  position: absolute;
+  width: 48px;
+  height: 30px;
+  margin: -15px 0 0 -24px;
+  animation: splat-in 0.18s steps(3, end);
+}
+.splat svg {
+  width: 100%;
+  height: 100%;
+  shape-rendering: crispEdges;
+}
+.splat.old {
+  opacity: 0.45;
+}
+#target-banner {
+  position: fixed;
+  top: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fffdf3;
+  border: 2px solid #293344;
+  border-radius: 14px;
+  padding: 15px 18px;
+  box-shadow: 4px 5px 0 #29334430;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 12px;
+  align-items: center;
+  font-size: 12px;
+  width: min(460px, calc(100vw - 32px));
+}
+#target-banner[hidden] {
+  display: none;
+}
+#target-banner strong {
+  font-size: 14px;
+}
+#target-banner span {
+  grid-column: 1/-1;
+  grid-row: 2;
+  line-height: 1.5;
+}
+#target-banner button {
+  grid-column: 2;
+  grid-row: 1;
+}
+button {
+  border: 1px solid #293344;
+  border-radius: 6px;
+  background: #f4bc53;
+  padding: 7px 10px;
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+body.targeting {
+  cursor: crosshair;
+  /* A nonzero alpha also makes empty pixels hittable on macOS. */
+  background: rgba(41, 51, 68, 0.055) !important;
+}
+body.sleeping * {
+  animation-play-state: paused !important;
+}
+@keyframes peck {
+  50% {
+    transform: translateY(3px);
+  }
+}
+@keyframes shout {
+  50% {
+    transform: translateY(-3px);
+  }
+}
+@keyframes splat-in {
+  from {
+    transform: translateY(-18px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+#chip-bag {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+}
+#chip-bag[hidden] {
+  display: none;
+}
+#chip-bag::before {
+  content: "";
+  position: absolute;
+  width: 96px;
+  height: 96px;
+  left: -24px;
+  top: -33px;
+  background: url("../../assets/gullbert-capers.png") -2304px 0 / auto 96px
+    no-repeat;
+  image-rendering: pixelated;
+}
+#chip-bag.empty::before {
+  background-position: -2400px 0;
+}
+#chip-bag::after {
+  content: attr(data-servings);
+  position: absolute;
+  top: 51px;
+  left: 24px;
+  transform: translateX(-50%);
+  padding: 2px 4px;
+  color: #293344;
+  background: #fffdf3dd;
+  font-size: 10px;
+  white-space: nowrap;
+  border-radius: 3px;
+}
+#chip-bag.attached {
+  z-index: 2;
+}
+#chip-bag.attached::after {
+  display: none;
+}
+
+#gull.caper[data-phase="inspect"] #bird {
+  animation: peck 0.7s steps(2, end) infinite;
+}
+#gull.caper[data-phase="panic"] #bird {
+  animation: caper-run 0.18s steps(2, end) infinite;
+}
+#gull.caper[data-phase="shake"] #bird {
+  animation: caper-shake 0.16s steps(2, end) infinite;
+}
+#gull.cursor[data-phase="peck"] #bird {
+  animation: peck 0.18s steps(2, end) infinite;
+}
+@keyframes caper-run {
+  50% {
+    transform: translateY(-4px) rotate(-4deg);
+  }
+}
+@keyframes caper-shake {
+  0%,
+  100% {
+    transform: rotate(-9deg);
+  }
+  50% {
+    transform: rotate(9deg);
+  }
+}
+
+#perch-spot {
+  position: absolute;
+  width: 30px;
+  height: 6px;
+  border: 2px dashed #718b86;
+  opacity: 0.55;
+  border-radius: 50%;
+}
+.treasure-prop {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  image-rendering: pixelated;
+}
+#carried-treasure {
+  top: 39px;
+}
+#perch-spot[hidden],
+.treasure-prop[hidden],
+#gull[hidden],
+#world[hidden] {
+  display: none;
+}
+
+/* A pretend caught pointer in the browser; native uses the real OS cursor. */
+body.cursor-caught,
+body.cursor-caught.gull-grabbable {
+  cursor: none;
+}
+#caught-pointer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 17px;
+  height: 23px;
+  background: #293344;
+  clip-path: polygon(
+    0 0,
+    100% 65%,
+    60% 67%,
+    80% 95%,
+    59% 100%,
+    40% 73%,
+    12% 97%
+  );
+  filter: drop-shadow(1px 1px 0 white);
+  transform-origin: 0 0;
+}
+#gull[data-phase="chew"] #bird {
+  animation: peck 0.18s steps(1, end) infinite;
+}
+
+/* Scene-owned artwork remains click-through, including guest dialogue. */
+#theatre-props {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.theatre-prop,
+#tiny-hat {
+  position: absolute;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+#tiny-hat {
+  z-index: 2;
+}
+#guest-speech {
+  position: absolute;
+  transform: translateX(-50%);
+  max-width: 180px;
+  padding: 6px 9px;
+  background: #e1e8ee;
+  border: 2px solid #293344;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  pointer-events: none;
+}
+#gull.idle[data-hat="captain"] #bird {
+  transform: translateY(-3px) rotate(-3deg);
+}
+#gull.idle[data-hat="cone"] #bird {
+  transform: rotate(3deg);
+}
+#gull[data-pose="bath-shake-a"] #bird {
+  transform: translateX(-3px) rotate(-5deg);
+}
+#gull[data-pose="bath-shake-b"] #bird {
+  transform: translateX(3px) rotate(5deg);
+}
+
+/* Match the bottom-to-top order used by cleanupObjects. */
+#chip-bag {
+  z-index: 1;
+}
+#crumb,
+#loose-chips {
+  z-index: 2;
+}
+#loose-chips {
+  position: absolute;
+  inset: 0;
+}
+.loose-chip {
+  position: absolute;
+  image-rendering: pixelated;
+}
+#splats {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+}
+#municipal-cones {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+.municipal-cone {
+  position: absolute;
+  image-rendering: pixelated;
+}
+#tidy-highlight {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  border: 2px dashed #b56a28;
+  background: #f4bc5322;
+  border-radius: 4px;
+}
+#tidy-highlight[hidden] {
+  display: none;
+}
+#target-banner {
+  z-index: 10;
+}
+body.tidying {
+  cursor: default;
+}
+
+body.interactive-hover {
+  cursor: pointer;
+}
+#tidy-highlight[data-direct="true"] {
+  border-style: solid;
+  background: #f4bc5312;
+}
+#gull[data-touch="pet"] #bird {
+  transform: translateY(2px) rotate(-3deg);
+}
+#gull[data-touch="poke"] #bird {
+  transform: translateY(-4px);
+}
+#gull[data-touch="ruffled"] #bird {
+  animation: caper-shake 0.25s steps(2, end) 2;
+}
+
+/* Give macOS a hittable pixel only inside each small interaction rectangle. */
+#interaction-regions {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+#interaction-regions > div {
+  position: absolute;
+  background: rgba(41, 51, 68, 0.004);
+  pointer-events: auto;
+}
+
+body.gull-grabbable {
+  cursor: grab;
+}
+body.gull-dragging {
+  cursor: grabbing;
+}
+#gull.carried #bird {
+  transform-origin: 50% 30%;
+  animation: carried-sway 0.45s ease-in-out infinite alternate;
+}
+@keyframes carried-sway {
+  from {
+    transform: rotate(-7deg);
+  }
+  to {
+    transform: rotate(7deg);
+  }
+}
+.rubbish-bag {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  pointer-events: none;
+}
+.rubbish-bag[hidden] {
+  display: none;
+}
+.rubbish-bag::before {
+  content: "";
+  position: absolute;
+  width: 96px;
+  height: 96px;
+  left: -24px;
+  top: -33px;
+  background: url("../../assets/gullbert-capers.png") -2400px 0 / auto 96px
+    no-repeat;
+  image-rendering: pixelated;
+}
+.loose-rubbish {
+  z-index: 1;
+}
+
+.theatre-prop[data-asset="letter"] {
+  color: #3b3026;
+  font:
+    bold 25px/28px ui-monospace,
+    monospace;
+  text-align: center;
+  text-shadow:
+    -1px -1px 0 #fff5d9,
+    1px -1px 0 #fff5d9,
+    -1px 1px 0 #fff5d9,
+    1px 1px 0 #fff5d9;
+}
+
+#typing-playground {
+  position: absolute;
+  top: 38%;
+  left: 10%;
+  width: 80%;
+  max-width: 520px;
+  padding: 18px;
+  border: 1px solid #b5b4a3;
+  border-radius: 12px;
+  background: #fffdf3;
+}
+#typing-playground label {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+#typing-demo {
+  min-height: 72px;
+  padding: 12px;
+  background: white;
+  border: 1px solid #c9c6b7;
+  border-radius: 5px;
+  font:
+    16px/1.6 ui-monospace,
+    monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+#typing-playground small {
+  display: block;
+  margin-top: 10px;
+  color: #6c705f;
+  font:
+    11px/1.5 system-ui,
+    sans-serif;
+}
+#gull.typing[data-phase="pounce"] #bird {
+  animation: peck 0.2s steps(1, end) infinite;
+}
+#gull.typing[data-phase="innocent"] #bird {
+  transform: rotate(-4deg);
+}

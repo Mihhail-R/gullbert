@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Gullbert</title>
+    <link rel="stylesheet" href="ui/pet/pet.css" />
+  </head>
+  <body>
+    <section id="typing-playground" hidden>
+      <label id="typing-label"
+        >Fresh letters. Please do not feed the gull.</label
+      >
+      <div
+        id="typing-demo"
+        contenteditable="true"
+        role="textbox"
+        aria-labelledby="typing-label"
+        spellcheck="false"
+      >
+        A perfectly normal sentence...
+      </div>
+      <small
+        >Type here. Menace fishes; Public enemy collects punctuation. Move the
+        pointer near him to catch him in the act.</small
+      >
+    </section>
+    <div id="world" aria-hidden="true">
+      <div id="crumb"></div>
+      <div id="gull">
+        <div id="bird"><div class="sprite"></div></div>
+        <div id="speech"></div>
+      </div>
+      <div id="splats"></div>
+    </div>
+    <div id="target-banner" role="status" hidden>
+      <strong>Pick a parking spot.</strong
+      ><span>Click anywhere to deliver a gift. Esc cancels.</span
+      ><button id="cancel">Never mind</button>
+    </div>
+    <script type="module" src="ui/pet/pet.js"></script>
+  </body>
+</html>

@@ -1,0 +1,37 @@
+// Original sheet stays compatible; appended Piskel poses are mapped here.
+export const POSES = {
+  idle: 0,
+  blink: 4,
+  squawk: 7,
+  walkLeft: 8,
+  walkRight: 9,
+  crouch: 10,
+  wingUp: 11,
+  wingDown: 12,
+  "nap-settle": 4,
+  "nap-sleep": 13,
+  "nap-wobble": 14,
+  "nap-wake": 4,
+  "nap-startle": 15,
+  "nap-accuse": 16,
+  "preen-start": 0,
+  preen: 17,
+  "preen-finish": 0,
+  "tilt-start": 0,
+  tilt: 18,
+  "tilt-finish": 0,
+  "stretch-start": 11,
+  stretch: 19,
+  "stretch-finish": 12,
+  nibble: 23,
+  "theft-grip": 23,
+  "theft-innocent": 13,
+  "bag-inspect": 18,
+  "bag-trapped": 20,
+  "bag-panic": 21,
+  "bag-shake": 22,
+  "bag-offended": 16,
+};
+
+export type Pose =
+  keyof typeof POSES | "bath-wet" | "bath-shake-a" | "bath-shake-b";

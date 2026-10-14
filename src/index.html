@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Gullbert</title>
+    <link rel="stylesheet" href="ui/controls/controls.css" />
+  </head>
+  <body>
+    <main class="panel">
+      <header>
+        <div class="eyebrow">
+          <span class="dot"></span> YOUR LOCAL NUISANCE
+          <span class="version">v0.1</span>
+        </div>
+        <div class="intro">
+          <div>
+            <h1>Gullbert.</h1>
+            <p>No job. No rent. Absolutely your problem.</p>
+          </div>
+          <div class="portrait" aria-label="A suspicious pixel seagull"></div>
+        </div>
+        <div class="status">
+          <span id="status-dot"></span><span id="status">Settling in…</span
+          ><span id="mood">Contentedly gull.</span>
+        </div>
+      </header>
+      <section class="quick-actions" aria-label="Quick actions">
+        <button class="primary" data-action="summon">
+          <span>↗</span> Summon Gullbert <kbd>⌃ ⌥ G</kbd>
+        </button>
+        <button data-action="feed">Offer a chip</button>
+      </section>
+      <div
+        class="sections"
+        role="region"
+        aria-label="Activities and preferences"
+        tabindex="0"
+      >
+        <details class="control-section" id="snacks" name="control-room">
+          <summary>
+            <span>Snacks</span><small>Chips, bags &amp; snack hunts</small>
+          </summary>
+          <div class="section-content">
+            <div class="pair">
+              <button data-action="feed"><span>▰</span> Offer a chip</button
+              ><button data-action="place_bag">
+                <span>▤</span> Place chip bag…
+              </button>
+            </div>
+            <div class="pair">
+              <button data-action="search_snack">
+                <span>⌕</span> Find a snack</button
+              ><button data-action="chip_toss">Chip toss…</button>
+            </div>
+            <p class="hint">Place a bag, then let curiosity do the rest.</p>
+          </div>
+        </details>
+        <details class="control-section" id="routines" name="control-room">
+          <summary>
+            <span>Bird routines</span
+            ><small>A moment of almost good behaviour</small>
+          </summary>
+          <div class="section-content">
+            <div class="pair">
+              <button data-action="squawk"><span>♪</span> Have a word</button
+              ><button data-action="nap"><span>☾</span> Take a nap</button>
+            </div>
+            <div class="pair">
+              <button data-action="preen"><span>❧</span> Preen feathers</button
+              ><button data-action="tilt"><span>?</span> Tilt his head</button>
+            </div>
+            <div class="pair">
+              <button data-action="stretch">
+                <span>↔</span> Stretch wings
+              </button>
+            </div>
+          </div>
+        </details>
+        <details
+          class="control-section"
+          id="mischief-actions"
+          name="control-room"
+        >
+          <summary>
+            <span>Mischief</span
+            ><small>Petty crime &amp; pointer trouble</small>
+          </summary>
+          <div class="section-content">
+            <div class="pair">
+              <button data-action="nibble_cursor">
+                <span>↖</span> Nibble cursor</button
+              ><button data-action="eat_cursor">
+                <span>↖</span> Eat cursor
+              </button>
+            </div>
+            <div class="pair">
+              <button data-action="bag_caper"><span>!</span> Bag caper</button
+              ><button data-action="steal_bag"><span>↪</span> Steal bag</button>
+            </div>
+            <div class="pair">
+              <button data-action="caught"><span>☝</span> Caught you!</button
+              ><button data-action="poop"><span>✳</span> Leave a gift</button>
+            </div>
+            <div class="pair">
+              <button data-action="target"><span>⌖</span> Poop here…</button>
+            </div>
+            <p class="hint">
+              Eat cursor lets him catch and tug your pointer for one second. Esc
+              releases it. In the playground, move into the desktop; the catch
+              is visual only.
+            </p>
+            <p class="hint">
+              Hover a car. Press Ctrl + Alt + P. A gift awaits.
+            </p>
+          </div>
+        </details>
+        <details class="control-section" id="theatre" name="control-room">
+          <summary>
+            <span>Theatre</span><small>One little spectacle at a time</small>
+          </summary>
+          <div class="section-content">
+            <div class="pair">
+              <button data-action="blow_bubbles">Blow bubbles</button
+              ><button data-action="bath_time">Bath time</button>
+            </div>
+            <div class="pair">
+              <button data-action="invite_pigeon">Invite pigeon</button
+              ><button data-action="gull_argument">Gull argument</button>
+            </div>
+            <div class="pair">
+              <button data-action="baguette_parade">Baguette parade</button
+              ><button data-action="pretend_leave">Pretend to leave</button>
+            </div>
+            <div class="pair">
+              <button data-action="cursor_egg">Cursor egg</button
+              ><button data-action="municipal_gull">Municipal gull</button>
+            </div>
+            <div class="pair">
+              <button data-action="apology">The apology</button>
+              <button data-action="postcards">Poop postcards</button>
+            </div>
+            <p class="hint">
+              For cursor egg, leave your pointer still in his patch. Stop
+              routine ends the show.
+            </p>
+          </div>
+        </details>
+        <details class="control-section" id="belongings" name="control-room">
+          <summary>
+            <span>Gifts &amp; favourite spot</span
+            ><small
+              ><span id="belongings-summary">No treasures yet</span></small
+            >
+          </summary>
+          <div class="section-content">
+            <div class="pair">
+              <button data-action="bring_gift">Bring me something</button>
+            </div>
+            <div class="pair">
+              <button data-action="place_perch">Favourite spot…</button
+              ><button data-action="perch">Perch</button>
+            </div>
+            <div class="pair small-actions">
+              <button data-action="clear_perch">Clear favourite spot</button>
+            </div>
+            <p class="hint">
+              Ask him to bring something back for your collection.
+            </p>
+            <details id="collection">
+              <summary>
+                Questionable treasures <span id="collection-count">0</span>
+              </summary>
+              <p id="collection-empty">
+                Nothing yet. A promising lack of taste.
+              </p>
+              <ul id="collection-items"></ul>
+            </details>
+          </div>
+        </details>
+        <details class="control-section" id="tidying" name="control-room">
+          <summary>
+            <span>Tidying</span
+            ><small>A slightly more respectable desktop</small>
+          </summary>
+          <div class="section-content">
+            <div class="pair">
+              <button data-action="tidy">Focused tidy mode…</button
+              ><button data-action="clean">Clean the evidence</button>
+            </div>
+            <p class="hint">
+              Click loose mess to tidy it, or use focused tidy mode. Your
+              treasures and favourite spot stay put.
+            </p>
+          </div>
+        </details>
+        <details class="control-section" id="preferences" name="control-room">
+          <summary>
+            <span>Preferences</span
+            ><small
+              ><span id="preferences-summary">Menace · Sound off</span></small
+            >
+          </summary>
+          <div class="section-content">
+            <div class="setting">
+              <div>
+                <label for="hat">Tiny wardrobe</label
+                ><small>Enormous responsibility. Saved locally.</small>
+              </div>
+              <select id="hat">
+                <option value="none">None</option>
+                <option value="captain">Captain</option>
+                <option value="cone">Traffic cone</option>
+              </select>
+            </div>
+            <section class="preferences" aria-label="Preferences">
+              <div class="setting">
+                <div>
+                  <label for="mischief">Mischief level</label
+                  ><small>How bold he gets with your cursor and typing.</small>
+                </div>
+                <select id="mischief">
+                  <option value="0">Polite-ish</option>
+                  <option value="1" selected>Menace</option>
+                  <option value="2">Public enemy</option>
+                </select>
+              </div>
+              <div class="setting">
+                <div>
+                  <span>Caret fishing</span
+                  ><small id="caret-status">Checking caret access…</small>
+                </div>
+                <button id="caret-access" type="button" hidden>
+                  Enable access
+                </button>
+              </div>
+              <div class="setting" id="vision-setting">
+                <div>
+                  <label for="vision">Local vision</label
+                  ><small
+                    >Nibble visible words near the mouse. Processed on this Mac;
+                    nothing saved or sent.</small
+                  >
+                </div>
+                <input id="vision" type="checkbox" role="switch" />
+              </div>
+              <p id="vision-status" role="status" hidden></p>
+              <button id="vision-access" type="button" hidden>
+                Allow screen access
+              </button>
+              <div class="setting">
+                <label for="paused">Pause autonomous antics</label
+                ><input id="paused" type="checkbox" role="switch" />
+              </div>
+              <div class="setting">
+                <label for="sound">Tiny sound effects</label
+                ><input id="sound" type="checkbox" role="switch" />
+              </div>
+            </section>
+          </div>
+        </details>
+      </div>
+      <div class="bottom-bar">
+        <div class="footer-actions">
+          <button data-action="cancel">Stop routine</button>
+          <button id="visibility-toggle" data-action="hide">
+            Send him away
+          </button>
+        </div>
+        <footer>
+          <span>He lives in your menu bar / system tray.</span
+          ><button data-action="quit">Quit</button>
+        </footer>
+        <p id="error" role="alert" hidden></p>
+        <p id="storage-error" role="alert" hidden></p>
+      </div>
+    </main>
+    <aside id="demo" hidden>
+      <div class="desktop-note">
+        <span>THE TEST DESKTOP</span>
+        <h2>A perfectly peaceful<br />place. For now.</h2>
+        <p>Browser preview. The installed app roams over your real desktop.</p>
+        <div class="toy-car" aria-label="An extremely unfortunate parked car">
+          🚙
+        </div>
+      </div>
+      <iframe title="Gullbert's preview playground"></iframe>
+    </aside>
+    <script type="module" src="ui/controls/controls.js"></script>
+  </body>
+</html>

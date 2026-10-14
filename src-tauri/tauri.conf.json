@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Gullbert", "version": "0.1.0", "identifier": "io.gullbert.desktop",
+  "build": {"beforeDevCommand": "npm run preview", "devUrl": "http://127.0.0.1:4173", "beforeBuildCommand": "npm run build:web", "frontendDist": "../web-dist"},
+  "app": {
+    "withGlobalTauri": true, "macOSPrivateApi": true,
+    "windows": [
+      {"label":"pet","title":"Gullbert overlay","url":"pet.html","width":800,"height":600,"visible":false,"decorations":false,"transparent":true,"shadow":false,"alwaysOnTop":true,"skipTaskbar":true,"resizable":false,"focus":false,"focusable":false,"acceptFirstMouse":true},
+      {"label":"controls","title":"Gullbert","url":"index.html","width":440,"height":700,"minWidth":400,"minHeight":600,"resizable":false,"visible":true,"center":true,"backgroundColor":"#f6f3ea"}
+    ],
+    "security": {"csp":"default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src ipc: http://ipc.localhost; object-src 'none'; base-uri 'none'; frame-src 'none'"}
+  },
+  "bundle": {"active":true,"targets":"all","shortDescription":"Your desktop's local nuisance.","category":"Entertainment","icon":["icons/32x32.png","icons/128x128.png","icons/128x128@2x.png","icons/icon.icns","icons/icon.ico"],"macOS":{"minimumSystemVersion":"11.0"},"windows":{"nsis":{"displayLanguageSelector":false}}}
+}

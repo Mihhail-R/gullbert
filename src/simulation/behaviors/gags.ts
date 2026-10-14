@@ -1,0 +1,724 @@
+import { observe } from "../observation.js";
+import type { ReadonlyValue } from "../presentation.js";
+import { scopeCapabilities } from "../capabilities.js";
+import { beakOffsetX, SIZE, clamp } from "../geometry.js";
+import { isGag, type GagScene } from "../scenes.js";
+import type { Point, PointerSample, SceneProp } from "../model.js";
+import type { Pose } from "../poses.js";
+import type { SimulationView, BehaviorCapabilities } from "../capabilities.js";
+import type { SceneOwner } from "../routine.js";
+import type { Scene, GagScene as OwnedScene } from "../scenes.js";
+
+const automatic = [
+  "pretend_leave",
+  "cursor_egg",
+  "municipal_gull",
+  "postcards",
+] as const;
+const postcards = [
+  { photo: "liberty", caption: "liberty. with a little something from me." },
+  { photo: "giza", caption: "giza. left my mark on history." },
+  { photo: "car", caption: "freshly washed. perfectly timed." },
+  { photo: "eiffel", caption: "paris. my finest work." },
+] as const;
+export function gagPose(
+  sim: Pick<SimulationView, "scene" | "motionTime">,
+): Pose | null {
+  const scene = sim.scene;
+  if (!isGag(scene)) {
+    return null;
+  }
+  const walk = (["idle", "walkLeft", "idle", "walkRight"] as const)[
+    Math.floor(sim.motionTime * 10) % 4
+  ];
+  if (scene.kind === "postcards") {
+    if (scene.phase === "reach" || scene.phase === "pull") {
+      return "nibble";
+    }
+    if (scene.phase === "show") {
+      return "tilt";
+    }
+    if (scene.phase === "tuck") {
+      return "preen";
+    }
+    return walk;
+  }
+  if (scene.kind === "pretend_leave") {
+    if (scene.phase === "peek") {
+      return "tilt";
+    } else {
+      return walk;
+    }
+  }
+  if (scene.kind === "cursor_egg") {
+    if (scene.phase === "settle") {
+      return "crouch";
+    } else if (scene.phase === "inspect") {
+      return "tilt";
+    } else {
+      return walk;
+    }
+  }
+  if (scene.kind === "municipal_gull") {
+    if (scene.phase === "inspect") {
+      return "bag-inspect";
+    } else {
+      return walk;
+    }
+  }
+  if (scene.phase === "carry") {
+    return walk;
+  } else if (scene.phase === "offer") {
+    return "tilt";
+  } else {
+    return "nibble";
+  }
+}
+export function gagProps(
+  sim: Pick<
+    SimulationView,
+    "scene" | "visible" | "x" | "facing" | "y" | "time" | "width" | "height"
+  >,
+): SceneProp[] {
+  const scene = sim.scene;
+  if (sim.visible && scene?.kind === "postcards") {
+    if (scene.phase === "approach" || scene.phase === "reach") {
+      return [];
+    }
+    const size = 96;
+    let x = sim.x + beakOffsetX(sim.facing);
+    if (sim.facing < 0) {
+      x -= size;
+    }
+    let opacity = 1;
+    if (scene.phase === "pull") {
+      const progress = clamp((sim.time - scene.phaseStarted) / 0.9, 0, 1);
+      let edge = sim.width;
+      if (scene.side < 0) {
+        edge = -size;
+      }
+      x = edge + (x - edge) * progress;
+    } else {
+      x = clamp(x, 0, sim.width - size);
+    }
+    let y = clamp(sim.y + 30, 0, sim.height - size);
+    if (scene.phase === "tuck") {
+      const progress = clamp((sim.time - scene.phaseStarted) / 0.6, 0, 1);
+      opacity = 1 - progress;
+      y = clamp(y + 12 * progress, 0, sim.height - size);
+    }
+    return [
+      {
+        id: "postcard",
+        asset: `postcard-${scene.photo}.png`,
+        x,
+        y,
+        width: size,
+        height: size,
+        opacity,
+      },
+    ];
+  }
+  if (!sim.visible || scene?.kind !== "apology" || scene.phase === "eat") {
+    return [];
+  }
+  return [
+    {
+      id: "apology-chip",
+      asset: "chip",
+      x: sim.x + beakOffsetX(sim.facing) - 12,
+      y: sim.y + 36,
+      width: 24,
+      height: 24,
+    },
+  ];
+}
+export function gagOffset(sim: Pick<SimulationView, "scene" | "time">) {
+  const scene = sim.scene;
+  if (scene?.kind !== "pretend_leave") {
+    return { x: 0, opacity: 1 };
+  }
+  const elapsed = sim.time - scene.phaseStarted;
+  if (scene.phase === "depart") {
+    return { x: scene.side * 100 * clamp(elapsed / 0.7, 0, 1), opacity: 1 };
+  }
+  if (scene.phase === "away") {
+    return { x: scene.side * 100, opacity: 0 };
+  }
+  if (scene.phase === "peek") {
+    return { x: scene.side * 64, opacity: 1 };
+  }
+  if (scene.phase === "reenter") {
+    return {
+      x: scene.side * 64 * (1 - clamp(elapsed / 0.5, 0, 1)),
+      opacity: 1,
+    };
+  }
+  return { x: 0, opacity: 1 };
+}
+
+type Environment = Pick<
+  BehaviorCapabilities,
+  | "body"
+  | "clock"
+  | "lifecycle"
+  | "speech"
+  | "policy"
+  | "random"
+  | "activity"
+  | "objects"
+  | "commands"
+  | "movement"
+  | "events"
+>;
+export class GagRoutine implements SceneOwner {
+  #environment: Environment;
+  #scene: OwnedScene | null = null;
+  #identity: object = Object.freeze({});
+  #gagSchedule?: { at: number; level: number; last?: string };
+  #lastPostcard?: string;
+  constructor(environment: Environment) {
+    this.#environment = scopeCapabilities(environment, [
+      "body",
+      "clock",
+      "lifecycle",
+      "speech",
+      "policy",
+      "random",
+      "activity",
+      "objects",
+      "commands",
+      "movement",
+      "events",
+    ]);
+  }
+  get scene(): ReadonlyValue<OwnedScene> | null {
+    return observe(this.#scene);
+  }
+
+  get identity(): object {
+    return this.#identity;
+  }
+  install(scene: ReadonlyValue<Scene>): void {
+    this.#scene = structuredClone(scene) as OwnedScene;
+    this.#identity = Object.freeze({});
+  }
+  clear(): void {
+    this.#scene = null;
+  }
+  start(name: string, point?: import("../model.js").Point): boolean {
+    const handled = this.#startGag(name);
+    void point;
+    if (handled && this.#scene) {
+      this.#identity = Object.freeze({});
+    }
+    return handled;
+  }
+  update(dt: number): "running" | "complete" {
+    this.#stepGag(dt);
+    if (!this.#scene) {
+      return "complete";
+    }
+    return "running";
+  }
+  complete(): void {
+    this.#cancelGag();
+    this.#scene = null;
+  }
+  presentation() {
+    const sim = this.#environment;
+    const observation = {
+      ...sim.body.snapshot(),
+      ...sim.activity.snapshot(),
+      time: sim.clock.now,
+      visible: sim.policy.visible(),
+      scene: this.#scene,
+    };
+    return observe({
+      pose: gagPose(observation) ?? undefined,
+      props: gagProps(observation),
+      offset: gagOffset(observation),
+    });
+  }
+  interrupt(): void {
+    this.#cancelGag();
+    this.#scene = null;
+  }
+  visibility(visible: boolean): void {
+    if (!visible && this.#scene) {
+      this.#environment.lifecycle.interrupt();
+      this.#environment.lifecycle.rest();
+    }
+  }
+  get gagSchedule() {
+    return observe(this.#gagSchedule);
+  }
+  #onScreen(p: Point) {
+    const sim = this.#environment;
+    return {
+      x: clamp(p.x, 14, sim.body.width - 14),
+      y: clamp(p.y, 36, sim.body.height),
+    };
+  }
+  #phase(name: GagScene["phase"], duration: number) {
+    const sim = this.#environment;
+    if (!isGag(this.#scene)) {
+      return;
+    }
+    this.#scene.phase = name;
+    this.#scene.phaseStarted = sim.clock.now;
+    this.#scene.until = sim.clock.now + duration;
+    sim.body.resetMotion();
+  }
+  #finish(text?: string) {
+    const sim = this.#environment;
+    sim.lifecycle.complete();
+    sim.lifecycle.rest(4);
+    if (text) {
+      sim.speech.say(text);
+    }
+  }
+  #schedule() {
+    const sim = this.#environment;
+    const level = sim.policy.settings().mischief;
+    let minimumDelay;
+    if (level === 2) {
+      minimumDelay = 120;
+    } else {
+      minimumDelay = 240;
+    }
+    let delayRange;
+    if (level === 2) {
+      delayRange = 120;
+    } else {
+      delayRange = 180;
+    }
+    return {
+      at: sim.clock.now + minimumDelay + sim.random() * delayRange,
+      level,
+      last: this.#gagSchedule?.last,
+    };
+  }
+  #startGag(name: string) {
+    const sim = this.#environment;
+    if (![...automatic, "apology"].includes(name)) {
+      return false;
+    }
+    const clock = {
+      started: sim.clock.now,
+      phaseStarted: sim.clock.now,
+      until: sim.clock.now,
+      deadline: sim.clock.now + 14.9,
+    };
+    this.#gagSchedule = { ...this.#schedule(), last: name };
+    if (name === "postcards") {
+      const choices = postcards.filter((photo) => {
+        return photo.photo !== this.#lastPostcard;
+      });
+      const photo =
+        choices[
+          Math.min(
+            choices.length - 1,
+            Math.floor(sim.random() * choices.length),
+          )
+        ];
+      this.#lastPostcard = photo.photo;
+      let side: -1 | 1 = 1;
+      if (sim.body.x + SIZE / 2 < sim.body.width / 2) {
+        side = -1;
+      }
+      this.#scene = {
+        ...clock,
+        kind: "postcards",
+        phase: "approach",
+        side,
+        ...photo,
+        target: sim.body.safePoint({
+          x: clamp(sim.body.x, 100, sim.body.width - SIZE - 100),
+          y: clamp(sim.body.y, 0, sim.body.height - 126),
+        }),
+      };
+      sim.speech.say("wait. I have holiday photos.");
+    } else if (name === "pretend_leave") {
+      let side: -1 | 1;
+      if (sim.body.x + SIZE / 2 < sim.body.width / 2) {
+        side = -1;
+      } else {
+        side = 1;
+      }
+      this.#scene = {
+        ...clock,
+        kind: name,
+        phase: "approach",
+        side,
+        origin: { x: sim.body.x, y: sim.body.y },
+      };
+      sim.speech.say("fine. I shall leave.");
+    } else if (name === "cursor_egg") {
+      this.#scene = {
+        ...clock,
+        kind: name,
+        phase: "approach",
+        pointer: null,
+        stablePoint: null,
+        stableSince: sim.clock.now,
+        nest: null,
+        until: sim.clock.now + 8,
+      };
+      sim.speech.say("a promising egg.");
+    } else if (name === "municipal_gull") {
+      sim.objects.clearCones();
+      const patch = this.#onScreen({ x: sim.body.x + 48, y: sim.body.y + 78 });
+      const placements = [
+        { x: patch.x - 40, y: patch.y + 14 },
+        { x: patch.x + 40, y: patch.y + 14 },
+        { x: patch.x, y: patch.y - 30 },
+      ].map((p) => {
+        return this.#onScreen(p);
+      });
+      this.#scene = {
+        ...clock,
+        kind: name,
+        phase: "place",
+        patch,
+        placements,
+        placed: 0,
+        movedId: null,
+        target: sim.body.safePoint({ x: patch.x + 90, y: patch.y - 78 }),
+      };
+      sim.speech.say("essential infrastructure.");
+    } else {
+      let sidestepDistance;
+      if (sim.body.x < sim.body.width / 2) {
+        sidestepDistance = 90;
+      } else {
+        sidestepDistance = -90;
+      }
+      this.#scene = {
+        ...clock,
+        deadline: sim.clock.now + 9.9,
+        kind: "apology",
+        phase: "carry",
+        target: sim.body.safePoint({
+          x: sim.body.x + sidestepDistance,
+          y: sim.body.y,
+        }),
+      };
+      sim.speech.say("a gesture of goodwill.");
+    }
+    if (this.#scene) {
+      sim.activity.beginRoutine(this.#scene.kind);
+    }
+    return true;
+  }
+  maybeGag() {
+    const sim = this.#environment;
+    if (
+      !this.#gagSchedule ||
+      this.#gagSchedule.level !== sim.policy.settings().mischief
+    ) {
+      this.#gagSchedule = this.#schedule();
+    }
+    if (
+      !sim.policy.visible() ||
+      sim.policy.settings().paused ||
+      sim.policy.settings().mischief <= 0 ||
+      sim.policy.tidying() ||
+      this.#scene ||
+      sim.activity.mode !== "idle" ||
+      sim.clock.now < this.#gagSchedule.at ||
+      sim.clock.now < sim.policy.cleanup().suppressUntil
+    ) {
+      return false;
+    }
+    const choices = automatic.filter((name) => {
+      return name !== this.#gagSchedule?.last;
+    });
+    sim.commands.action(
+      choices[
+        Math.min(choices.length - 1, Math.floor(sim.random() * choices.length))
+      ],
+    );
+    return true;
+  }
+  #cancelGag() {
+    const sim = this.#environment;
+    if (!isGag(this.#scene)) {
+      return;
+    }
+    sim.body.place(sim.body.safePoint(sim.body));
+    sim.speech.clear();
+    sim.speech.forget();
+  }
+  resizeGags() {
+    const sim = this.#environment;
+
+    const scene = this.#scene;
+    if (!isGag(scene)) {
+      return;
+    }
+    if (scene.kind === "pretend_leave") {
+      scene.origin = sim.body.safePoint(scene.origin);
+    } else if (scene.kind === "cursor_egg") {
+      if (
+        scene.pointer &&
+        (scene.pointer.x > sim.body.width || scene.pointer.y > sim.body.height)
+      ) {
+        this.gagPointer(null);
+      }
+      if (scene.nest) {
+        scene.nest = {
+          x: clamp(scene.nest.x, 0, sim.body.width),
+          y: clamp(scene.nest.y, 0, sim.body.height),
+        };
+      }
+    } else {
+      scene.target = sim.body.safePoint(scene.target);
+      if (scene.kind === "municipal_gull") {
+        scene.patch = this.#onScreen(scene.patch);
+        scene.placements = scene.placements.map((p) => {
+          return this.#onScreen(p);
+        });
+      }
+    }
+  }
+  gagPointer(point: PointerSample | null) {
+    const sim = this.#environment;
+    const scene = this.#scene;
+    if (scene?.kind !== "cursor_egg") {
+      return;
+    }
+    if (
+      !point ||
+      point.inside === false ||
+      !Number.isFinite(point.x) ||
+      !Number.isFinite(point.y) ||
+      point.x < 0 ||
+      point.y < 0 ||
+      point.x > sim.body.width ||
+      point.y > sim.body.height
+    ) {
+      this.#finish("the egg has other commitments.");
+      return;
+    }
+    scene.pointer = { x: point.x, y: point.y };
+    if (
+      !scene.stablePoint ||
+      Math.hypot(point.x - scene.stablePoint.x, point.y - scene.stablePoint.y) >
+        8
+    ) {
+      scene.stablePoint = { ...scene.pointer };
+      scene.stableSince = sim.clock.now;
+    }
+    if (
+      scene.phase === "settle" &&
+      scene.nest &&
+      Math.hypot(point.x - scene.nest.x, point.y - scene.nest.y) > 24
+    ) {
+      this.#phase("inspect", 1.3);
+      sim.speech.say("it hatched.", 2.5);
+    }
+  }
+  #stepGag(dt: number) {
+    const sim = this.#environment;
+    const scene = this.#scene;
+    if (!isGag(scene)) {
+      return false;
+    }
+    if (sim.clock.now >= scene.deadline) {
+      this.#finish();
+      return true;
+    }
+    if (scene.kind === "postcards") {
+      let edge = sim.body.width - SIZE;
+      if (scene.side < 0) {
+        edge = 0;
+      }
+      const speed = Math.max(180, sim.body.width / 3);
+      if (scene.phase === "approach") {
+        if (sim.body.moveToward({ x: edge, y: scene.target.y }, speed, dt)) {
+          sim.movement.face(scene.side);
+          this.#phase("reach", 0.6);
+        }
+      } else if (scene.phase === "reach" && sim.clock.now >= scene.until) {
+        this.#phase("pull", 0.9);
+        sim.speech.clear();
+      } else if (scene.phase === "pull") {
+        const progress = clamp(
+          (sim.clock.now - scene.phaseStarted) / 0.9,
+          0,
+          1,
+        );
+        sim.body.place(
+          sim.body.safePoint({
+            x: edge - scene.side * 96 * progress,
+            y: scene.target.y,
+          }),
+        );
+        sim.movement.face(scene.side);
+        if (sim.clock.now >= scene.until) {
+          this.#phase("carry", 3);
+        }
+      } else if (scene.phase === "carry") {
+        const reached = sim.body.moveToward(scene.target, speed, dt);
+        // Back away with the photograph still held in his beak.
+        sim.movement.face(scene.side);
+        if (reached || sim.clock.now >= scene.until) {
+          this.#phase("show", 4.5);
+          sim.speech.say(scene.caption, 4.5);
+        }
+      } else if (scene.phase === "show" && sim.clock.now >= scene.until) {
+        this.#phase("tuck", 0.6);
+      } else if (scene.phase === "tuck" && sim.clock.now >= scene.until) {
+        this.#finish("a well-travelled bird.");
+      }
+    } else if (scene.kind === "pretend_leave") {
+      let edge;
+      if (scene.side === -1) {
+        edge = 0;
+      } else {
+        edge = sim.body.width - SIZE;
+      }
+      if (scene.phase === "approach") {
+        if (
+          sim.body.moveToward(
+            { x: edge, y: scene.origin.y },
+            Math.max(150, sim.body.width / 5),
+            dt,
+          )
+        ) {
+          this.#phase("depart", 0.7);
+        }
+      } else if (scene.phase === "depart" && sim.clock.now >= scene.until) {
+        this.#phase("away", 2);
+      } else if (scene.phase === "away" && sim.clock.now >= scene.until) {
+        this.#phase("peek", 1.3);
+        sim.speech.say("forgot something.", 3);
+      } else if (scene.phase === "peek" && sim.clock.now >= scene.until) {
+        this.#phase("reenter", 0.5);
+      } else if (scene.phase === "reenter" && sim.clock.now >= scene.until) {
+        this.#phase("return", 4);
+      } else if (scene.phase === "return") {
+        if (
+          sim.body.moveToward(
+            scene.origin,
+            Math.max(150, sim.body.width / 5),
+            dt,
+          )
+        ) {
+          this.#finish();
+        }
+      }
+      if (["depart", "away", "peek", "reenter"].includes(scene.phase)) {
+        sim.movement.moveTo({ x: edge, y: sim.body.y });
+        if (["depart", "away"].includes(scene.phase)) {
+          sim.movement.face(scene.side as -1 | 1);
+        } else {
+          sim.movement.face(-scene.side as -1 | 1);
+        }
+      }
+    } else if (scene.kind === "cursor_egg") {
+      if (scene.phase === "approach") {
+        if (sim.clock.now >= scene.until) {
+          this.#finish("not ready for parenthood.");
+        } else if (!scene.pointer) {
+          if (sim.clock.now - scene.started >= 1.5) {
+            this.#finish("where did my egg go?");
+          }
+        } else {
+          const reached = sim.body.moveToward(
+            { x: scene.pointer.x - 48, y: scene.pointer.y - 76 },
+            230,
+            dt,
+          );
+          if (
+            reached &&
+            Math.hypot(
+              sim.body.x + 48 - scene.pointer.x,
+              sim.body.y + 76 - scene.pointer.y,
+            ) <= 24 &&
+            sim.clock.now - scene.stableSince >= 1
+          ) {
+            scene.nest = { ...scene.pointer };
+            this.#phase("settle", 5);
+            sim.speech.say("do not disturb. parenting.", 2.5);
+          }
+        }
+      } else if (scene.phase === "settle" && sim.clock.now >= scene.until) {
+        this.#finish("incubation postponed.");
+      } else if (scene.phase === "inspect" && sim.clock.now >= scene.until) {
+        this.#finish("it hatched.");
+      }
+    } else if (scene.kind === "municipal_gull") {
+      if (scene.phase === "place") {
+        const point = scene.placements[scene.placed];
+        if (
+          sim.body.moveToward({ x: point.x - 48, y: point.y - 78 }, 150, dt) &&
+          sim.clock.now >= scene.until
+        ) {
+          sim.objects.placeCone(point, sim.clock.now);
+          scene.placed += 1;
+          scene.until = sim.clock.now + 0.45;
+          if (scene.placed === 3) {
+            this.#phase("inspect", 1.5);
+          }
+        }
+      } else if (scene.phase === "inspect" && sim.clock.now >= scene.until) {
+        scene.movedId = sim.objects.snapshot().cones[0]?.id ?? null;
+        this.#phase("retrieve", 2);
+      } else if (scene.phase === "retrieve") {
+        const cone = sim.objects.snapshot().cones.find((c) => {
+          return c.id === scene.movedId;
+        });
+        if (
+          !cone ||
+          sim.body.moveToward({ x: cone.x - 48, y: cone.y - 78 }, 150, dt) ||
+          sim.clock.now >= scene.until
+        ) {
+          this.#phase("move", 2);
+        }
+      } else if (scene.phase === "move") {
+        const cone = sim.objects.snapshot().cones.find((c) => {
+          return c.id === scene.movedId;
+        });
+        const point = this.#onScreen({
+          x: scene.patch.x - 20,
+          y: scene.patch.y + 24,
+        });
+        const reached = sim.body.moveToward(
+          { x: point.x - 48, y: point.y - 78 },
+          110,
+          dt,
+        );
+        if (cone) {
+          sim.objects.moveCone(
+            cone.id,
+            this.#onScreen({ x: sim.body.x + 48, y: sim.body.y + 78 }),
+          );
+        }
+        if (reached || sim.clock.now >= scene.until) {
+          this.#phase("leave", 3);
+          sim.speech.say("works ongoing.", 3);
+        }
+      } else if (scene.phase === "leave") {
+        if (
+          sim.body.moveToward(scene.target, 90, dt) ||
+          sim.clock.now >= scene.until
+        ) {
+          this.#finish("works ongoing.");
+        }
+      }
+    } else if (scene.phase === "carry") {
+      if (sim.body.moveToward(scene.target, 120, dt)) {
+        this.#phase("offer", 2);
+        sim.speech.say("for you.", 2);
+      }
+    } else if (scene.phase === "offer" && sim.clock.now >= scene.until) {
+      this.#phase("eat", 1);
+      sim.events.emit("munch");
+    } else if (scene.phase === "eat" && sim.clock.now >= scene.until) {
+      this.#finish("glad we resolved that.");
+    }
+    return true;
+  }
+}
