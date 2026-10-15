@@ -7,12 +7,14 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: "Existing version tag to build or retry (leave empty for checks only)"
+        description: "Existing version tag to build or retry (leave empty for unsigned builds and tests)"
         required: false
         type: string
 permissions:
   contents: read
 env:
+  # Upgrade deliberately so main and release tags use compatible Rust caches.
+  RUST_TOOLCHAIN: "1.99.1"
   RELEASE_TAG: ${{ inputs.release_tag || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.ref_name) || '' }}
 jobs:
   test:
@@ -61,64 +63,92 @@ jobs:
             src-tauri/Cargo.lock
             src-tauri/tauri.conf.json
   desktop:
-    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
+    # Main keeps caches available to future tags. Manual runs can validate the
+    # native pipeline without publishing; pull requests retain frontend checks.
+    if: github.event_name != 'pull_request'
+    name: ${{ matrix.platform }} (${{ matrix.task }})
     needs: test
     strategy:
       fail-fast: false
       matrix:
+        platform: [mac-apple-silicon, mac-intel, windows-x64]
+        task: [package, test]
         include:
-          - os: macos-latest
+          - platform: mac-apple-silicon
+            os: macos-latest
             target: aarch64-apple-darwin
             bundle: app,dmg
-            artifact: mac-apple-silicon
-          - os: macos-15-intel
+          - platform: mac-intel
+            os: macos-15-intel
             target: x86_64-apple-darwin
             bundle: app,dmg
-            artifact: mac-intel
-          - os: windows-latest
+          - platform: windows-x64
+            os: windows-latest
             target: x86_64-pc-windows-msvc
             bundle: nsis
-            artifact: windows-x64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.test.outputs.source_sha }}
       - uses: actions/download-artifact@v4
+        if: env.RELEASE_TAG != ''
         with:
           name: release-metadata
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
           targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri -> target
+          # Separate test and release profiles so parallel jobs never compete
+          # to save incomplete caches under the same immutable key.
+          shared-key: desktop-${{ matrix.target }}-${{ matrix.task }}
+          # Tag caches cannot be restored by later tags. Only main writes them;
+          # retries of old tags must not replace main's dependency cache either.
+          save-if: ${{ github.ref == 'refs/heads/main' && env.RELEASE_TAG == '' }}
       - run: npm ci
       - name: Validate release version
         run: node scripts/release.mjs check
+      - name: Build without installers to warm the release cache
+        if: matrix.task == 'package' && env.RELEASE_TAG == ''
+        run: npm run build -- --target ${{ matrix.target }} --no-bundle
       - name: Build signed update packages and installers
+        if: matrix.task == 'package' && env.RELEASE_TAG != ''
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         run: npm run build -- --target ${{ matrix.target }} --bundles ${{ matrix.bundle }}
+      - name: Build frontend for native tests
+        if: matrix.task == 'test'
+        run: npm run build:web
+      - name: Prepare Windows OCR models for native tests
+        if: matrix.task == 'test' && runner.os == 'Windows'
+        run: npm run prepare:vision
       - name: Run native lifecycle tests
+        if: matrix.task == 'test'
         run: cargo test --manifest-path src-tauri/Cargo.toml --locked --target ${{ matrix.target }}
       - name: Verify routing through the application and simulation
+        if: matrix.task == 'test'
         run: npm run test:routing -- --target ${{ matrix.target }}
       - name: Collect installers and update signatures
+        if: matrix.task == 'package' && env.RELEASE_TAG != ''
         run: node scripts/release.mjs collect ${{ matrix.target }}
       - uses: actions/upload-artifact@v4
+        if: matrix.task == 'package' && env.RELEASE_TAG != ''
         with:
-          name: Gullbert-${{ matrix.artifact }}
+          name: Gullbert-${{ matrix.platform }}
           if-no-files-found: error
           retention-days: 14
           path: dist/*
   draft-release:
     if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
+    # Every platform must finish both packaging and native tests successfully.
     needs: [test, desktop]
     runs-on: ubuntu-latest
     permissions:
