@@ -42,6 +42,7 @@ export interface TouchContext {
   available(): boolean;
   sleeping(): boolean;
   rest(delay: number): void;
+  scratched?(): void;
 }
 
 export function canTouch(sim: {
@@ -240,6 +241,7 @@ export class Touch {
     if (zone === "head" && dwell >= 0.45) {
       state.reaction = "pet";
       this.#remark(dialogue.gullbert.touch.fineOneHeadScratch);
+      context.scratched?.();
       return true;
     }
     if (zone === "body" && dwell >= 0.2 && !context.sleeping()) {

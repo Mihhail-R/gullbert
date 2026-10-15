@@ -49,6 +49,7 @@ import { CursorRoutine, cursorBeak } from "./behaviors/cursor.js";
 import { TypingRoutine } from "./behaviors/typing.js";
 import { SnackRoutine } from "./behaviors/snacks.js";
 import { CapRoutine } from "./behaviors/cap.js";
+import { LearningRoutine } from "./behaviors/learning.js";
 
 const remarks = dialogue.gullbert.general.remarks;
 export class Gullbert {
@@ -68,6 +69,7 @@ export class Gullbert {
   #snacks: SnackRoutine;
   #typing: TypingRoutine;
   #cap: CapRoutine;
+  #learning: LearningRoutine;
   #random: () => number;
   #time: number;
   #nextMischief: number;
@@ -116,6 +118,9 @@ export class Gullbert {
       emit: (sound) => {
         this.#sounds.push(sound);
       },
+      ateChip: (point) => {
+        this.#learning.ateChip(point);
+      },
     });
     this.#food = new FoodPolicy(this.#random);
     this.#capabilities = this.#createCapabilities();
@@ -129,6 +134,7 @@ export class Gullbert {
     this.#snacks = new SnackRoutine(this.#capabilities);
     this.#typing = new TypingRoutine(this.#capabilities);
     this.#cap = new CapRoutine(this.#capabilities);
+    this.#learning = new LearningRoutine(this.#capabilities);
     this.#cleanup = new Cleanup({
       observe: () => {
         return this.#baseObservation();
@@ -151,6 +157,9 @@ export class Gullbert {
       },
     });
     this.#touch = new Touch({
+      scratched: () => {
+        this.#learning.scratched();
+      },
       body: this.#body,
       clock: this.#capabilities.clock,
       speech: this.#capabilities.speech,
@@ -268,6 +277,8 @@ export class Gullbert {
     owners.set("snack", this.#snacks);
     owners.set("typing", this.#typing);
     owners.set("cap", this.#cap);
+    owners.set("trick", this.#learning);
+    owners.set("habit", this.#learning);
     const additional = (options.routines ?? []).map((factory) => {
       return new ScopedRoutine(factory, this.#capabilities, () => {
         return this.#visible;
@@ -285,6 +296,7 @@ export class Gullbert {
         this.#snacks,
         this.#typing,
         this.#cap,
+        this.#learning,
         this.#quiet,
         ...additional,
       ],
@@ -309,6 +321,7 @@ export class Gullbert {
     return this.#belongings.snapshot().memory;
   }
   restoreMemory(data: unknown) {
+    this.#learning.cancelAssociations();
     this.#cancelScene();
     this.#cancelFlight();
     this.#rest();
@@ -319,6 +332,7 @@ export class Gullbert {
     this.#objects.resize(this.#body.width, this.#body.height);
     this.#gags.resizeGags();
     this.#cap.resize();
+    this.#learning.resize();
     this.#belongings.resize(this.#body.width, this.#body.height);
     this.#activity.resize();
   }
@@ -383,6 +397,7 @@ export class Gullbert {
     this.#visible = visible;
     this.#registry.visibility(visible);
     if (!visible) {
+      this.#learning.cancelAssociations();
       this.#typing.resetSensing();
       this.#pickup.cancel();
       this.#touch.reset();
@@ -395,6 +410,7 @@ export class Gullbert {
     this.#registry.interrupt();
   }
   #replaceActivity() {
+    this.#learning.cancelAssociations();
     this.#objects.discardFood();
     this.#cancelScene();
     this.#cancelFlight();
@@ -406,6 +422,7 @@ export class Gullbert {
     this.#activity.stopTravel();
   }
   #beginTidying() {
+    this.#learning.cancelAssociations();
     this.#cleanup.cancel();
     // A cancelled routine loses its scene props. Keep only unconsumed loose
     // chips in the same painted rectangles; held snacks leave with their owner.
@@ -420,6 +437,7 @@ export class Gullbert {
     this.#say(dialogue.gullbert.general.iWasUsingThatMess);
   }
   #beginDragging(): void {
+    this.#learning.cancelAssociations();
     this.#cancelScene();
     this.#cancelFlight();
     this.#cleanup.cancel();
@@ -437,6 +455,7 @@ export class Gullbert {
     );
   }
   clean() {
+    this.#learning.cancelAssociations();
     this.#typing.cleanNest();
     this.#objects.clear();
     this.#pickup.cancel();
@@ -451,6 +470,15 @@ export class Gullbert {
     this.#cleanup.bulk();
   }
   action(name: string, point?: Point) {
+    if (point && (!Number.isFinite(point.x) || !Number.isFinite(point.y))) {
+      return;
+    }
+    if (name === "prepare_chip") {
+      if (this.#learning.rewardCandidate()) {
+        return;
+      }
+      name = "cancel";
+    }
     if (name === "direct_pick") {
       if (point && this.flickCap(point)) {
         return;
@@ -485,11 +513,15 @@ export class Gullbert {
       this.#moods.snapshot().mood?.name === "offended" ||
       this.#cleanup.snapshot().level > 0;
     this.#cleanup.cancel();
-    if (name === "feed") {
+    if (name === "feed" || name === "feed_here") {
       this.#cleanup.settle();
     }
     if (name === "caught" && this.#crime.caughtCrime()) {
       return;
+    }
+    let reward = null;
+    if (name === "feed" || name === "feed_here") {
+      reward = this.#learning.rewardCandidate();
     }
     this.#replaceActivity();
     if (this.#startRoutine(name, point)) {
@@ -509,9 +541,14 @@ export class Gullbert {
       this.greet();
       return;
     }
-    if (name === "feed") {
+    if (name === "feed" || name === "feed_here") {
       this.#food.clearRequest();
-      this.#activity.fetch(this.#randomPoint());
+      this.#learning.offerReward(reward);
+      let destination = { x: this.#body.x, y: this.#body.y };
+      if (point) {
+        destination = { x: point.x - 60, y: point.y - 78 };
+      }
+      this.#activity.fetch(destination);
       if (wasOffended) {
         this.#say(dialogue.gullbert.general.weCanSettleOutOfCourt, 2);
       } else {
@@ -598,6 +635,9 @@ export class Gullbert {
     if (this.#time < this.#activity.calmUntil) {
       return;
     }
+    if (this.#learning.maybeStart()) {
+      return;
+    }
     if (this.#typing.maybeStart()) {
       return;
     }
@@ -682,6 +722,7 @@ export class Gullbert {
       (settings.mischief != null &&
         settings.mischief !== this.#settings.mischief)
     ) {
+      this.#learning.cancelAssociations();
       this.#pickup.cancel();
       if (
         this.#registry.scene?.kind === "relocation" ||
@@ -721,7 +762,9 @@ export class Gullbert {
     if (
       settings.paused &&
       (this.#registry.scene?.kind === "cursor" ||
-        this.#registry.scene?.kind === "cap")
+        this.#registry.scene?.kind === "cap" ||
+        this.#registry.scene?.kind === "trick" ||
+        this.#registry.scene?.kind === "habit")
     ) {
       this.#cancelScene();
       this.#rest();
@@ -818,7 +861,9 @@ export class Gullbert {
     if (touch) {
       return touch;
     }
-    return this.#registry.presentation().pose ?? null;
+    return (
+      this.#registry.presentation().pose ?? this.#learning.expectationPose()
+    );
   }
   get frame() {
     return frameFor(this.pose);
@@ -967,8 +1012,17 @@ export class Gullbert {
   }
 
   #completeRoutine(): void {
+    const scene = this.#registry.scene;
+    const played =
+      (scene?.kind === "cap" &&
+        scene.phase === "victory" &&
+        scene.rounds >= 3) ||
+      (scene?.kind === "toss" && scene.phase === "eat");
     this.#objects.releaseBag();
     this.#registry.complete();
+    if (played) {
+      this.#learning.playCompleted();
+    }
   }
   #tokens = new WeakMap<object, object>();
   #reactionToken: object | null = null;

@@ -6,6 +6,12 @@ import { Gullbert } from "../web-dist/simulation/engine.js";
 test("missing and malformed snapshots produce fresh, empty durable memories", () => {
   const expected = {
     version: 1,
+    learned: {
+      tricks: { come: 0, spin: 0, dead: 0 },
+      snackSpot: null,
+      snackCandidate: null,
+      scratchesAfterPlay: 0,
+    },
     perch: null,
     collection: {},
     greetings: { seen: false, lastAt: 0, lastLine: "", lastDiscovery: null },
@@ -80,7 +86,7 @@ test("simulation restoration exports an independent snapshot and preserves prefe
     },
   };
   sim.restoreMemory(saved);
-  assert.deepEqual(sim.exportMemory(), saved);
+  assert.deepEqual(sim.exportMemory(), normalizeMemory(saved, 800, 600));
   saved.perch.x = 1;
   saved.collection.sock = 3;
   const exported = sim.exportMemory();

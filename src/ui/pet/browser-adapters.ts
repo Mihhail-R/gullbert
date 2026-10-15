@@ -131,6 +131,14 @@ export class PetBrowser implements ApplicationBrowser {
 }
 
 const targetDescriptions: Record<string, readonly [string, string]> = {
+  feed_here: [
+    "Leave him a chip.",
+    "Click a spot. Feed him here again to teach a snack ritual. Esc cancels.",
+  ],
+  trick_come: [
+    "Call Gullbert over.",
+    "Click where he should come. Offer a chip after he arrives to teach the trick. Esc cancels.",
+  ],
   tidy: [
     "Tidy up. Under protest.",
     "Click mess to remove it. Belongings stay put. Done or Esc finishes; 30 seconds maximum.",

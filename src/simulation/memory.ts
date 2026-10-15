@@ -54,6 +54,26 @@ export function normalizeMemory(
     }
   }
   const greetings = object(source.greetings);
+  const learned = object(source.learned);
+  const tricks = object(learned.tricks);
+  function lessons(value: unknown): number {
+    if (finite(value)) {
+      return Math.floor(clamp(value, 0, 6));
+    }
+    return 0;
+  }
+  const spot = point(learned.snackSpot);
+  const meals = lessons(object(learned.snackSpot).meals);
+  let snackSpot = null;
+  if (spot && meals > 0) {
+    snackSpot = { ...spot, meals };
+  }
+  const candidate = point(learned.snackCandidate);
+  const candidateMeals = lessons(object(learned.snackCandidate).meals);
+  let snackCandidate = null;
+  if (candidate && candidateMeals > 0 && snackSpot && snackSpot.meals >= 3) {
+    snackCandidate = { ...candidate, meals: Math.min(2, candidateMeals) };
+  }
   let lastAt;
   if (finite(greetings.lastAt)) {
     lastAt = Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, greetings.lastAt));
@@ -74,6 +94,16 @@ export function normalizeMemory(
   }
   return {
     version: 1,
+    learned: {
+      tricks: {
+        come: lessons(tricks.come),
+        spin: lessons(tricks.spin),
+        dead: lessons(tricks.dead),
+      },
+      snackSpot,
+      snackCandidate,
+      scratchesAfterPlay: lessons(learned.scratchesAfterPlay),
+    },
     perch: point(source.perch),
     collection,
     greetings: {

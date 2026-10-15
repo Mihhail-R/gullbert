@@ -100,6 +100,7 @@ export function createPetRenderer(world: HTMLElement) {
     gull.dataset.fluff = String(sim.affection.fluff);
     bird.style.setProperty("--affection-x", `${sim.affection.x}px`);
     bird.style.setProperty("--affection-y", `${sim.affection.y}px`);
+    bird.style.setProperty("--routine-rotation", `${sim.rotation}deg`);
     // Match the raised-step head position used by hatPlacement.
     let stepOffsetY;
     if (sim.pose === "walkLeft") {

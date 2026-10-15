@@ -1,5 +1,5 @@
 import type { ReadonlyValue } from "./presentation.js";
-import type { Point, Direction } from "./model.js";
+import type { Point, Direction, Trick } from "./model.js";
 import type { Item } from "./items.js";
 
 // Each routine owns its state. Narrow on kind before reading routine-specific fields.
@@ -76,6 +76,17 @@ export interface CapScene extends TimedScene {
   pointer: Point | null;
   rounds: number;
   carrying: boolean;
+}
+export interface LearningScene extends TimedScene {
+  kind: "trick" | "habit";
+  trick: Trick;
+  phase: "consider" | "perform" | "reward" | "check";
+  phaseStarted: number;
+  target: Point;
+  origin: Point;
+  facing: Direction;
+  practiced: boolean;
+  unsolicited: boolean;
 }
 interface TheatreClock extends TimedScene {
   started: number;
@@ -226,6 +237,7 @@ export type Scene =
   | GiftScene
   | PerchScene
   | CapScene
+  | LearningScene
   | TheatreScene
   | GuestScene
   | GagScene;

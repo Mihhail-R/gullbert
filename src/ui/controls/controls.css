@@ -224,6 +224,33 @@ kbd {
   color: #687169;
   margin: 12px 0 3px;
 }
+.trick-row {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  margin-top: 8px;
+}
+.trick-row button {
+  text-align: left;
+}
+.trick-row span {
+  font-size: 10px;
+  color: #687169;
+}
+.ritual-notes {
+  margin-top: 12px;
+  padding: 2px 12px;
+  border-left: 3px solid #dda83c;
+  background: #f5f2e9;
+  font-size: 11px;
+  line-height: 1.5;
+}
+#learning .subtle {
+  margin-top: 12px;
+  font-size: 10px;
+  color: #687169;
+}
 .preferences {
   border-top: 1px solid #dadcd2;
   margin-top: 8px;

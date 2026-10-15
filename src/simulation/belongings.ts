@@ -1,7 +1,7 @@
 import { dialogue } from "./dialogue.js";
 import { normalizeMemory } from "./memory.js";
 import { ITEMS, isCollectible, type Collectible } from "./items.js";
-import type { Memory, Point } from "./model.js";
+import type { Memory, Point, Trick } from "./model.js";
 
 export const GREETING_COOLDOWN_MS = 5 * 60 * 1000;
 const firstLines = dialogue.gullbert.greetings.first;
@@ -61,6 +61,68 @@ export class Belongings {
       (this.#memory.collection[item] ?? 0) + 1,
     );
     this.#memory.greetings.lastDiscovery = item;
+    this.#revision += 1;
+  }
+
+  rewardTrick(trick: Trick): number {
+    const learned = this.#memory.learned;
+    if (learned.tricks[trick] < 6) {
+      learned.tricks[trick] += 1;
+      this.#revision += 1;
+    }
+    return learned.tricks[trick];
+  }
+
+  rememberMeal(point: Point): void {
+    const location = normalizeMemory(
+      { perch: point },
+      this.#width,
+      this.#height,
+    ).perch;
+    if (!location) {
+      return;
+    }
+    const learned = this.#memory.learned;
+    const spot = learned.snackSpot;
+    const previous = JSON.stringify(learned);
+    if (spot && Math.hypot(spot.x - location.x, spot.y - location.y) <= 90) {
+      learned.snackSpot = {
+        x: Math.round((spot.x * spot.meals + location.x) / (spot.meals + 1)),
+        y: Math.round((spot.y * spot.meals + location.y) / (spot.meals + 1)),
+        meals: Math.min(6, spot.meals + 1),
+      };
+      learned.snackCandidate = null;
+    } else if (spot && spot.meals >= 3) {
+      const candidate = learned.snackCandidate;
+      let meals = 1;
+      if (
+        candidate &&
+        Math.hypot(candidate.x - location.x, candidate.y - location.y) <= 90
+      ) {
+        meals = candidate.meals + 1;
+      }
+      learned.snackCandidate = { ...location, meals };
+      if (meals >= 3) {
+        learned.snackSpot = learned.snackCandidate;
+        learned.snackCandidate = null;
+      }
+    } else {
+      learned.snackSpot = { ...location, meals: 1 };
+    }
+    if (previous !== JSON.stringify(learned)) {
+      this.#revision += 1;
+    }
+  }
+
+  rememberScratchAfterPlay(): void {
+    if (this.#memory.learned.scratchesAfterPlay < 6) {
+      this.#memory.learned.scratchesAfterPlay += 1;
+      this.#revision += 1;
+    }
+  }
+
+  forgetLearning(): void {
+    this.#memory.learned = normalizeMemory(null).learned;
     this.#revision += 1;
   }
 

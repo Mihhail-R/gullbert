@@ -24,6 +24,8 @@ pub(crate) fn plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
                 dispatch_action(app, Action::Clean);
             } else if shortcut.matches(Modifiers::CONTROL | Modifiers::ALT, Code::KeyP) {
                 dispatch_action(app, Action::PoopAtCursor);
+            } else if shortcut.matches(Modifiers::CONTROL | Modifiers::ALT, Code::KeyF) {
+                dispatch_action(app, Action::FeedAtCursor);
             } else if shortcut.matches(Modifiers::empty(), Code::Escape) {
                 report(native_input::dispatch(app, |app| {
                     report(native_input::escape(app));
@@ -34,7 +36,13 @@ pub(crate) fn plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
 }
 
 pub(crate) fn register(app: &tauri::AppHandle) {
-    for shortcut in ["Ctrl+Alt+G", "Ctrl+Alt+Shift+G", "Ctrl+Alt+X", "Ctrl+Alt+P"] {
+    for shortcut in [
+        "Ctrl+Alt+G",
+        "Ctrl+Alt+Shift+G",
+        "Ctrl+Alt+X",
+        "Ctrl+Alt+P",
+        "Ctrl+Alt+F",
+    ] {
         if let Err(e) = app.global_shortcut().register(shortcut) {
             app.state::<State>()
                 .shortcut_errors
