@@ -76,6 +76,12 @@ function harness(options = {}) {
     directCleanupAt() {
       return false;
     },
+    flickCap(point) {
+      if (options.flickCap) {
+        return options.flickCap(point);
+      }
+      return false;
+    },
     beginPickup() {
       held = true;
       return true;
@@ -426,6 +432,56 @@ test("late pickup acquisition after application disposal releases its lease with
     h.calls.some(([name, args]) => name === "release_cursor" && args.id === 88),
   );
   assert.equal(h.timers.size, 0);
+});
+
+test("a cap click takes priority over pickup and releases its native hit region", async () => {
+  const flicks = [];
+  const h = harness({
+    native: true,
+    flickCap(point) {
+      flicks.push(point);
+      return true;
+    },
+  });
+  await h.app.start();
+  let prevented = false;
+  h.emit(
+    "pointerdown",
+    pointerEvent({
+      preventDefault() {
+        prevented = true;
+      },
+    }),
+  );
+  assert.deepEqual(flicks, [{ x: 20, y: 20 }]);
+  assert.equal(prevented, true);
+  assert.equal(
+    h.calls.some(([name]) => name === "begin_pickup"),
+    false,
+  );
+  assert.ok(
+    h.calls.some(([name, args]) => {
+      return name === "sync_interaction" && args.rects.length === 0;
+    }),
+  );
+  await h.app.dispose();
+});
+
+test("target placement never flicks a cap under the selected point", async () => {
+  const h = harness({
+    flickCap() {
+      assert.fail("Targeting must take priority over the cap game");
+    },
+  });
+  await h.app.start();
+  h.emit("message", { type: "action", action: "target", purpose: "poop" });
+  h.emit("pointerdown", pointerEvent());
+  assert.ok(
+    h.calls.some(([name, action]) => {
+      return name === "action" && action === "poop";
+    }),
+  );
+  await h.app.dispose();
 });
 
 test("late targeting failure after disposal cannot cancel a scene or wake the overlay", async () => {

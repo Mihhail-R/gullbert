@@ -65,6 +65,18 @@ export interface PerchScene extends TimedScene {
   kind: "perch";
   phase: "approach" | "settle" | "loiter";
 }
+export interface CapScene extends TimedScene {
+  kind: "cap";
+  phase: "drop" | "ready" | "chase" | "peck" | "return" | "collect" | "victory";
+  started: number;
+  deadline: number;
+  phaseStarted: number;
+  cap: Point;
+  target: Point;
+  pointer: Point | null;
+  rounds: number;
+  carrying: boolean;
+}
 interface TheatreClock extends TimedScene {
   started: number;
   deadline: number;
@@ -213,6 +225,7 @@ export type Scene =
   | CrimeScene
   | GiftScene
   | PerchScene
+  | CapScene
   | TheatreScene
   | GuestScene
   | GagScene;

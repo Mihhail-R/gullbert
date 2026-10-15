@@ -1,5 +1,15 @@
 {
   "gullbert": {
+    "cap": {
+      "invitation": "click the cap. try your best.",
+      "chase": "mine.",
+      "abandoned": "match abandoned. still undefeated.",
+      "forfeit": "forfeit accepted.",
+      "lastReturn": "last one. mine.",
+      "yourMove": "your move.",
+      "victory": "i win.",
+      "keepingTrophy": "keeping the trophy."
+    },
     "cleanup": {
       "reactions": {
         "rubbish": [

@@ -26,7 +26,11 @@ export function createTheatreRenderer(
         if (prop.asset.endsWith(".png")) {
           filename = prop.asset;
         }
-        node.src = `assets/theatre/${filename}`;
+        if (prop.asset === "bottle_cap") {
+          node.src = "assets/belongings/bottle_cap.svg";
+        } else {
+          node.src = `assets/theatre/${filename}`;
+        }
       }
     }
     if (prop.text !== undefined) {
@@ -75,6 +79,9 @@ export function createTheatreRenderer(
         nodes.set(prop.id, node);
       }
       draw(node, prop);
+      node.dataset.playable = String(
+        prop.asset === "bottle_cap" && sim.phase === "ready",
+      );
     }
     const message = sim.guestSpeech;
     dialogue.hidden = !message;

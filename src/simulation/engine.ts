@@ -48,6 +48,7 @@ import { CrimeRoutine } from "./behaviors/crime.js";
 import { CursorRoutine, cursorBeak } from "./behaviors/cursor.js";
 import { TypingRoutine } from "./behaviors/typing.js";
 import { SnackRoutine } from "./behaviors/snacks.js";
+import { CapRoutine } from "./behaviors/cap.js";
 
 const remarks = dialogue.gullbert.general.remarks;
 export class Gullbert {
@@ -66,6 +67,7 @@ export class Gullbert {
   #cursor: CursorRoutine;
   #snacks: SnackRoutine;
   #typing: TypingRoutine;
+  #cap: CapRoutine;
   #random: () => number;
   #time: number;
   #nextMischief: number;
@@ -126,6 +128,7 @@ export class Gullbert {
     this.#cursor = new CursorRoutine(this.#capabilities);
     this.#snacks = new SnackRoutine(this.#capabilities);
     this.#typing = new TypingRoutine(this.#capabilities);
+    this.#cap = new CapRoutine(this.#capabilities);
     this.#cleanup = new Cleanup({
       observe: () => {
         return this.#baseObservation();
@@ -264,6 +267,7 @@ export class Gullbert {
     owners.set("cursor", this.#cursor);
     owners.set("snack", this.#snacks);
     owners.set("typing", this.#typing);
+    owners.set("cap", this.#cap);
     const additional = (options.routines ?? []).map((factory) => {
       return new ScopedRoutine(factory, this.#capabilities, () => {
         return this.#visible;
@@ -280,6 +284,7 @@ export class Gullbert {
         this.#cursor,
         this.#snacks,
         this.#typing,
+        this.#cap,
         this.#quiet,
         ...additional,
       ],
@@ -313,6 +318,7 @@ export class Gullbert {
     this.#body.resize(width, height);
     this.#objects.resize(this.#body.width, this.#body.height);
     this.#gags.resizeGags();
+    this.#cap.resize();
     this.#belongings.resize(this.#body.width, this.#body.height);
     this.#activity.resize();
   }
@@ -350,6 +356,9 @@ export class Gullbert {
     return this.#cleanup.target(point);
   }
   get wantsPointer() {
+    if (this.#visible && this.#registry.scene?.kind === "cap") {
+      return true;
+    }
     if (this.#visible && this.#registry.scene?.kind === "cursor_egg") {
       return true;
     }
@@ -365,6 +374,7 @@ export class Gullbert {
     this.#gags.gagPointer(point);
     this.#cursor.pointerSample(point);
     this.#typing.pointer(point);
+    this.#cap.pointerSample(point);
   }
   caret(sample: CaretSample | null): void {
     this.#typing.sample(sample);
@@ -442,6 +452,9 @@ export class Gullbert {
   }
   action(name: string, point?: Point) {
     if (name === "direct_pick") {
+      if (point && this.flickCap(point)) {
+        return;
+      }
       if (point && !this.#cleanup.directPick(point)) {
         this.#touch.poke(point);
       }
@@ -705,7 +718,11 @@ export class Gullbert {
     if (settings.paused && this.#activity.mode === "walk") {
       this.#rest();
     }
-    if (settings.paused && this.#registry.scene?.kind === "cursor") {
+    if (
+      settings.paused &&
+      (this.#registry.scene?.kind === "cursor" ||
+        this.#registry.scene?.kind === "cap")
+    ) {
       this.#cancelScene();
       this.#rest();
     }
@@ -1010,6 +1027,12 @@ export class Gullbert {
   }
   directCleanupAt(point: Point): boolean {
     return directCleanupTarget(this.#observe(), point) !== null;
+  }
+  flickCap(point: Point): boolean {
+    if (!this.#visible || this.tidying) {
+      return false;
+    }
+    return this.#cap.flick(point);
   }
   beginPickup(point: Point, now: number): boolean {
     return this.#pickup.begin(point, now);
