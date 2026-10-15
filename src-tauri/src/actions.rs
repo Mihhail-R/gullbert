@@ -50,6 +50,7 @@ pub(crate) enum Action {
     BlowBubbles,
     BathTime,
     ChipToss,
+    PlayCap,
     InvitePigeon,
     GullArgument,
     BaguetteParade,
@@ -161,6 +162,7 @@ fn perform_action(app: tauri::AppHandle, action: Action) -> Result<(), String> {
         | Action::Caught
         | Action::BlowBubbles
         | Action::BathTime
+        | Action::PlayCap
         | Action::InvitePigeon
         | Action::GullArgument
         | Action::BaguetteParade
@@ -194,6 +196,7 @@ fn perform_action(app: tauri::AppHandle, action: Action) -> Result<(), String> {
                     Action::BagCaper => "bag_caper",
                     Action::BlowBubbles => "blow_bubbles",
                     Action::BathTime => "bath_time",
+                    Action::PlayCap => "play_cap",
                     Action::InvitePigeon => "invite_pigeon",
                     Action::GullArgument => "gull_argument",
                     Action::BaguetteParade => "baguette_parade",
@@ -244,6 +247,7 @@ pub(crate) fn from_cli(flag: Option<&str>) -> Action {
         Some("--blow-bubbles") => Action::BlowBubbles,
         Some("--bath-time") => Action::BathTime,
         Some("--chip-toss") => Action::ChipToss,
+        Some("--play-cap") => Action::PlayCap,
         Some("--invite-pigeon") => Action::InvitePigeon,
         Some("--gull-argument") => Action::GullArgument,
         Some("--baguette-parade") => Action::BaguetteParade,
@@ -265,7 +269,7 @@ pub(crate) fn from_cli(flag: Option<&str>) -> Action {
 
 #[cfg(test)]
 mod tests {
-    use super::Action;
+    use super::{from_cli, Action};
 
     #[test]
     fn theatre_actions_are_accepted_by_native_bridge() {
@@ -273,6 +277,7 @@ mod tests {
             "blow_bubbles",
             "bath_time",
             "chip_toss",
+            "play_cap",
             "invite_pigeon",
             "gull_argument",
             "baguette_parade",
@@ -285,5 +290,10 @@ mod tests {
         ] {
             assert!(serde_json::from_str::<Action>(&format!("\"{name}\"")).is_ok());
         }
+    }
+
+    #[test]
+    fn cap_launcher_starts_play() {
+        assert!(matches!(from_cli(Some("--play-cap")), Action::PlayCap));
     }
 }

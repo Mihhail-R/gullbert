@@ -26,6 +26,7 @@ Versions before 0.3.0-beta.1 need one manual replacement to receive the updater.
 - Blow bubbles, run a bath, toss chips, choose a tiny hat, and invite rival birds.
 - Watch him lean into head scratches, give an offended look when you stop, and hop happily after a chip.
 - Dress him in a captain hat, traffic cone, fisherman’s beanie, paper crown, or fried egg.
+- Play bottle-cap football: flick it away, watch him return it, and lose on his terms.
 - Poke him, scratch his head, or drag him somewhere else. Repeated pickups provoke increasingly petty revenge.
 - Aim a poop run, clean up his mess, or start a baguette parade, a municipal inspection, or a questionable apology.
 - Fish for the typing caret, steal pretend letters, and build a punctuation nest. Approach with the pointer and he suddenly becomes a very innocent bird.
@@ -49,6 +50,8 @@ On Mac, Alt means **Option** and Ctrl means **Control**. If another app owns a s
 ### Play, placement, and tidying
 
 Use the control room to feed, play, or start a routine. **Poop here…**, **Place chip bag…**, **Favourite spot…**, and **Chip toss…** temporarily capture a click to choose a target. Escape or **Never mind** cancels; a 12-second failsafe restores click-through. The underlying app does not receive that placement click. Gullbert does not detect cars; choose the target yourself.
+
+**Bottle-cap football.** Choose **Play → Play with a cap** in the control room or tray. Click the cap to flick it away; Gullbert chases it and pecks it back toward your pointer. After three exchanges, he takes the cap and declares “i win.” No collected treasure is needed. **Stop routine** ends the game. A running desktop app also accepts `--play-cap` from a second invocation of its executable.
 
 Hover over his head for a scratch, click to poke, or hold and drag to pick him up. Click loose splats, chips, bags, rubbish, and discarded cones to remove them. Other desktop areas pass clicks through. **Focused tidy mode…** captures repeated cleanup clicks until **Done**, Escape, or its 30-second timeout. Remembered belongings survive cleanup, and direct clicks leave objects used in active scenes alone. **Clean the evidence** removes all loose mess and the punctuation nest.
 

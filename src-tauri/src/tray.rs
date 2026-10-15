@@ -52,6 +52,7 @@ pub(crate) fn install(app: &tauri::App) -> tauri::Result<()> {
                 ("target", "Poop here…"),
             ],
         ),
+        ("Play", &[("play_cap", "Play with a cap")]),
         (
             "Theatre",
             &[
@@ -162,6 +163,7 @@ pub(crate) fn install(app: &tauri::App) -> tauri::Result<()> {
                 "blow_bubbles" => Action::BlowBubbles,
                 "bath_time" => Action::BathTime,
                 "chip_toss" => Action::ChipToss,
+                "play_cap" => Action::PlayCap,
                 "invite_pigeon" => Action::InvitePigeon,
                 "gull_argument" => Action::GullArgument,
                 "baguette_parade" => Action::BaguetteParade,

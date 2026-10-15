@@ -334,6 +334,14 @@ body.cursor-caught.gull-grabbable {
   image-rendering: pixelated;
   pointer-events: none;
 }
+.theatre-prop[data-asset="bottle_cap"][data-playable="true"] {
+  border-radius: 50%;
+  outline: 2px dashed #718b86;
+  outline-offset: 4px;
+}
+#gull.cap[data-phase="peck"] #bird {
+  animation: peck 0.18s steps(2, end) infinite;
+}
 #tiny-hat {
   z-index: 2;
 }

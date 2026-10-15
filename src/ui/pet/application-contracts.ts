@@ -95,6 +95,7 @@ export type ApplicationSimulation = Pick<
   | "pickupRect"
   | "canPickup"
   | "directCleanupAt"
+  | "flickCap"
   | "beginPickup"
   | "movePickup"
   | "finishPickup"

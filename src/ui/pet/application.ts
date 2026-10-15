@@ -738,6 +738,12 @@ export class PetApplication {
     const sim = this.#dependencies.simulation;
     const point = { x: event.x, y: event.y };
     if (!this.#targeting) {
+      if (sim.flickCap(point)) {
+        event.preventDefault();
+        this.#releaseInteraction();
+        this.#wake();
+        return;
+      }
       const rect = sim.pickupRect();
       if (sim.canPickup() && contains(rect, point)) {
         if (this.#drag.begin(event.pointerId, point, rect)) {
