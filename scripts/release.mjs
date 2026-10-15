@@ -42,6 +42,55 @@ export function checkVersion(tag, directory = root) {
   }
   return version;
 }
+export function prepareRelease(tag, directory = root) {
+  const numeric = "(?:0|[1-9][0-9]*)";
+  const prerelease = `(?:${numeric}|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)`;
+  const pattern = new RegExp(
+    `^v${numeric}\\.${numeric}\\.${numeric}(?:-${prerelease}(?:\\.${prerelease})*)?(?:\\+[0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*)?$`,
+  );
+  if (typeof tag !== "string" || tag.trim() !== tag || !pattern.test(tag)) {
+    throw new Error(
+      `Invalid release tag: ${JSON.stringify(tag)}. Expected v<semver>, for example v0.3.0-beta.5.`,
+    );
+  }
+  // Catch broken source metadata before changing any files. The tag supplies
+  // the release version; branch versions only need to agree with each other.
+  checkVersion(undefined, directory);
+  const version = tag.slice(1);
+  const updates = new Map();
+  for (const file of [
+    "package.json",
+    "package-lock.json",
+    "src-tauri/tauri.conf.json",
+  ]) {
+    const content = readFileSync(path.join(directory, file), "utf8");
+    const data = JSON.parse(content);
+    data.version = version;
+    if (file === "package-lock.json") data.packages[""].version = version;
+    updates.set(
+      file,
+      (JSON.stringify(data, null, 2) + "\n").replace(
+        /\n/g,
+        content.includes("\r\n") ? "\r\n" : "\n",
+      ),
+    );
+  }
+  for (const [file, pattern] of [
+    ["src-tauri/Cargo.toml", /(^version = ")[^"]+("\r?$)/m],
+    ["src-tauri/Cargo.lock", /(name = "gullbert"\r?\nversion = ")[^"]+(")/],
+  ]) {
+    updates.set(
+      file,
+      readFileSync(path.join(directory, file), "utf8").replace(
+        pattern,
+        (_, prefix, suffix) => `${prefix}${version}${suffix}`,
+      ),
+    );
+  }
+  for (const [file, content] of updates)
+    writeFileSync(path.join(directory, file), content);
+  return checkVersion(tag, directory);
+}
 function single(directory, suffix) {
   const matches = readdirSync(directory).filter((file) =>
     file.endsWith(suffix),
@@ -111,24 +160,33 @@ if (
   process.argv[1] &&
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
-  const [command, argument] = process.argv.slice(2);
-  const version = checkVersion(
-    process.env.GITHUB_REF_TYPE === "tag"
-      ? process.env.GITHUB_REF_NAME
-      : undefined,
-  );
-  if (command === "collect") {
-    collect(
-      path.join(root, "src-tauri/target", argument, "release/bundle"),
-      path.join(root, "dist"),
+  const [command, argument, directory] = process.argv.slice(2);
+  if (command === "prepare") {
+    const version = prepareRelease(
       argument,
-      version,
+      directory ? path.resolve(directory) : root,
     );
-  } else if (command === "merge") {
-    merge(path.resolve(argument), version);
-  } else if (command !== "check") {
-    throw new Error(
-      "Usage: release.mjs check | collect <target> | merge <directory>",
+    console.log(`Prepared release v${version}.`);
+  } else {
+    const version = checkVersion(
+      process.env.RELEASE_TAG ||
+        (process.env.GITHUB_REF_TYPE === "tag"
+          ? process.env.GITHUB_REF_NAME
+          : undefined),
     );
+    if (command === "collect") {
+      collect(
+        path.join(root, "src-tauri/target", argument, "release/bundle"),
+        path.join(root, "dist"),
+        argument,
+        version,
+      );
+    } else if (command === "merge") {
+      merge(path.resolve(argument), version);
+    } else if (command !== "check") {
+      throw new Error(
+        "Usage: release.mjs prepare <tag> [directory] | check | collect <target> | merge <directory>",
+      );
+    }
   }
 }
