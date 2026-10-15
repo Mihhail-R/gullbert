@@ -1,5 +1,15 @@
+mod action_catalog;
 use std::{env, path::PathBuf, process::Command};
 fn main() {
+    println!("cargo:rerun-if-changed=../src/actions/catalog.json");
+    println!("cargo:rerun-if-changed=action_catalog.rs");
+    let source = std::fs::read_to_string("../src/actions/catalog.json").unwrap();
+    let generated = action_catalog::generate(&source).expect("Invalid action catalog");
+    std::fs::write(
+        PathBuf::from(env::var_os("OUT_DIR").unwrap()).join("actions.rs"),
+        generated,
+    )
+    .unwrap();
     if env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") {
         use sha2::{Digest, Sha256};
         println!("cargo:rerun-if-changed=models/manifest.json");

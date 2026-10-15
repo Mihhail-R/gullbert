@@ -1,3 +1,4 @@
+import type { ActionName } from "../../actions/catalog.js";
 import { setupUpdates } from "./updates.js";
 import { requiredElement } from "../dom.js";
 import {
@@ -95,41 +96,15 @@ async function act(action: string) {
   error("");
   try {
     if (native) {
-      await invoke("act", { action });
+      await invoke("act", { action: action as ActionName });
     } else {
-      if (action === "quit") {
-        visible = false;
-        post({ type: "visible", visible });
-        error("Preview: in the installed app, this quits Gullbert.");
-      } else if (action === "hide" || action === "show") {
-        visible = action === "show";
-        post({ type: "visible", visible });
-      } else {
-        if (action !== "clean" && action !== "cancel") {
-          visible = true;
-          post({ type: "visible", visible });
-        }
-        if (
-          [
-            "feed_here",
-            "trick_come",
-            "place_bag",
-            "place_perch",
-            "chip_toss",
-            "tidy",
-          ].includes(action)
-        ) {
-          post({ type: "action", action: "target", purpose: action });
-        } else {
-          post({ type: "action", action });
-        }
-      }
-      render();
+      post({ type: "action", action });
     }
   } catch (e) {
     error(String(e));
   }
 }
+
 for (const button of document.querySelectorAll<HTMLElement>("[data-action]")) {
   button.addEventListener("click", () => {
     return act(button.dataset.action ?? "");
@@ -323,6 +298,13 @@ if (native) {
     if (e.data.type === "roommate") {
       roommate(e.data);
     }
+    if (e.data.type === "visible") {
+      visible = e.data.visible;
+      render();
+    }
+    if (e.data.type === "preview-quit") {
+      error("Preview: in the installed app, this quits Gullbert.");
+    }
     if (e.data.type === "ready") {
       post({ type: "settings", settings });
       post({ type: "visible", visible });
@@ -338,11 +320,11 @@ document.addEventListener("keydown", (event) => {
     return;
   }
   if (native) {
-    invoke("cancel_targeting").catch((e) => {
+    invoke("cancel_targeting", {}).catch((e) => {
       return error(String(e));
     });
   } else {
-    post({ type: "action", action: "escape" });
+    post({ type: "escape" });
   }
 });
 

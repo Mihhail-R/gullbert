@@ -497,6 +497,10 @@ export class Gullbert {
       }
       return;
     }
+    if (name === "tidy_cancel") {
+      this.#cleanup.cancel();
+      return;
+    }
     if (name === "tidy_done") {
       this.#cleanup.finish();
       return;

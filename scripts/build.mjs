@@ -1,3 +1,4 @@
+import { validateActions } from "./actions.mjs";
 import { validateDialogue } from "./dialogue.mjs";
 import {
   readFileSync,
@@ -25,6 +26,10 @@ export function buildFrontend() {
       readFileSync(path.join(source, "simulation/dialogue.json"), "utf8"),
     );
     validateDialogue(catalog);
+    const actions = JSON.parse(
+      readFileSync(path.join(source, "actions/catalog.json"), "utf8"),
+    );
+    validateActions(actions);
     const result = spawnSync(
       process.execPath,
       [
@@ -53,6 +58,10 @@ export function buildFrontend() {
     writeFileSync(
       path.join(staging, "simulation/dialogue.js"),
       `export const dialogue = ${JSON.stringify(catalog)};\n`,
+    );
+    writeFileSync(
+      path.join(staging, "actions/catalog.js"),
+      `export const catalog = ${JSON.stringify(actions)};\n`,
     );
     rmSync(frontendRoot, { recursive: true, force: true });
     renameSync(staging, frontendRoot);

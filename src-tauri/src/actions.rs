@@ -1,6 +1,6 @@
 //! Shared action routing for frontend commands, tray events, shortcuts, and launchers.
 use crate::{
-    native_input::{self, cancel_target, set_visible, Purpose as TargetPurpose},
+    native_input::{self, replace_target, set_visible, Purpose as TargetPurpose},
     state::State,
     windows::{controls, fit_to_cursor_monitor, pet, Point},
 };
@@ -13,63 +13,130 @@ pub(crate) struct Message {
     pub(crate) action: String,
     pub(crate) point: Option<Point>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) purpose: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) cursor_id: Option<u64>,
 }
-#[derive(Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub(crate) enum Action {
+#[derive(Clone, Copy)]
+enum Visibility {
+    Show,
+    Hide,
+    Preserve,
+}
+enum Route {
+    Command(&'static str),
+    Pointer(&'static str),
+    Target(TargetPurpose, &'static str),
+    Cursor,
+    Visibility,
+    Controls,
+    Quit,
     #[cfg(all(debug_assertions, target_os = "macos"))]
     WindowProbe,
     #[cfg(all(debug_assertions, target_os = "macos"))]
     WindowSpike,
-    Summon,
-    Hide,
-    Show,
-    Feed,
-    FeedHere,
-    FeedAtCursor,
-    TrickCome,
-    TrickSpin,
-    TrickDead,
-    ForgetLearning,
-    Squawk,
-    Nap,
-    Preen,
-    Tilt,
-    Stretch,
-    Poop,
-    PoopAtCursor,
-    Target,
-    PlaceBag,
-    BringGift,
-    PlacePerch,
-    ClearPerch,
-    Perch,
-    SearchSnack,
-    NibbleCursor,
-    EatCursor,
-    StealBag,
-    Caught,
-    BagCaper,
-    BlowBubbles,
-    BathTime,
-    ChipToss,
-    PlayCap,
-    InvitePigeon,
-    GullArgument,
-    BaguetteParade,
-    PretendLeave,
-    CursorEgg,
-    MunicipalGull,
-    Apology,
-    Postcards,
-    Tidy,
-    Cancel,
-    Clean,
-    Controls,
-    Quit,
+}
+include!(concat!(env!("OUT_DIR"), "/actions.rs"));
+
+// Private effect seam shared by desktop routing and lifecycle tests.
+pub(crate) trait Effects {
+    fn interrupt(&mut self);
+    fn replace_target(&mut self);
+    fn visible(&self) -> bool;
+    fn position(&mut self) -> Result<Point, String>;
+    fn visibility(&mut self, visible: bool) -> Result<(), String>;
+    fn command(&mut self, command: &str, point: Option<Point>) -> Result<(), String>;
+    fn target(&mut self, purpose: TargetPurpose, preparation: &'static str) -> Result<(), String>;
+    fn cursor(&mut self) -> Result<(), String>;
+    fn controls(&mut self);
+    fn quit(&mut self);
+    #[cfg(all(debug_assertions, target_os = "macos"))]
+    fn window_probe(&mut self, spike: bool) -> Result<(), String>;
+}
+impl Action {
+    pub(crate) fn perform(self, effects: &mut impl Effects) -> Result<(), String> {
+        let (visibility, route, preparation) = self.routing();
+        effects.interrupt();
+        effects.replace_target();
+        // Targeting and Cursor position and acquire through their native owner.
+        match route {
+            Route::Target(purpose, preparation) => return effects.target(purpose, preparation),
+            Route::Cursor => return effects.cursor(),
+            _ => {}
+        }
+        if let Some(command) = preparation {
+            effects.command(command, None)?;
+        }
+        let point = match route {
+            Route::Pointer(_) => Some(effects.position()?),
+            Route::Command(_) if matches!(visibility, Visibility::Show) && !effects.visible() => {
+                effects.position()?;
+                None
+            }
+            _ => None,
+        };
+        match visibility {
+            Visibility::Show => effects.visibility(true)?,
+            Visibility::Hide => effects.visibility(false)?,
+            Visibility::Preserve => {}
+        }
+        match route {
+            Route::Command(command) | Route::Pointer(command) => effects.command(command, point),
+            Route::Controls => {
+                effects.controls();
+                Ok(())
+            }
+            Route::Quit => {
+                effects.quit();
+                Ok(())
+            }
+            #[cfg(all(debug_assertions, target_os = "macos"))]
+            Route::WindowProbe => effects.window_probe(false),
+            #[cfg(all(debug_assertions, target_os = "macos"))]
+            Route::WindowSpike => effects.window_probe(true),
+            _ => Ok(()),
+        }
+    }
+}
+
+struct Desktop<'a>(&'a tauri::AppHandle);
+impl Effects for Desktop<'_> {
+    fn interrupt(&mut self) {
+        native_input::interrupt(self.0);
+    }
+    fn replace_target(&mut self) {
+        replace_target(self.0);
+    }
+    fn visible(&self) -> bool {
+        self.0.state::<State>().visible.load(Ordering::SeqCst)
+    }
+    fn position(&mut self) -> Result<Point, String> {
+        fit_to_cursor_monitor(self.0)
+    }
+    fn visibility(&mut self, visible: bool) -> Result<(), String> {
+        set_visible(self.0, visible)
+    }
+    fn command(&mut self, command: &str, point: Option<Point>) -> Result<(), String> {
+        emit_action(self.0, command, point)
+    }
+    fn target(&mut self, purpose: TargetPurpose, preparation: &'static str) -> Result<(), String> {
+        native_input::begin_target(self.0, purpose, preparation)
+    }
+    fn cursor(&mut self) -> Result<(), String> {
+        native_input::eat_cursor(self.0)
+    }
+    fn controls(&mut self) {
+        controls(self.0);
+    }
+    fn quit(&mut self) {
+        #[cfg(all(debug_assertions, target_os = "macos"))]
+        if native_input::window_spike::quit() {
+            return;
+        }
+        self.0.exit(0);
+    }
+    #[cfg(all(debug_assertions, target_os = "macos"))]
+    fn window_probe(&mut self, spike: bool) -> Result<(), String> {
+        native_input::window_spike::start(self.0, spike)
+    }
 }
 
 fn emit_action(app: &tauri::AppHandle, action: &str, point: Option<Point>) -> Result<(), String> {
@@ -79,7 +146,6 @@ fn emit_action(app: &tauri::AppHandle, action: &str, point: Option<Point>) -> Re
             Message {
                 action: action.into(),
                 point,
-                purpose: None,
                 cursor_id: None,
             },
         )
@@ -90,151 +156,7 @@ pub(crate) async fn act(app: tauri::AppHandle, action: Action) -> Result<(), Str
     native_input::request(app, move |app| perform_action(app.clone(), action)).await?
 }
 fn perform_action(app: tauri::AppHandle, action: Action) -> Result<(), String> {
-    native_input::interrupt(&app);
-    match action {
-        #[cfg(all(debug_assertions, target_os = "macos"))]
-        Action::WindowProbe | Action::WindowSpike => {
-            cancel_target(&app);
-            native_input::window_spike::start(&app, matches!(action, Action::WindowSpike))
-        }
-        Action::EatCursor => native_input::eat_cursor(&app),
-        Action::Summon => {
-            cancel_target(&app);
-            let p = fit_to_cursor_monitor(&app)?;
-            set_visible(&app, true)?;
-            emit_action(&app, "summon", Some(p))
-        }
-        Action::Hide => set_visible(&app, false),
-        Action::Show => {
-            cancel_target(&app);
-            set_visible(&app, true)
-        }
-        Action::PoopAtCursor | Action::FeedAtCursor => {
-            cancel_target(&app);
-            let point = fit_to_cursor_monitor(&app)?;
-            set_visible(&app, true)?;
-            let command = if matches!(action, Action::FeedAtCursor) {
-                "feed_here"
-            } else {
-                "poop"
-            };
-            emit_action(&app, command, Some(point))
-        }
-        Action::Target
-        | Action::FeedHere
-        | Action::TrickCome
-        | Action::PlaceBag
-        | Action::PlacePerch
-        | Action::ChipToss
-        | Action::Tidy => {
-            let purpose = match action {
-                Action::FeedHere => TargetPurpose::Placement("feed_here"),
-                Action::TrickCome => TargetPurpose::Placement("trick_come"),
-                Action::Tidy => TargetPurpose::Tidy,
-                Action::ChipToss => TargetPurpose::Placement("chip_toss"),
-                Action::PlaceBag => TargetPurpose::Placement("place_bag"),
-                Action::PlacePerch => TargetPurpose::Placement("place_perch"),
-                _ => TargetPurpose::Placement("poop"),
-            };
-            native_input::begin_target(&app, purpose)
-        }
-        Action::Cancel | Action::Clean => {
-            cancel_target(&app);
-            emit_action(
-                &app,
-                if matches!(action, Action::Clean) {
-                    "clean"
-                } else {
-                    "cancel"
-                },
-                None,
-            )
-        }
-        Action::Controls => {
-            cancel_target(&app);
-            controls(&app);
-            Ok(())
-        }
-        Action::Quit => {
-            cancel_target(&app);
-            #[cfg(all(debug_assertions, target_os = "macos"))]
-            if native_input::window_spike::quit() {
-                return Ok(());
-            }
-            app.exit(0);
-            Ok(())
-        }
-        Action::Feed
-        | Action::TrickSpin
-        | Action::TrickDead
-        | Action::ForgetLearning
-        | Action::Squawk
-        | Action::Poop
-        | Action::Nap
-        | Action::Preen
-        | Action::Tilt
-        | Action::Stretch
-        | Action::SearchSnack
-        | Action::NibbleCursor
-        | Action::StealBag
-        | Action::Caught
-        | Action::BlowBubbles
-        | Action::BathTime
-        | Action::PlayCap
-        | Action::InvitePigeon
-        | Action::GullArgument
-        | Action::BaguetteParade
-        | Action::PretendLeave
-        | Action::CursorEgg
-        | Action::MunicipalGull
-        | Action::Apology
-        | Action::Postcards
-        | Action::BagCaper
-        | Action::BringGift
-        | Action::ClearPerch
-        | Action::Perch => {
-            cancel_target(&app);
-            if !app.state::<State>().visible.load(Ordering::SeqCst) {
-                fit_to_cursor_monitor(&app)?;
-            }
-            set_visible(&app, true)?;
-            emit_action(
-                &app,
-                match action {
-                    Action::Feed => "feed",
-                    Action::TrickSpin => "trick_spin",
-                    Action::TrickDead => "trick_dead",
-                    Action::ForgetLearning => "forget_learning",
-                    Action::Squawk => "squawk",
-                    Action::Nap => "nap",
-                    Action::Preen => "preen",
-                    Action::Tilt => "tilt",
-                    Action::Stretch => "stretch",
-                    Action::SearchSnack => "search_snack",
-                    Action::NibbleCursor => "nibble_cursor",
-                    Action::StealBag => "steal_bag",
-                    Action::Caught => "caught",
-                    Action::BagCaper => "bag_caper",
-                    Action::BlowBubbles => "blow_bubbles",
-                    Action::BathTime => "bath_time",
-                    Action::PlayCap => "play_cap",
-                    Action::InvitePigeon => "invite_pigeon",
-                    Action::GullArgument => "gull_argument",
-                    Action::BaguetteParade => "baguette_parade",
-                    Action::PretendLeave => "pretend_leave",
-                    Action::CursorEgg => "cursor_egg",
-                    Action::MunicipalGull => "municipal_gull",
-                    Action::Apology => "apology",
-                    Action::Postcards => "postcards",
-                    Action::BringGift => "bring_gift",
-                    Action::ClearPerch => "clear_perch",
-                    Action::Perch => "perch",
-                    _ => "poop",
-                },
-                None,
-            )
-        }
-    }
+    action.perform(&mut Desktop(&app))
 }
 pub(crate) fn dispatch_action(app: &tauri::AppHandle, action: Action) {
     report(native_input::dispatch(app, move |app| {
@@ -247,85 +169,78 @@ pub(crate) fn report(result: Result<(), String>) {
     }
 }
 
-pub(crate) fn from_cli(flag: Option<&str>) -> Action {
-    match flag {
-        #[cfg(all(debug_assertions, target_os = "macos"))]
-        Some("--window-probe") => Action::WindowProbe,
-        #[cfg(all(debug_assertions, target_os = "macos"))]
-        Some("--window-spike") => Action::WindowSpike,
-        Some("--summon") => Action::Summon,
-        Some("--hide") => Action::Hide,
-        Some("--show") => Action::Show,
-        Some("--clean") => Action::Clean,
-        Some("--poop-here") => Action::PoopAtCursor,
-        Some("--place-bag") => Action::PlaceBag,
-        Some("--find-snack") => Action::SearchSnack,
-        Some("--nibble-cursor") => Action::NibbleCursor,
-        Some("--eat-cursor") => Action::EatCursor,
-        Some("--steal-bag") => Action::StealBag,
-        Some("--caught") => Action::Caught,
-        Some("--bag-caper") => Action::BagCaper,
-        Some("--blow-bubbles") => Action::BlowBubbles,
-        Some("--bath-time") => Action::BathTime,
-        Some("--chip-toss") => Action::ChipToss,
-        Some("--play-cap") => Action::PlayCap,
-        Some("--invite-pigeon") => Action::InvitePigeon,
-        Some("--gull-argument") => Action::GullArgument,
-        Some("--baguette-parade") => Action::BaguetteParade,
-        Some("--pretend-leave") => Action::PretendLeave,
-        Some("--cursor-egg") => Action::CursorEgg,
-        Some("--municipal-gull") => Action::MunicipalGull,
-        Some("--apology") => Action::Apology,
-        Some("--postcards") => Action::Postcards,
-        Some("--tidy") => Action::Tidy,
-        Some("--feed") => Action::Feed,
-        Some("--feed-here") => Action::FeedAtCursor,
-        Some("--place-chip") => Action::FeedHere,
-        Some("--trick-come") => Action::TrickCome,
-        Some("--trick-spin") => Action::TrickSpin,
-        Some("--trick-dead") => Action::TrickDead,
-        Some("--bring-gift") => Action::BringGift,
-        Some("--place-perch") => Action::PlacePerch,
-        Some("--clear-perch") => Action::ClearPerch,
-        Some("--perch") => Action::Perch,
-        Some("--cancel") => Action::Cancel,
-        _ => Action::Controls,
-    }
-}
+#[cfg(test)]
+#[path = "../action_catalog.rs"]
+mod action_catalog;
 
 #[cfg(test)]
 mod tests {
-    use super::{from_cli, Action};
+    use super::*;
 
     #[test]
-    fn theatre_actions_are_accepted_by_native_bridge() {
-        for name in [
-            "blow_bubbles",
-            "bath_time",
-            "chip_toss",
-            "play_cap",
-            "feed_here",
-            "feed_at_cursor",
-            "trick_come",
-            "trick_spin",
-            "trick_dead",
-            "forget_learning",
-            "invite_pigeon",
-            "gull_argument",
-            "baguette_parade",
-            "pretend_leave",
-            "cursor_egg",
-            "municipal_gull",
-            "apology",
-            "postcards",
-            "tidy",
+    fn launcher_aliases_preserve_their_historical_meanings_and_fallback() {
+        assert_eq!(from_cli(Some("--feed-here")), Action::FeedAtCursor);
+        assert_eq!(from_cli(Some("--place-chip")), Action::FeedHere);
+        assert_eq!(from_cli(Some("--poop-here")), Action::PoopAtCursor);
+        assert_eq!(from_cli(Some("--find-snack")), Action::SearchSnack);
+        assert_eq!(from_cli(Some("--play-cap")), Action::PlayCap);
+        for flag in [
+            None,
+            Some("--feed_here"),
+            Some("--feed-at-cursor"),
+            Some("--unknown"),
+            Some("--quit"),
         ] {
-            assert!(serde_json::from_str::<Action>(&format!("\"{name}\"")).is_ok());
+            assert_eq!(from_cli(flag), Action::Controls);
+        }
+        assert!(Action::named("prepare_chip").is_none());
+        assert!(Action::named("unknown").is_none());
+        assert!(serde_json::from_str::<Action>("\"unknown\"").is_err());
+    }
+
+    #[test]
+    fn debug_actions_are_only_accepted_in_debug_macos_builds() {
+        let available = cfg!(all(debug_assertions, target_os = "macos"));
+        for name in ["window_probe", "window_spike"] {
+            assert_eq!(Action::named(name).is_some(), available);
+            assert_eq!(
+                serde_json::from_value::<Action>(serde_json::json!(name)).is_ok(),
+                available
+            );
         }
     }
 
     #[test]
-    fn cap_launcher_starts_play() {
-        assert!(matches!(from_cli(Some("--play-cap")), Action::PlayCap));
+    fn malformed_definitions_fail_generation() {
+        let source = include_str!("../../src/actions/catalog.json");
+        action_catalog::generate(source).unwrap();
+        for mutation in [
+            "alias",
+            "purpose",
+            "preparation",
+            "visibility",
+            "extra",
+            "variant",
+            "debug",
+        ] {
+            let mut catalog: serde_json::Value = serde_json::from_str(source).unwrap();
+            match mutation {
+                "alias" => catalog["feed"]["aliases"] = serde_json::json!(["--place-chip"]),
+                "purpose" => catalog["feed_here"]["purpose"] = serde_json::json!("tidy"),
+                "preparation" => catalog["feed_here"]["preparation"] = serde_json::json!("cancel"),
+                "visibility" => catalog["feed_here"]["visibility"] = serde_json::json!("preserve"),
+                "extra" => catalog["feed"]["purpose"] = serde_json::json!("tidy"),
+                "variant" => catalog["feed"]["variant"] = serde_json::json!("Quit"),
+                "debug" => catalog["window_probe"]["availability"] = serde_json::json!("all"),
+                _ => unreachable!(),
+            }
+            assert!(
+                action_catalog::generate(&catalog.to_string()).is_err(),
+                "{mutation}"
+            );
+        }
+        for source in ["null", "[]", "{}", "{", r#"{"feed":3}"#] {
+            assert!(action_catalog::generate(source).is_err());
+        }
     }
 }
