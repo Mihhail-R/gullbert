@@ -107,6 +107,8 @@ jobs:
         run: npm run build -- --target ${{ matrix.target }} --bundles ${{ matrix.bundle }}
       - name: Run native lifecycle tests
         run: cargo test --manifest-path src-tauri/Cargo.toml --locked --target ${{ matrix.target }}
+      - name: Verify routing through the application and simulation
+        run: npm run test:routing -- --target ${{ matrix.target }}
       - name: Collect installers and update signatures
         run: node scripts/release.mjs collect ${{ matrix.target }}
       - uses: actions/upload-artifact@v4

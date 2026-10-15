@@ -1,7 +1,7 @@
 use super::*;
 use std::cell::{Cell, RefCell};
 
-type Message = (String, Option<(f64, f64)>, Option<Purpose>, Option<u64>);
+type Message = (String, Option<(f64, f64)>, Option<u64>);
 struct Recording {
     now: Cell<Instant>,
     visible: Cell<bool>,
@@ -15,6 +15,7 @@ struct Recording {
     events: RefCell<Vec<String>>,
     messages: RefCell<Vec<Message>>,
     deadlines: RefCell<Vec<(Instant, Deadline)>>,
+    stream: RefCell<Vec<serde_json::Value>>,
 }
 impl Default for Recording {
     fn default() -> Self {
@@ -31,6 +32,7 @@ impl Default for Recording {
             events: RefCell::new(vec![]),
             messages: RefCell::new(vec![]),
             deadlines: RefCell::new(vec![]),
+            stream: RefCell::new(vec![]),
         }
     }
 }
@@ -48,11 +50,24 @@ impl Recording {
         self.now.set(self.now.get() + duration);
     }
     fn actions(&self) -> Vec<String> {
-        self.messages.borrow().iter().map(|m| m.0.clone()).collect()
+        self.stream
+            .borrow()
+            .iter()
+            .filter(|event| event["event"] != "gullbert-visible")
+            .map(|event| {
+                let payload = &event["payload"];
+                payload["action"]
+                    .as_str()
+                    .or(payload["outcome"].as_str())
+                    .unwrap()
+                    .into()
+            })
+            .collect()
     }
     fn clear(&self) {
         self.events.borrow_mut().clear();
         self.messages.borrow_mut().clear();
+        self.stream.borrow_mut().clear();
     }
     fn latest(&self) -> Deadline {
         self.deadlines.borrow().last().unwrap().1
@@ -145,7 +160,11 @@ impl Effects for Recording {
     }
     fn visibility(&self, visible: bool) -> Result<(), String> {
         self.visible.set(visible);
-        self.effect(if visible { "visible:on" } else { "visible:off" })
+        self.effect(if visible { "visible:on" } else { "visible:off" })?;
+        self.stream
+            .borrow_mut()
+            .push(serde_json::json!({ "event": "gullbert-visible", "payload": visible }));
+        Ok(())
     }
     fn emergency_hide(&self, _error: &str) {
         self.visible.set(false);
@@ -155,16 +174,23 @@ impl Effects for Recording {
         &self,
         action: &str,
         point: Option<Point>,
-        purpose: Option<Purpose>,
         cursor_id: Option<u64>,
     ) -> Result<(), String> {
         self.effect(&format!("emit:{action}"))?;
-        self.messages.borrow_mut().push((
-            action.into(),
-            point.map(|p| (p.x, p.y)),
-            purpose,
-            cursor_id,
-        ));
+        self.stream.borrow_mut().push(serde_json::json!({
+            "event": "gullbert-action", "payload": { "action": action, "point": point, "cursor_id": cursor_id }
+        }));
+        self.messages
+            .borrow_mut()
+            .push((action.into(), point.map(|p| (p.x, p.y)), cursor_id));
+        Ok(())
+    }
+    fn target_notice(&self, notice: Notice) -> Result<(), String> {
+        let payload = serde_json::to_value(notice).unwrap();
+        self.effect(&format!("emit:{}", payload["outcome"].as_str().unwrap()))?;
+        self.stream
+            .borrow_mut()
+            .push(serde_json::json!({ "event": "gullbert-target", "payload": payload }));
         Ok(())
     }
     fn schedule(&self, deadline: Deadline, delay: Duration) {
@@ -192,7 +218,7 @@ fn point() -> Point {
 }
 fn cursor(input: &mut Input, effects: &Recording) -> u64 {
     input.eat_cursor(effects).unwrap();
-    effects.messages.borrow().last().unwrap().3.unwrap()
+    effects.messages.borrow().last().unwrap().2.unwrap()
 }
 
 #[test]
@@ -201,7 +227,7 @@ fn targeting_preempts_pickup_and_stale_pickup_work_cannot_release_it() {
     let effects = Recording::default();
     let pickup = input.begin_pickup(&effects, rect()).unwrap();
     let old = effects.latest();
-    input.begin_target(&effects, Purpose::Tidy).unwrap();
+    input.begin_target(&effects, Purpose::Tidy, "tidy").unwrap();
     effects.clear();
     assert!(input.begin_pickup(&effects, rect()).is_none());
     assert!(input.end_pickup(&effects, pickup, true, true).is_none());
@@ -212,8 +238,10 @@ fn targeting_preempts_pickup_and_stale_pickup_work_cannot_release_it() {
     assert!(effects.capture.get());
     assert!(effects.escape.get());
     assert!(effects.actions().is_empty());
-    input.target_picked(&effects, point()).unwrap();
-    assert_eq!(effects.actions(), ["tidy_pick"]);
+    input
+        .target_picked(&effects, input.targeting.id(), point())
+        .unwrap();
+    assert_eq!(effects.actions(), ["selected"]);
 }
 
 #[test]
@@ -222,7 +250,7 @@ fn completion_and_cancellation_have_distinct_tidy_outcomes() {
         for ending in ["done", "escape", "timeout", "replacement", "hide"] {
             let mut input = Input::default();
             let effects = Recording::default();
-            input.begin_target(&effects, purpose).unwrap();
+            input.begin_target(&effects, purpose, "cancel").unwrap();
             effects.clear();
             match ending {
                 "done" => input.finish_target(&effects),
@@ -240,9 +268,11 @@ fn completion_and_cancellation_have_distinct_tidy_outcomes() {
             assert_eq!(
                 effects.actions(),
                 [if purpose == Purpose::Tidy && complete {
-                    "tidy_done"
+                    "finished_tidying"
+                } else if complete {
+                    "abandoned"
                 } else {
-                    "cancel_target"
+                    "replaced"
                 }],
                 "{purpose:?} {ending}"
             );
@@ -255,26 +285,30 @@ fn placement_releases_before_delivery_but_tidy_picks_do_not_renew_deadline() {
     let mut input = Input::default();
     let effects = Recording::default();
     input
-        .begin_target(&effects, Purpose::Placement("place_bag"))
+        .begin_target(&effects, Purpose::Placement("place_bag"), "cancel")
         .unwrap();
     assert_eq!(
         effects.deadlines.borrow()[0].0 - effects.now(),
         Duration::from_secs(12)
     );
     effects.clear();
-    input.target_picked(&effects, point()).unwrap();
-    assert_eq!(effects.actions(), ["cancel_target", "place_bag"]);
+    input
+        .target_picked(&effects, input.targeting.id(), point())
+        .unwrap();
+    assert_eq!(effects.actions(), ["selected"]);
     effects.assert_released();
     assert_eq!(
-        effects.messages.borrow().last().unwrap().1,
-        Some((20.0, 30.0))
+        effects.stream.borrow().last().unwrap()["payload"]["point"],
+        serde_json::json!({"x":20.0,"y":30.0})
     );
-    input.begin_target(&effects, Purpose::Tidy).unwrap();
+    input.begin_target(&effects, Purpose::Tidy, "tidy").unwrap();
     let count = effects.deadlines.borrow().len();
     effects.clear();
     for _ in 0..3 {
         effects.advance(Duration::from_secs(9));
-        input.target_picked(&effects, point()).unwrap();
+        input
+            .target_picked(&effects, input.targeting.id(), point())
+            .unwrap();
     }
     assert_eq!(effects.deadlines.borrow().len(), count);
     assert!(effects.capture.get());
@@ -282,17 +316,17 @@ fn placement_releases_before_delivery_but_tidy_picks_do_not_renew_deadline() {
     effects.fire_due(&mut input);
     assert_eq!(
         effects.actions(),
-        ["tidy_pick", "tidy_pick", "tidy_pick", "tidy_done"]
+        ["selected", "selected", "selected", "finished_tidying"]
     );
     effects.assert_released();
 }
 
 #[test]
 fn invalid_target_or_failed_delivery_cancels_without_completing_tidy() {
-    for failure in ["coordinate", "geometry", "emit:tidy_pick"] {
+    for failure in ["coordinate", "geometry", "emit:selected"] {
         let mut input = Input::default();
         let effects = Recording::default();
-        input.begin_target(&effects, Purpose::Tidy).unwrap();
+        input.begin_target(&effects, Purpose::Tidy, "tidy").unwrap();
         effects.clear();
         let target = if failure == "coordinate" {
             Point { x: 800.0, y: 10.0 }
@@ -300,8 +334,10 @@ fn invalid_target_or_failed_delivery_cancels_without_completing_tidy() {
             effects.fail.set(Some(failure));
             point()
         };
-        assert!(input.target_picked(&effects, target).is_err());
-        assert_eq!(effects.actions(), ["cancel_target"]);
+        assert!(input
+            .target_picked(&effects, input.targeting.id(), target)
+            .is_err());
+        assert_eq!(effects.actions(), ["abandoned"]);
         effects.assert_released();
     }
 }
@@ -315,13 +351,13 @@ fn every_target_acquisition_failure_rolls_back_capture_focus_and_escape() {
         "focusable:on",
         "capture:on",
         "focus",
-        "emit:target",
+        "emit:started",
     ] {
         let mut input = Input::default();
         let effects = Recording::default();
         effects.fail.set(Some(failure));
         assert!(
-            input.begin_target(&effects, Purpose::Tidy).is_err(),
+            input.begin_target(&effects, Purpose::Tidy, "tidy").is_err(),
             "{failure}"
         );
         effects.assert_released();
@@ -329,10 +365,10 @@ fn every_target_acquisition_failure_rolls_back_capture_focus_and_escape() {
         assert!(!effects
             .actions()
             .iter()
-            .any(|a| a == "target" || a == "tidy_done"));
+            .any(|a| a == "selected" || a == "finished_tidying"));
         // Recovery leaves the module usable for a later explicit request.
         input
-            .begin_target(&effects, Purpose::Placement("poop"))
+            .begin_target(&effects, Purpose::Placement("poop"), "cancel")
             .unwrap();
         assert!(effects.capture.get());
         assert!(effects.escape.get());
@@ -343,7 +379,7 @@ fn every_target_acquisition_failure_rolls_back_capture_focus_and_escape() {
 fn failed_restoration_hides_instead_of_leaving_an_interactive_overlay() {
     let mut input = Input::default();
     let effects = Recording::default();
-    input.begin_target(&effects, Purpose::Tidy).unwrap();
+    input.begin_target(&effects, Purpose::Tidy, "tidy").unwrap();
     effects.clear();
     effects.fail.set(Some("capture:off"));
     input.finish_target(&effects);
@@ -353,7 +389,10 @@ fn failed_restoration_hides_instead_of_leaving_an_interactive_overlay() {
     let events = effects.events.borrow();
     assert!(
         events.iter().position(|e| e == "hide:fallback").unwrap()
-            < events.iter().position(|e| e == "emit:tidy_done").unwrap()
+            < events
+                .iter()
+                .position(|e| e == "emit:finished_tidying")
+                .unwrap()
     );
 }
 
@@ -362,10 +401,10 @@ fn stale_target_and_cursor_deadlines_do_not_affect_replacements() {
     let mut input = Input::default();
     let effects = Recording::default();
     input
-        .begin_target(&effects, Purpose::Placement("poop"))
+        .begin_target(&effects, Purpose::Placement("poop"), "cancel")
         .unwrap();
     let old_target = effects.latest();
-    input.begin_target(&effects, Purpose::Tidy).unwrap();
+    input.begin_target(&effects, Purpose::Tidy, "tidy").unwrap();
     effects.clear();
     input.expired(&effects, old_target);
     assert!(effects.capture.get());
@@ -457,14 +496,16 @@ fn pause_or_mischief_change_interrupts_pickup_and_cursor_without_ending_targetin
     let id = cursor(&mut input, &effects);
     input.interrupt(&effects);
     assert!(!input.tug_cursor(&effects, id, point()));
-    input.begin_target(&effects, Purpose::Tidy).unwrap();
+    input.begin_target(&effects, Purpose::Tidy, "tidy").unwrap();
     effects.clear();
     input.interrupt(&effects);
     assert!(effects.capture.get());
     assert!(effects.escape.get());
     assert!(effects.actions().is_empty());
-    input.target_picked(&effects, point()).unwrap();
-    assert_eq!(effects.actions(), ["tidy_pick"]);
+    input
+        .target_picked(&effects, input.targeting.id(), point())
+        .unwrap();
+    assert_eq!(effects.actions(), ["selected"]);
 }
 
 #[test]
@@ -591,4 +632,200 @@ fn startup_prepares_geometry_and_click_through_before_showing_the_overlay() {
     assert!(input.ready(&effects).is_err());
     assert!(!effects.visible());
     assert!(!effects.events.borrow().iter().any(|e| e == "visible:on"));
+}
+
+struct Routing<'a> {
+    input: &'a mut Input,
+    effects: &'a Recording,
+}
+impl crate::actions::Effects for Routing<'_> {
+    fn interrupt(&mut self) {
+        self.input.interrupt(self.effects);
+    }
+    fn replace_target(&mut self) {
+        self.input.cancel_target(self.effects);
+    }
+    fn visible(&self) -> bool {
+        self.effects.visible()
+    }
+    fn position(&mut self) -> Result<Point, String> {
+        self.effects.position_for_cursor()?;
+        Ok(point())
+    }
+    fn visibility(&mut self, visible: bool) -> Result<(), String> {
+        self.input.set_visible(self.effects, visible)
+    }
+    fn command(&mut self, command: &str, point: Option<Point>) -> Result<(), String> {
+        self.effects.emit(command, point, None)
+    }
+    fn target(&mut self, purpose: Purpose, preparation: &'static str) -> Result<(), String> {
+        self.input.begin_target(self.effects, purpose, preparation)
+    }
+    fn cursor(&mut self) -> Result<(), String> {
+        self.input.eat_cursor(self.effects)
+    }
+    fn controls(&mut self) {
+        self.effects.effect("controls").unwrap();
+    }
+    fn quit(&mut self) {
+        self.effects.effect("quit").unwrap();
+    }
+    #[cfg(all(debug_assertions, target_os = "macos"))]
+    fn window_probe(&mut self, _spike: bool) -> Result<(), String> {
+        Ok(())
+    }
+}
+
+// Export real routing/input event delivery for the application + Gullbert tests.
+// No Node or frontend build is needed to run this native test on its own.
+#[test]
+fn application_routing_traces() {
+    let scenarios: serde_json::Value =
+        serde_json::from_str(include_str!("../../../tests/action-scenarios.json")).unwrap();
+    let mut traces = serde_json::Map::new();
+    for (name, steps) in scenarios.as_object().unwrap() {
+        let mut input = Input::default();
+        let effects = Recording::default();
+        let mut trace = vec![];
+        for step in steps.as_array().unwrap() {
+            effects.clear();
+            let mut result = Ok(());
+            if let Some(action) = step["action"].as_str() {
+                let action = crate::actions::Action::named(action).unwrap();
+                result = action.perform(&mut Routing {
+                    input: &mut input,
+                    effects: &effects,
+                });
+            } else if let Some(point) = step["pick"].as_array() {
+                let id = input.targeting.id();
+                result = input.target_picked(
+                    &effects,
+                    id,
+                    Point {
+                        x: point[0].as_f64().unwrap(),
+                        y: point[1].as_f64().unwrap(),
+                    },
+                );
+            } else if step["escape"] == true {
+                result = input.escape(&effects);
+            } else if step["deadline"] == true {
+                effects.advance(input.targeting.purpose().unwrap().timeout());
+                effects.fire_due(&mut input);
+            } else if let Some(failure) = step["fail"].as_str() {
+                effects.fail.set(Some(match failure {
+                    "emit:selected" => "emit:selected",
+                    "capture:on" => "capture:on",
+                    _ => panic!("unknown failure"),
+                }));
+            }
+            assert_eq!(result.is_err(), step["error"] == true, "{name}: {step}");
+            trace.push(
+                serde_json::json!({ "events": *effects.stream.borrow(), "error": result.err() }),
+            );
+        }
+        traces.insert(name.clone(), serde_json::json!(trace));
+    }
+    println!(
+        "GULLBERT_ROUTING_TRACES={}",
+        serde_json::Value::Object(traces)
+    );
+}
+
+#[test]
+fn duplicate_and_stale_target_requests_cannot_end_another_session() {
+    let mut input = Input::default();
+    let effects = Recording::default();
+    input
+        .begin_target(&effects, Purpose::Placement("feed_here"), "prepare_chip")
+        .unwrap();
+    let first = input.targeting.id();
+    input.finish_target_id(&effects, Some(first));
+    effects.clear();
+    input.finish_target_id(&effects, Some(first));
+    input.escape(&effects).unwrap();
+    input.target_picked(&effects, first, point()).unwrap();
+    assert!(effects.actions().is_empty());
+    input.begin_target(&effects, Purpose::Tidy, "tidy").unwrap();
+    effects.clear();
+    input.finish_target_id(&effects, Some(first));
+    input.target_picked(&effects, first, point()).unwrap();
+    input.expired(&effects, Deadline::Target(first));
+    assert!(effects.actions().is_empty());
+    assert!(effects.capture.get());
+}
+
+#[test]
+fn failed_selection_delivery_reports_its_released_identity_and_cleans_up() {
+    let mut input = Input::default();
+    let effects = Recording::default();
+    input
+        .begin_target(&effects, Purpose::Placement("feed_here"), "prepare_chip")
+        .unwrap();
+    let id = input.targeting.id();
+    effects.clear();
+    effects.fail.set(Some("emit:selected"));
+    assert!(input.target_picked(&effects, id, point()).is_err());
+    effects.assert_released();
+    assert_eq!(effects.actions(), ["abandoned"]);
+    assert_eq!(effects.stream.borrow()[0]["payload"]["id"], id);
+    let events = effects.events.borrow();
+    assert!(
+        events.iter().position(|e| e == "capture:off").unwrap()
+            < events.iter().position(|e| e == "emit:selected").unwrap()
+    );
+}
+
+#[test]
+fn public_routing_preserves_pointer_positioning_and_visibility_policy() {
+    use crate::actions::Action;
+    let mut input = Input::default();
+    let effects = Recording::default();
+    Action::Summon
+        .perform(&mut Routing {
+            input: &mut input,
+            effects: &effects,
+        })
+        .unwrap();
+    assert_eq!(
+        effects.messages.borrow().last().unwrap().1,
+        Some((20.0, 30.0))
+    );
+    for action in [Action::Clean, Action::Cancel] {
+        effects.visible.set(false);
+        effects.clear();
+        action
+            .perform(&mut Routing {
+                input: &mut input,
+                effects: &effects,
+            })
+            .unwrap();
+        assert!(!effects.visible());
+        assert!(!effects
+            .events
+            .borrow()
+            .iter()
+            .any(|event| event == "position:cursor"));
+    }
+    effects.clear();
+    Action::Feed
+        .perform(&mut Routing {
+            input: &mut input,
+            effects: &effects,
+        })
+        .unwrap();
+    assert!(effects.visible());
+    let events = effects.events.borrow();
+    let position = events
+        .iter()
+        .position(|event| event == "position:cursor")
+        .unwrap();
+    let visible = events
+        .iter()
+        .position(|event| event == "visible:on")
+        .unwrap();
+    let command = events
+        .iter()
+        .position(|event| event == "emit:feed")
+        .unwrap();
+    assert!(position < visible && visible < command);
 }

@@ -1,0 +1,334 @@
+{
+  "successful placement rewards only after chip consumption": [
+    {
+      "action": "trick_spin"
+    },
+    {
+      "advance": "reward"
+    },
+    {
+      "action": "feed_here"
+    },
+    {
+      "expect": {
+        "targeting": true,
+        "lessons": 0
+      }
+    },
+    {
+      "pick": [500, 400]
+    },
+    {
+      "expect": {
+        "targeting": false,
+        "lessons": 0
+      }
+    },
+    {
+      "advance": 8
+    },
+    {
+      "expect": {
+        "lessons": 1
+      }
+    }
+  ],
+  "Escape abandons placement and cancels the pending reward": [
+    {
+      "action": "trick_spin"
+    },
+    {
+      "advance": "reward"
+    },
+    {
+      "action": "feed_here"
+    },
+    {
+      "escape": true
+    },
+    {
+      "expect": {
+        "targeting": false
+      }
+    },
+    {
+      "action": "feed"
+    },
+    {
+      "advance": 3
+    },
+    {
+      "expect": {
+        "lessons": 0
+      }
+    }
+  ],
+  "native and frontend deadlines abandon placement without Escape": [
+    {
+      "action": "trick_spin"
+    },
+    {
+      "advance": "reward"
+    },
+    {
+      "action": "feed_here"
+    },
+    {
+      "deadline": true
+    },
+    {
+      "expect": {
+        "targeting": false
+      }
+    },
+    {
+      "action": "feed"
+    },
+    {
+      "advance": 3
+    },
+    {
+      "expect": {
+        "lessons": 0
+      }
+    }
+  ],
+  "hiding focused tidying preserves an offered chip": [
+    {
+      "action": "feed"
+    },
+    {
+      "action": "tidy"
+    },
+    {
+      "expect": {
+        "chip": true,
+        "tidying": true
+      }
+    },
+    {
+      "action": "hide"
+    },
+    {
+      "expect": {
+        "chip": true,
+        "tidying": false,
+        "targeting": false,
+        "visible": false
+      }
+    }
+  ],
+  "restarting focused tidying preserves an offered chip": [
+    {
+      "action": "feed"
+    },
+    {
+      "action": "tidy"
+    },
+    {
+      "action": "tidy"
+    },
+    {
+      "expect": {
+        "chip": true,
+        "tidying": true,
+        "targeting": true
+      }
+    },
+    {
+      "pick": [790, 590]
+    },
+    {
+      "pick": [790, 590]
+    },
+    {
+      "escape": true
+    },
+    {
+      "expect": {
+        "chip": true,
+        "tidying": false,
+        "targeting": false
+      }
+    }
+  ],
+  "repeated tidy selections end normally on the fixed deadline": [
+    {
+      "action": "feed"
+    },
+    {
+      "action": "tidy"
+    },
+    {
+      "pick": [790, 590]
+    },
+    {
+      "pick": [790, 590]
+    },
+    {
+      "deadline": true
+    },
+    {
+      "expect": {
+        "chip": true,
+        "tidying": false,
+        "targeting": false
+      }
+    }
+  ],
+  "ordinary actions show the bird while clean and Stop preserve visibility": [
+    {
+      "action": "hide"
+    },
+    {
+      "action": "clean"
+    },
+    {
+      "expect": {
+        "visible": false
+      }
+    },
+    {
+      "action": "cancel"
+    },
+    {
+      "expect": {
+        "visible": false
+      }
+    },
+    {
+      "action": "nap"
+    },
+    {
+      "expect": {
+        "visible": true
+      }
+    }
+  ],
+  "invalid points abandon placement and cancel its reward": [
+    {
+      "action": "trick_spin"
+    },
+    {
+      "advance": "reward"
+    },
+    {
+      "action": "feed_here"
+    },
+    {
+      "pick": [800, 600],
+      "error": true
+    },
+    {
+      "expect": {
+        "targeting": false
+      }
+    },
+    {
+      "action": "feed"
+    },
+    {
+      "advance": 3
+    },
+    {
+      "expect": {
+        "lessons": 0
+      }
+    }
+  ],
+  "selection delivery failure after releasing capture abandons the reward": [
+    {
+      "nativeOnly": true
+    },
+    {
+      "action": "trick_spin"
+    },
+    {
+      "advance": "reward"
+    },
+    {
+      "action": "feed_here"
+    },
+    {
+      "fail": "emit:selected"
+    },
+    {
+      "pick": [500, 400],
+      "error": true
+    },
+    {
+      "expect": {
+        "targeting": false
+      }
+    },
+    {
+      "action": "feed"
+    },
+    {
+      "advance": 3
+    },
+    {
+      "expect": {
+        "lessons": 0
+      }
+    }
+  ],
+  "acquisition failure closes prepared placement and cancels its reward": [
+    {
+      "nativeOnly": true
+    },
+    {
+      "action": "trick_spin"
+    },
+    {
+      "advance": "reward"
+    },
+    {
+      "fail": "capture:on"
+    },
+    {
+      "action": "feed_here",
+      "error": true
+    },
+    {
+      "expect": {
+        "targeting": false
+      }
+    },
+    {
+      "action": "feed"
+    },
+    {
+      "advance": 3
+    },
+    {
+      "expect": {
+        "lessons": 0
+      }
+    }
+  ],
+  "focused tidying can start while the bird is hidden": [
+    {
+      "action": "hide"
+    },
+    {
+      "action": "tidy"
+    },
+    {
+      "expect": {
+        "visible": true,
+        "tidying": true,
+        "targeting": true
+      }
+    },
+    {
+      "escape": true
+    },
+    {
+      "expect": {
+        "tidying": false,
+        "targeting": false
+      }
+    }
+  ]
+}

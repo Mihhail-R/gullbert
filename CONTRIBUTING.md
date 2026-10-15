@@ -9,6 +9,7 @@ npm test
 npm run check
 npm run format:check
 cargo test --manifest-path src-tauri/Cargo.toml --locked
+npm run test:routing
 ```
 
 Use `npm run format` to apply frontend and documentation formatting. For native changes, also run `cargo fmt --manifest-path src-tauri/Cargo.toml --check`, test the desktop overlay, and state which operating system you used. Check click-through, dragging, targeting, Escape, hiding, and shortcuts; browser mocks cannot verify OS input delivery. Include a screenshot or short clip for a new gag.
@@ -43,6 +44,12 @@ The simulation owns state and contains no browser or native dependencies. `Gullb
 Keep DOM, native calls, storage, audio, and wall-clock scheduling outside the simulation. `PetApplication` owns startup, shutdown, timers, subscriptions, persistence, and outstanding native work through explicitly supplied dependencies. `pet.ts` only assembles those dependencies. Renderers consume detached, read-only `PetPresentation` snapshots; they must not inspect the runtime or import behavior implementations. Use `inspect()` for diagnostic observations and behavioral assertions, never as a mutation interface.
 
 Durable belongings have one simulation writer and a separate `roommate.json` snapshot. Normalize new fields through `src/simulation/memory.ts`; never persist moods, in-flight rewards, or scene clocks. Failed native initialization must not overwrite unread belongings.
+
+Public action identity, explicit launcher aliases, visibility, and Targeting preparation live in `src/actions/catalog.json`. Controls submit action names; preview and desktop routing own effect ordering. Keep labels and menu layout in presentation code, and keep private simulation commands and additional routines outside this catalog. TypeScript reads its action names directly; Cargo validates and generates Rust routing in `OUT_DIR` without a frontend build.
+
+Targeting notices carry the native lease generation (or a preview identity). Successful placement releases capture before selection delivery; abandonment cancels a pending reward, normal tidy completion finishes tidying, and replacement only closes the old view. Desktop Escape goes through the native input owner. Frontend expiry remains a fallback when native terminal delivery fails.
+
+`npm run test:routing` builds the frontend, obtains event traces through the real Rust action router and native input lifecycle with recorded OS effects, and delivers them to `PetApplication` with real `Gullbert`. It requires the same native build prerequisites as Cargo tests. Plain `npm test` runs preview and application regressions without native build tools; the native trace cases are skipped there. Neither test mode verifies OS input delivery.
 
 ### Readability and module depth
 

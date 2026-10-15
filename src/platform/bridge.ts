@@ -1,3 +1,4 @@
+import type { ActionName } from "../actions/catalog.js";
 import type {
   CaretSample,
   Memory,
@@ -10,9 +11,12 @@ import type {
 export interface ActionMessage {
   action: string;
   point?: Point;
-  purpose?: string;
   cursor_id?: number;
 }
+export type TargetNotice =
+  | { outcome: "started"; id: number; purpose: string; preparation: string }
+  | { outcome: "selected"; id: number; point: Point }
+  | { outcome: "abandoned" | "finished_tidying" | "replaced"; id: number };
 export interface RoommateStatus {
   memory?: Memory;
   mood?: MoodName | null;
@@ -27,7 +31,7 @@ interface Commands {
   app_version: [undefined, string];
   check_update: [{ beta: boolean }, { version: string; notes: string } | null];
   install_update: [undefined, void];
-  act: [{ action: string }, void];
+  act: [{ action: ActionName }, void];
   update_settings: [{ settings: Settings }, void];
   snapshot: [undefined, Snapshot];
   pet_ready: [undefined, Snapshot];
@@ -56,8 +60,8 @@ interface Commands {
   ];
   tug_cursor: [{ id: number; x: number; y: number }, boolean];
   release_cursor: [{ id: number }, void];
-  cancel_targeting: [undefined, void];
-  target_picked: [Point, void];
+  cancel_targeting: [{ id?: number }, void];
+  target_picked: [Point & { id: number }, void];
 }
 interface Events {
   "gullbert-update-progress": {
@@ -67,6 +71,7 @@ interface Events {
   };
   "gullbert-open-updates": unknown;
   "gullbert-action": ActionMessage;
+  "gullbert-target": TargetNotice;
   "gullbert-settings": Settings;
   "gullbert-visible": boolean;
   "gullbert-roommate": RoommateStatus;
@@ -97,7 +102,9 @@ export const invoke: Invoke =
     return Promise.reject(new Error("Native bridge unavailable"));
   });
 export type PreviewMessage =
-  | ({ type: "action" } & ActionMessage)
+  | { type: "action"; action: string }
+  | { type: "escape" }
+  | { type: "preview-quit" }
   | { type: "settings"; settings: Settings }
   | { type: "visible"; visible: boolean }
   | ({ type: "roommate" } & RoommateStatus)

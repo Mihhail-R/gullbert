@@ -1,5 +1,10 @@
+import { submitPreviewAction } from "../../actions/preview.js";
 import { dialogue } from "../../simulation/dialogue.js";
-import type { ActionMessage, PreviewMessage } from "../../platform/bridge.js";
+import type {
+  ActionMessage,
+  PreviewMessage,
+  TargetNotice,
+} from "../../platform/bridge.js";
 import { createPickupDrag } from "../../platform/pickup-drag.js";
 import { createCursorBiteBridge } from "../../platform/cursor-bite.js";
 import { createMemoryWriter } from "../../platform/roommate-store.js";
@@ -32,6 +37,8 @@ export class PetApplication {
   #visible = true;
   #targeting = false;
   #targetGeneration = 0;
+  #targetId: number | null = null;
+  #lastTargetId = 0;
   #targetPurpose = "poop";
   #tidyPoint: Point | null = null;
   #timer: ReturnType<typeof setTimeout> | undefined;
@@ -324,6 +331,11 @@ export class PetApplication {
         });
       },
       () => {
+        return native.listen("gullbert-target", (event) => {
+          this.#targetNotice(event.payload);
+        });
+      },
+      () => {
         return native.listen("gullbert-settings", (event) => {
           this.#configure(event.payload);
         });
@@ -409,7 +421,42 @@ export class PetApplication {
 
   #previewMessage(message: PreviewMessage): void {
     if (message.type === "action") {
-      this.#action(message);
+      if (!this.#running()) {
+        return;
+      }
+      try {
+        submitPreviewAction(message.action, {
+          replace: () => {
+            this.#targetMode(false);
+          },
+          visibility: (visible) => {
+            this.#changeVisibility(visible);
+            this.#dependencies.browser.publish({ type: "visible", visible });
+          },
+          command: (action, point) => {
+            this.#action({ action, point });
+          },
+          target: (purpose, preparation) => {
+            this.#targetNotice({
+              outcome: "started",
+              id: this.#lastTargetId + 1,
+              purpose,
+              preparation,
+            });
+          },
+          center: () => {
+            const size = this.#dependencies.browser.size();
+            return { x: size.width / 2, y: size.height / 2 };
+          },
+          quit: () => {
+            this.#dependencies.browser.publish({ type: "preview-quit" });
+          },
+        });
+      } catch (error) {
+        this.#dependencies.reportError(error);
+      }
+    } else if (message.type === "escape") {
+      this.#cancel();
     } else if (message.type === "settings") {
       this.#configure(message.settings);
     } else if (message.type === "visible") {
@@ -647,6 +694,7 @@ export class PetApplication {
     const generation = ++this.#targetGeneration;
     this.#targeting = active;
     if (!active) {
+      this.#targetId = null;
       this.#tidyPoint = null;
       this.#dependencies.simulation.tidyPointer(null);
     }
@@ -656,31 +704,88 @@ export class PetApplication {
       if (this.#targetPurpose === "tidy") {
         timeout = 30000;
       }
+      const id = this.#targetId;
       this.#targetTimer = this.#dependencies.clock.schedule(() => {
-        if (this.#running() && generation === this.#targetGeneration) {
-          this.#cancel();
+        if (
+          this.#running() &&
+          generation === this.#targetGeneration &&
+          id !== null
+        ) {
+          // Native expiry is independent. This remains a frontend fallback if
+          // terminal event delivery fails after native ownership is released.
+          this.#cancelNativeTargeting(id);
+          this.#targetNotice({ id, outcome: this.#targetEnd() });
         }
       }, timeout);
     }
     this.#updateView();
   }
 
+  #targetEnd(): "finished_tidying" | "abandoned" {
+    if (this.#targetPurpose === "tidy") {
+      return "finished_tidying";
+    }
+    return "abandoned";
+  }
+
   #cancel(): void {
     if (!this.#running()) {
       return;
     }
+    if (this.#dependencies.native) {
+      // Both webview and global Escape terminate through the native owner.
+      // A repeated request after its lease ended must never become Stop routine.
+      this.#cancelNativeTargeting();
+      return;
+    }
+    if (this.#targetId !== null) {
+      this.#targetNotice({ id: this.#targetId, outcome: this.#targetEnd() });
+      return;
+    }
     this.#cancelDrag();
-    const wasTidying = this.#dependencies.simulation.status().tidying;
-    this.#targetMode(false);
-    if (wasTidying) {
-      this.#dependencies.simulation.action("tidy_done");
-    } else {
-      this.#dependencies.simulation.action("cancel");
+    this.#dependencies.simulation.action("cancel");
+    this.#wake();
+  }
+
+  #targetNotice(notice: TargetNotice): void {
+    if (!this.#running()) {
+      return;
     }
-    if (this.#visible) {
+    const sim = this.#dependencies.simulation;
+    if (notice.outcome === "started") {
+      if (notice.id <= this.#lastTargetId) {
+        return;
+      }
+      this.#lastTargetId = notice.id;
+      this.#targetMode(false);
+      this.#targetId = notice.id;
+      this.#caret.stop();
+      this.#cancelDrag();
+      sim.action(notice.preparation);
+      this.#targetMode(true, notice.purpose);
       this.#wake();
+      return;
     }
-    this.#cancelNativeTargeting();
+    if (notice.id !== this.#targetId) {
+      return;
+    }
+    const purpose = this.#targetPurpose;
+    if (notice.outcome === "selected" && purpose === "tidy") {
+      sim.action("tidy_pick", notice.point);
+      this.#render();
+      return;
+    }
+    // Forget the accepted identity before applying a terminal simulation effect.
+    this.#targetMode(false);
+    if (notice.outcome === "selected") {
+      this.#resizeSimulation();
+      sim.action(purpose, notice.point);
+    } else if (notice.outcome === "abandoned") {
+      sim.action("cancel");
+    } else if (notice.outcome === "finished_tidying") {
+      sim.action("tidy_done");
+    }
+    this.#wake();
   }
 
   #action(message: ActionMessage): void {
@@ -690,40 +795,6 @@ export class PetApplication {
     const sim = this.#dependencies.simulation;
     this.#caret.stop();
     this.#cancelDrag();
-    if (message.action === "escape") {
-      this.#cancel();
-      return;
-    }
-    if (message.action === "target") {
-      if (message.purpose === "tidy") {
-        sim.action("tidy");
-      } else if (message.purpose === "feed_here") {
-        sim.action("prepare_chip");
-      } else {
-        sim.action("cancel");
-      }
-      this.#targetMode(true, message.purpose);
-      this.#wake();
-      return;
-    }
-    if (message.action === "tidy_pick") {
-      if (this.#targeting && this.#targetPurpose === "tidy") {
-        sim.action(message.action, message.point);
-        this.#render();
-      }
-      return;
-    }
-    if (message.action === "tidy_done" && !sim.status().tidying) {
-      return;
-    }
-    if (message.action === "cancel_target") {
-      if (sim.status().tidying) {
-        sim.action("cancel");
-      }
-      this.#targetMode(false);
-      this.#syncPointer();
-      return;
-    }
     this.#targetMode(false);
     this.#resizeSimulation();
     sim.action(message.action, message.point);
@@ -763,33 +834,35 @@ export class PetApplication {
     if (event.onBanner) {
       return;
     }
-    const tidy = this.#targetPurpose === "tidy";
-    if (!tidy) {
-      this.#targetMode(false);
+    const id = this.#targetId;
+    if (id === null) {
+      return;
     }
-    const generation = this.#targetGeneration;
     const lifecycleGeneration = this.#generation;
     const native = this.#dependencies.native;
     if (native) {
-      native.invoke("target_picked", point).catch((error) => {
-        if (
-          !this.#current(lifecycleGeneration) ||
-          generation !== this.#targetGeneration
-        ) {
+      native.invoke("target_picked", { id, ...point }).catch((error) => {
+        if (!this.#current(lifecycleGeneration) || id !== this.#targetId) {
           return;
         }
         this.#dependencies.reportError(error);
-        sim.action("cancel");
-        this.#targetMode(false);
-        this.#cancelNativeTargeting();
-        this.#wake();
+        this.#cancelNativeTargeting(id);
+        this.#targetNotice({ outcome: "abandoned", id });
       });
     } else {
-      let pickedAction = this.#targetPurpose;
-      if (tidy) {
-        pickedAction = "tidy_pick";
+      const size = this.#dependencies.browser.size();
+      if (
+        !Number.isFinite(point.x) ||
+        !Number.isFinite(point.y) ||
+        point.x < 0 ||
+        point.y < 0 ||
+        point.x >= size.width ||
+        point.y >= size.height
+      ) {
+        this.#targetNotice({ outcome: "abandoned", id });
+        return;
       }
-      this.#action({ action: pickedAction, point });
+      this.#targetNotice({ outcome: "selected", id, point });
     }
   }
 
@@ -1041,10 +1114,12 @@ export class PetApplication {
     }
   }
 
-  #cancelNativeTargeting(): void {
+  #cancelNativeTargeting(id = this.#targetId): void {
     const native = this.#dependencies.native;
     if (native) {
-      this.#runNative(native.invoke("cancel_targeting"));
+      this.#runNative(
+        native.invoke("cancel_targeting", { id: id ?? undefined }),
+      );
     }
   }
 

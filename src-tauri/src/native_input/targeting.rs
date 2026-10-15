@@ -1,3 +1,5 @@
+use crate::windows::Point;
+use serde::Serialize;
 use std::time::Duration;
 
 pub fn valid_point(x: f64, y: f64, size: (u32, u32), scale: f64) -> bool {
@@ -28,14 +30,29 @@ impl Purpose {
     pub fn timeout(self) -> Duration {
         Duration::from_secs(if self == Self::Tidy { 30 } else { 12 })
     }
+}
 
-    pub fn pick_action(self) -> &'static str {
-        if self == Self::Tidy {
-            "tidy_pick"
-        } else {
-            self.name()
-        }
-    }
+#[derive(Clone, Serialize)]
+#[serde(tag = "outcome", rename_all = "snake_case")]
+pub(crate) enum Notice {
+    Started {
+        id: u64,
+        purpose: &'static str,
+        preparation: &'static str,
+    },
+    Selected {
+        id: u64,
+        point: Point,
+    },
+    Abandoned {
+        id: u64,
+    },
+    FinishedTidying {
+        id: u64,
+    },
+    Replaced {
+        id: u64,
+    },
 }
 
 // The native capture lease is independent of webview timers. Clicks never
@@ -47,6 +64,10 @@ pub struct Targeting {
 }
 
 impl Targeting {
+    pub fn id(&self) -> u64 {
+        self.generation
+    }
+
     pub fn purpose(&self) -> Option<Purpose> {
         self.purpose
     }
@@ -102,7 +123,7 @@ mod tests {
         let mut session = Targeting::default();
         let generation = session.begin(Purpose::Tidy);
         for _ in 0..5 {
-            assert_eq!(session.purpose().unwrap().pick_action(), "tidy_pick");
+            assert_eq!(session.purpose().unwrap().name(), "tidy");
             assert!(session.is_current(generation));
         }
         assert_eq!(session.finish(), Some(Purpose::Tidy));
@@ -118,7 +139,7 @@ mod tests {
         let second = session.begin(Purpose::Placement("place_perch"));
         assert!(!session.is_current(first));
         assert!(session.is_current(second));
-        assert_eq!(session.purpose().unwrap().pick_action(), "place_perch");
+        assert_eq!(session.purpose().unwrap().name(), "place_perch");
         session.finish();
         assert!(!session.is_current(second));
     }

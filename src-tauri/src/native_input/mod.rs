@@ -20,6 +20,7 @@ pub(crate) use targeting::Purpose;
 
 use crate::windows::{CursorPoint, Point};
 use std::time::{Duration, Instant};
+use targeting::Notice;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Deadline {
@@ -49,9 +50,9 @@ trait Effects {
         &self,
         action: &str,
         point: Option<Point>,
-        purpose: Option<Purpose>,
         cursor_id: Option<u64>,
     ) -> Result<(), String>;
+    fn target_notice(&self, notice: Notice) -> Result<(), String>;
     fn schedule(&self, deadline: Deadline, delay: Duration);
     // Display selection is supplied by the application, not decided here.
     fn position_for_target(&self, purpose: Purpose) -> Result<(), String>;
@@ -214,10 +215,13 @@ impl Input {
         }
     }
 
-    fn end_target(&mut self, effects: &impl Effects, completed: bool) {
+    // Clear ownership before OS effects or delivery. A failed successful-selection
+    // delivery still has its captured id available for an explicit abandonment.
+    fn release_target(&mut self, effects: &impl Effects) -> Option<(u64, Purpose)> {
+        let id = self.targeting.id();
+        let purpose = self.targeting.finish()?;
         self.pickup.cancel();
         self.interaction = interaction::Interaction::default();
-        let purpose = self.targeting.finish();
         self.cancel_cursor(effects);
         if effects.window_exists() {
             if let Err(error) = effects.capture(false) {
@@ -226,21 +230,33 @@ impl Input {
             let _ = effects.focusable(false);
         }
         effects.release_escape();
-        if let Some(purpose) = purpose {
-            let action = if completed && purpose == Purpose::Tidy {
-                "tidy_done"
-            } else {
-                "cancel_target"
-            };
-            let _ = effects.emit(action, None, None, None);
-        }
+        Some((id, purpose))
     }
 
     fn cancel_target(&mut self, effects: &impl Effects) {
-        self.end_target(effects, false);
+        if let Some((id, _)) = self.release_target(effects) {
+            let _ = effects.target_notice(Notice::Replaced { id });
+        }
+    }
+    fn abandon_target(&mut self, effects: &impl Effects) {
+        if let Some((id, _)) = self.release_target(effects) {
+            let _ = effects.target_notice(Notice::Abandoned { id });
+        }
     }
     fn finish_target(&mut self, effects: &impl Effects) {
-        self.end_target(effects, true);
+        if let Some((id, purpose)) = self.release_target(effects) {
+            let notice = if purpose == Purpose::Tidy {
+                Notice::FinishedTidying { id }
+            } else {
+                Notice::Abandoned { id }
+            };
+            let _ = effects.target_notice(notice);
+        }
+    }
+    fn finish_target_id(&mut self, effects: &impl Effects, id: Option<u64>) {
+        if id.is_none_or(|id| self.targeting.is_current(id)) {
+            self.finish_target(effects);
+        }
     }
 
     fn set_visible(&mut self, effects: &impl Effects, visible: bool) -> Result<(), String> {
@@ -250,12 +266,26 @@ impl Input {
         effects.visibility(visible)
     }
 
-    fn begin_target(&mut self, effects: &impl Effects, purpose: Purpose) -> Result<(), String> {
+    fn begin_target(
+        &mut self,
+        effects: &impl Effects,
+        purpose: Purpose,
+        preparation: &'static str,
+    ) -> Result<(), String> {
         self.cancel_target(effects);
+        self.interrupt(effects);
+        let id = self.targeting.begin(purpose);
+        let start = Notice::Started {
+            id,
+            purpose: purpose.name(),
+            preparation,
+        };
+        let mut announced = false;
         let result = (|| {
             effects.position_for_target(purpose)?;
             self.set_visible(effects, true)?;
-            let generation = self.targeting.begin(purpose);
+            effects.target_notice(start.clone())?;
+            announced = true;
             if !effects.window_exists() {
                 return Err("Pet window unavailable".into());
             }
@@ -263,30 +293,45 @@ impl Input {
             effects.focusable(true)?;
             effects.capture(true)?;
             effects.focus()?;
-            effects.emit("target", None, Some(purpose), None)?;
-            effects.schedule(Deadline::Target(generation), purpose.timeout());
+            effects.schedule(Deadline::Target(id), purpose.timeout());
             Ok(())
         })();
         if result.is_err() {
-            self.cancel_target(effects);
+            if !announced {
+                // Even early acquisition failure must cancel this preparation.
+                // Repeating Started is safe if an earlier emission was delivered.
+                let _ = effects.target_notice(start);
+            }
+            self.abandon_target(effects);
         }
         result
     }
 
-    fn target_picked(&mut self, effects: &impl Effects, point: Point) -> Result<(), String> {
+    fn target_picked(
+        &mut self,
+        effects: &impl Effects,
+        id: u64,
+        point: Point,
+    ) -> Result<(), String> {
+        if !self.targeting.is_current(id) {
+            return Ok(());
+        }
+        let purpose = self.targeting.purpose().unwrap();
         let result = (|| {
-            let purpose = self.targeting.purpose().ok_or("Targeting has ended")?;
             let (size, scale) = effects.geometry()?;
             if !targeting::valid_point(point.x, point.y, size, scale) {
                 return Err("Target outside screen".into());
             }
             if purpose != Purpose::Tidy {
-                self.cancel_target(effects);
+                self.release_target(effects);
             }
-            effects.emit(purpose.pick_action(), Some(point), None, None)
+            effects.target_notice(Notice::Selected { id, point })
         })();
         if result.is_err() {
-            self.cancel_target(effects);
+            self.release_target(effects);
+            // The lease may already be released; do not infer the failed session
+            // from current state. Already delivered effects cannot be rolled back.
+            let _ = effects.target_notice(Notice::Abandoned { id });
         }
         result
     }
@@ -297,7 +342,7 @@ impl Input {
         self.set_visible(effects, true)?;
         let id = self.cursor.arm(effects.now());
         effects.schedule(Deadline::Cursor(id), cursor_bite::ENCOUNTER);
-        effects.emit("eat_cursor", None, None, Some(id))
+        effects.emit("eat_cursor", None, Some(id))
     }
 
     // Used for every replacement command and when pause/mischief changes.
@@ -313,7 +358,7 @@ impl Input {
         } else if self.cursor.armed() || self.pickup.active(effects.now()) {
             self.interrupt(effects);
             self.cancel_target(effects);
-            effects.emit("cancel", None, None, None)?;
+            effects.emit("cancel", None, None)?;
         }
         Ok(())
     }
@@ -325,7 +370,7 @@ impl Input {
                 self.pickup.cancel();
                 self.reconcile(effects, None);
                 self.cancel_cursor(effects);
-                let _ = effects.emit("cancel", None, None, None);
+                let _ = effects.emit("cancel", None, None);
             }
             Deadline::Cursor(id) => self.release_cursor(effects, id),
             _ => {}

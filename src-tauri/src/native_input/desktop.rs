@@ -1,4 +1,4 @@
-use super::{queue::Queue, Deadline, Effects, Input, Purpose, Rect};
+use super::{queue::Queue, targeting::Notice, Deadline, Effects, Input, Purpose, Rect};
 use crate::{
     actions::Message,
     state::State,
@@ -183,7 +183,6 @@ impl Effects for Desktop {
         &self,
         action: &str,
         point: Option<Point>,
-        purpose: Option<Purpose>,
         cursor_id: Option<u64>,
     ) -> Result<(), String> {
         pet(&self.0)?
@@ -192,10 +191,14 @@ impl Effects for Desktop {
                 Message {
                     action: action.into(),
                     point,
-                    purpose: purpose.map(|purpose| purpose.name().into()),
                     cursor_id,
                 },
             )
+            .map_err(|error| error.to_string())
+    }
+    fn target_notice(&self, notice: Notice) -> Result<(), String> {
+        pet(&self.0)?
+            .emit("gullbert-target", notice)
             .map_err(|error| error.to_string())
     }
     fn schedule(&self, deadline: Deadline, delay: Duration) {
@@ -332,19 +335,30 @@ pub(crate) async fn tug_cursor(
 }
 
 #[tauri::command]
-pub(crate) async fn target_picked(app: tauri::AppHandle, x: f64, y: f64) -> Result<(), String> {
+pub(crate) async fn target_picked(
+    app: tauri::AppHandle,
+    id: u64,
+    x: f64,
+    y: f64,
+) -> Result<(), String> {
     request(app, move |app| {
         with_input(app, |input, effects| {
-            input.target_picked(effects, Point { x, y })
+            input.target_picked(effects, id, Point { x, y })
         })
     })
     .await?
 }
 
 #[tauri::command]
-pub(crate) async fn cancel_targeting(app: tauri::AppHandle) {
-    let _ = request(app, |app| {
-        with_input(app, |input, effects| input.finish_target(effects))
+pub(crate) async fn cancel_targeting(app: tauri::AppHandle, id: Option<u64>) {
+    let _ = request(app, move |app| {
+        with_input(app, |input, effects| {
+            if id.is_some() {
+                input.finish_target_id(effects, id);
+            } else {
+                crate::actions::report(input.escape(effects));
+            }
+        })
     })
     .await;
 }
@@ -365,9 +379,15 @@ pub(crate) fn interrupt(app: &tauri::AppHandle) {
 pub(crate) fn eat_cursor(app: &tauri::AppHandle) -> Result<(), String> {
     with_input(app, |input, effects| input.eat_cursor(effects))
 }
-pub(crate) fn begin_target(app: &tauri::AppHandle, purpose: Purpose) -> Result<(), String> {
+pub(crate) fn begin_target(
+    app: &tauri::AppHandle,
+    purpose: Purpose,
+    preparation: &'static str,
+) -> Result<(), String> {
     cancel_spike();
-    with_input(app, |input, effects| input.begin_target(effects, purpose))
+    with_input(app, |input, effects| {
+        input.begin_target(effects, purpose, preparation)
+    })
 }
 pub(crate) fn escape(app: &tauri::AppHandle) -> Result<(), String> {
     cancel_spike();

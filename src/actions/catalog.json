@@ -1,0 +1,386 @@
+{
+  "window_probe": {
+    "variant": "WindowProbe",
+    "aliases": ["--window-probe"],
+    "availability": "debug_macos",
+    "visibility": "preserve",
+    "route": "window_probe"
+  },
+  "window_spike": {
+    "variant": "WindowSpike",
+    "aliases": ["--window-spike"],
+    "availability": "debug_macos",
+    "visibility": "preserve",
+    "route": "window_spike"
+  },
+  "summon": {
+    "variant": "Summon",
+    "aliases": ["--summon"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "pointer",
+    "command": "summon"
+  },
+  "hide": {
+    "variant": "Hide",
+    "aliases": ["--hide"],
+    "availability": "all",
+    "visibility": "hide",
+    "route": "hide"
+  },
+  "show": {
+    "variant": "Show",
+    "aliases": ["--show"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "show"
+  },
+  "feed": {
+    "variant": "Feed",
+    "aliases": ["--feed"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "feed"
+  },
+  "feed_here": {
+    "variant": "FeedHere",
+    "aliases": ["--place-chip"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "target",
+    "purpose": "feed_here",
+    "preparation": "prepare_chip"
+  },
+  "feed_at_cursor": {
+    "variant": "FeedAtCursor",
+    "aliases": ["--feed-here"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "pointer",
+    "command": "feed_here"
+  },
+  "trick_come": {
+    "variant": "TrickCome",
+    "aliases": ["--trick-come"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "target",
+    "purpose": "trick_come",
+    "preparation": "cancel"
+  },
+  "trick_spin": {
+    "variant": "TrickSpin",
+    "aliases": ["--trick-spin"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "trick_spin"
+  },
+  "trick_dead": {
+    "variant": "TrickDead",
+    "aliases": ["--trick-dead"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "trick_dead"
+  },
+  "forget_learning": {
+    "variant": "ForgetLearning",
+    "aliases": [],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "forget_learning"
+  },
+  "squawk": {
+    "variant": "Squawk",
+    "aliases": [],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "squawk"
+  },
+  "nap": {
+    "variant": "Nap",
+    "aliases": [],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "nap"
+  },
+  "preen": {
+    "variant": "Preen",
+    "aliases": [],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "preen"
+  },
+  "tilt": {
+    "variant": "Tilt",
+    "aliases": [],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "tilt"
+  },
+  "stretch": {
+    "variant": "Stretch",
+    "aliases": [],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "stretch"
+  },
+  "poop": {
+    "variant": "Poop",
+    "aliases": [],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "poop"
+  },
+  "poop_at_cursor": {
+    "variant": "PoopAtCursor",
+    "aliases": ["--poop-here"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "pointer",
+    "command": "poop"
+  },
+  "target": {
+    "variant": "Target",
+    "aliases": [],
+    "availability": "all",
+    "visibility": "show",
+    "route": "target",
+    "purpose": "poop",
+    "preparation": "cancel"
+  },
+  "place_bag": {
+    "variant": "PlaceBag",
+    "aliases": ["--place-bag"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "target",
+    "purpose": "place_bag",
+    "preparation": "cancel"
+  },
+  "bring_gift": {
+    "variant": "BringGift",
+    "aliases": ["--bring-gift"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "bring_gift"
+  },
+  "place_perch": {
+    "variant": "PlacePerch",
+    "aliases": ["--place-perch"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "target",
+    "purpose": "place_perch",
+    "preparation": "cancel"
+  },
+  "clear_perch": {
+    "variant": "ClearPerch",
+    "aliases": ["--clear-perch"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "clear_perch"
+  },
+  "perch": {
+    "variant": "Perch",
+    "aliases": ["--perch"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "perch"
+  },
+  "search_snack": {
+    "variant": "SearchSnack",
+    "aliases": ["--find-snack"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "search_snack"
+  },
+  "nibble_cursor": {
+    "variant": "NibbleCursor",
+    "aliases": ["--nibble-cursor"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "nibble_cursor"
+  },
+  "eat_cursor": {
+    "variant": "EatCursor",
+    "aliases": ["--eat-cursor"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "cursor"
+  },
+  "steal_bag": {
+    "variant": "StealBag",
+    "aliases": ["--steal-bag"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "steal_bag"
+  },
+  "caught": {
+    "variant": "Caught",
+    "aliases": ["--caught"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "caught"
+  },
+  "bag_caper": {
+    "variant": "BagCaper",
+    "aliases": ["--bag-caper"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "bag_caper"
+  },
+  "blow_bubbles": {
+    "variant": "BlowBubbles",
+    "aliases": ["--blow-bubbles"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "blow_bubbles"
+  },
+  "bath_time": {
+    "variant": "BathTime",
+    "aliases": ["--bath-time"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "bath_time"
+  },
+  "chip_toss": {
+    "variant": "ChipToss",
+    "aliases": ["--chip-toss"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "target",
+    "purpose": "chip_toss",
+    "preparation": "cancel"
+  },
+  "play_cap": {
+    "variant": "PlayCap",
+    "aliases": ["--play-cap"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "play_cap"
+  },
+  "invite_pigeon": {
+    "variant": "InvitePigeon",
+    "aliases": ["--invite-pigeon"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "invite_pigeon"
+  },
+  "gull_argument": {
+    "variant": "GullArgument",
+    "aliases": ["--gull-argument"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "gull_argument"
+  },
+  "baguette_parade": {
+    "variant": "BaguetteParade",
+    "aliases": ["--baguette-parade"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "baguette_parade"
+  },
+  "pretend_leave": {
+    "variant": "PretendLeave",
+    "aliases": ["--pretend-leave"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "pretend_leave"
+  },
+  "cursor_egg": {
+    "variant": "CursorEgg",
+    "aliases": ["--cursor-egg"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "cursor_egg"
+  },
+  "municipal_gull": {
+    "variant": "MunicipalGull",
+    "aliases": ["--municipal-gull"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "municipal_gull"
+  },
+  "apology": {
+    "variant": "Apology",
+    "aliases": ["--apology"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "apology"
+  },
+  "postcards": {
+    "variant": "Postcards",
+    "aliases": ["--postcards"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "postcards"
+  },
+  "tidy": {
+    "variant": "Tidy",
+    "aliases": ["--tidy"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "target",
+    "purpose": "tidy",
+    "preparation": "tidy"
+  },
+  "cancel": {
+    "variant": "Cancel",
+    "aliases": ["--cancel"],
+    "availability": "all",
+    "visibility": "preserve",
+    "route": "command",
+    "command": "cancel"
+  },
+  "clean": {
+    "variant": "Clean",
+    "aliases": ["--clean"],
+    "availability": "all",
+    "visibility": "preserve",
+    "route": "command",
+    "command": "clean"
+  },
+  "controls": {
+    "variant": "Controls",
+    "aliases": [],
+    "availability": "all",
+    "visibility": "preserve",
+    "route": "controls"
+  },
+  "quit": {
+    "variant": "Quit",
+    "aliases": [],
+    "availability": "all",
+    "visibility": "preserve",
+    "route": "quit"
+  }
+}
