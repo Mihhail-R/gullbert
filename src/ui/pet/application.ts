@@ -697,6 +697,8 @@ export class PetApplication {
     if (message.action === "target") {
       if (message.purpose === "tidy") {
         sim.action("tidy");
+      } else if (message.purpose === "feed_here") {
+        sim.action("prepare_chip");
       } else {
         sim.action("cancel");
       }

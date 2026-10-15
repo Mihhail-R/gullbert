@@ -140,7 +140,7 @@ test("walking cadence follows chase speed and stops at idle", () => {
   while (g.inspect().mode !== "walk") g.step(0.05);
   g.step(0.1);
   assert.equal(g.inspect().pose, "idle");
-  g.action("feed");
+  g.action("feed_here", { x: 950, y: 600 });
   g.step(0.1);
   assert.equal(g.inspect().pose, "walkLeft");
   g.action("cancel");

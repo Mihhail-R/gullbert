@@ -484,6 +484,32 @@ test("target placement never flicks a cap under the selected point", async () =>
   await h.app.dispose();
 });
 
+test("chip placement keeps the reward window available and Escape cancels it", async () => {
+  const h = harness();
+  await h.app.start();
+  h.emit("message", { type: "action", action: "target", purpose: "feed_here" });
+  assert.equal(h.updates.at(-1).targeting, true);
+  assert.ok(
+    h.calls.some(
+      ([name, action]) => name === "action" && action === "prepare_chip",
+    ),
+  );
+  h.emit("pointerdown", pointerEvent());
+  assert.ok(
+    h.calls.some(
+      ([name, action]) => name === "action" && action === "feed_here",
+    ),
+  );
+  assert.equal(h.updates.at(-1).targeting, false);
+  h.emit("message", { type: "action", action: "target", purpose: "feed_here" });
+  h.emit("keydown", "Escape");
+  assert.ok(
+    h.calls.some(([name, action]) => name === "action" && action === "cancel"),
+  );
+  assert.equal(h.updates.at(-1).targeting, false);
+  await h.app.dispose();
+});
+
 test("late targeting failure after disposal cannot cancel a scene or wake the overlay", async () => {
   const picked = deferred();
   const h = harness({

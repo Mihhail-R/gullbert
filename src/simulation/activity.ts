@@ -8,6 +8,7 @@ interface Effects {
   random(): number;
   mood(name: MoodName): void;
   emit(sound: Sound): void;
+  ateChip?(point: Point): void;
 }
 
 /** Owns ordinary travel and flight, including grounding on interruption. */
@@ -257,10 +258,15 @@ export class Activity {
         this.#body.place(this.#goal);
         this.#goal = null;
         if (this.#mode === "fetch") {
+          if (!this.#objects.snapshot().crumb) {
+            this.rest(now);
+            return;
+          }
           this.#mode = "eat";
           this.#until = now + 2.25;
           this.#effects.mood("snack-minded");
           this.#effects.emit("munch");
+          this.#effects.ateChip?.({ x: this.#body.x, y: this.#body.y });
         } else if (this.#mode === "fly") {
           this.#mode = "drop";
           this.#until = now + 0.55;

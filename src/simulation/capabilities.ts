@@ -63,7 +63,14 @@ export interface BehaviorCapabilities extends RoutineCapabilities {
   >;
   readonly belongings: Pick<
     Belongings,
-    "snapshot" | "collect" | "placePerch" | "clearPerch"
+    | "snapshot"
+    | "collect"
+    | "placePerch"
+    | "clearPerch"
+    | "rewardTrick"
+    | "rememberMeal"
+    | "rememberScratchAfterPlay"
+    | "forgetLearning"
   >;
   readonly moods: Pick<Mood, "set">;
   readonly destinations: { randomPoint(): Point };

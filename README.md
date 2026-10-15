@@ -25,6 +25,7 @@ Versions before 0.3.0-beta.1 need one manual replacement to receive the updater.
 - Send him to fetch questionable treasures and remember a favourite loitering spot.
 - Blow bubbles, run a bath, toss chips, choose a tiny hat, and invite rival birds.
 - Watch him lean into head scratches, give an offended look when you stop, and hop happily after a chip.
+- Teach him to come over, spin, and play dead with chip rewards. He remembers snack spots and head scratches after play, and occasionally volunteers a learned trick for payment.
 - Dress him in a captain hat, traffic cone, fisherman’s beanie, paper crown, or fried egg.
 - Play bottle-cap football: flick it away, watch him return it, and lose on his terms.
 - Poke him, scratch his head, or drag him somewhere else. Repeated pickups provoke increasingly petty revenge.
@@ -43,13 +44,28 @@ The control room and menu bar / system tray expose the main actions. Closing the
 | Hide Gullbert and his mess            | Ctrl + Alt + Shift + G |
 | Clean the evidence / cancel targeting | Ctrl + Alt + X         |
 | Poop at the current cursor position   | Ctrl + Alt + P         |
+| Leave a chip at the cursor            | Ctrl + Alt + F         |
 | Cancel targeting / release cursor     | Escape                 |
 
 On Mac, Alt means **Option** and Ctrl means **Control**. If another app owns a shortcut, the control room reports it and the tray remains available.
 
 ### Play, placement, and tidying
 
-Use the control room to feed, play, or start a routine. **Poop here…**, **Place chip bag…**, **Favourite spot…**, and **Chip toss…** temporarily capture a click to choose a target. Escape or **Never mind** cancels; a 12-second failsafe restores click-through. The underlying app does not receive that placement click. Gullbert does not detect cars; choose the target yourself.
+Use the control room to feed, play, or start a routine. **Poop here…**, **Leave a chip here…**, **Come here…**, **Place chip bag…**, **Favourite spot…**, and **Chip toss…** temporarily capture a click to choose a target. Escape or **Never mind** cancels; a 12-second failsafe restores click-through. The underlying app does not receive that placement click. Gullbert does not detect cars; choose the target yourself.
+
+**Chips where you want them.** **Offer a chip** now feeds Gullbert where he is. **Leave a chip here…** places one at a chosen spot; on desktop, **Ctrl + Alt + F** drops one at your pointer without opening the control room. Spots near display edges are adjusted so he can reach them. One offered chip is active at a time.
+
+### Tricks and little rituals
+
+Open **Tricks & rituals** in the control room, or **Tricks** in the tray. Ask for **Come here…**, **Spin**, or **Play dead**, then wait for “performance complete. chip please.” Use **Reward with a chip**, **Offer a chip**, or **Leave a chip here…** within 20 seconds. He learns when he reaches that chip; early rewards, cancelled performances, or food replaced before he arrives do not count. Three rewarded performances make a trick familiar; six complete his training. A familiar recall is faster, and a practiced dramatic death stops the novice's hopeful peek.
+
+Once he knows spin or play dead, he may occasionally perform it unsolicited and request payment. These performances are infrequent, stop with **Pause autonomous antics**, and do not occur in **Polite-ish**. Explicit training works while paused. **Stop routine**, hiding, a replacement activity, or pausing cancels a performance without removing earned lessons.
+
+Feed individual chips in roughly the same area three times to establish a snack spot. He occasionally checks it, even in **Polite-ish**. A single meal elsewhere does not erase it; three meals at a new spot establish a new routine. Automatic meals from a chip bag do not teach this ritual.
+
+Scratch his head within 18 seconds of completing a three-exchange cap game or a chip toss. After three games followed by scratches, he presents his head and expects the familiar after-play ritual. Each game counts once. There is no penalty for skipping a reward or being away.
+
+The control room shows progress. Earned tricks and rituals survive restarts and cleanup; reward windows and unfinished activities do not. **Forget tricks & rituals** clears this learning while keeping treasures, hats, and the favourite spot.
 
 **Bottle-cap football.** Choose **Play → Play with a cap** in the control room or tray. Click the cap to flick it away; Gullbert chases it and pecks it back toward your pointer. After three exchanges, he takes the cap and declares “i win.” No collected treasure is needed. **Stop routine** ends the game. A running desktop app also accepts `--play-cap` from a second invocation of its executable.
 

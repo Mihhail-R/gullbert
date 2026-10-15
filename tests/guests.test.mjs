@@ -217,7 +217,7 @@ test("commands and Clean interrupt every guest beat without lingering dialogue o
         const sim = setup();
         sim.action(command);
         until(sim, phase);
-        sim.action(replacement);
+        sim.action(replacement, { x: 750, y: 550 });
         assertGone(sim);
         const nextBubble = sim.inspect().bubble;
         sim.step(0.05);

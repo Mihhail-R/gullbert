@@ -110,7 +110,14 @@ async function act(action: string) {
           post({ type: "visible", visible });
         }
         if (
-          ["place_bag", "place_perch", "chip_toss", "tidy"].includes(action)
+          [
+            "feed_here",
+            "trick_come",
+            "place_bag",
+            "place_perch",
+            "chip_toss",
+            "tidy",
+          ].includes(action)
         ) {
           post({ type: "action", action: "target", purpose: action });
         } else {
@@ -183,6 +190,48 @@ function roommate(data: RoommateStatus) {
     $("#mood").textContent = "Contentedly gull.";
   }
   const memory = data.memory;
+  let knownTricks = 0;
+  for (const trick of ["come", "spin", "dead"] as const) {
+    const count = memory?.learned?.tricks[trick] ?? 0;
+    let label = "New trick";
+    if (count >= 6) {
+      label = "Professional nuisance · 6/6";
+    } else if (count >= 3) {
+      label = `Learned · ${count}/6`;
+    } else if (count > 0) {
+      label = `Making the connection · ${count}/3`;
+    }
+    if (count >= 3) {
+      knownTricks += 1;
+    }
+    $(`#lesson-${trick}`).textContent = label;
+  }
+  let summary = "Getting to know you";
+  if (knownTricks === 1) {
+    summary = "1 questionable trick learned";
+  } else if (knownTricks > 1) {
+    summary = `${knownTricks} questionable tricks learned`;
+  }
+  $("#learning-summary").textContent = summary;
+  const meals = memory?.learned?.snackSpot?.meals ?? 0;
+  let snack = "Feed him in the same spot a few times. He’ll remember.";
+  if (meals >= 3) {
+    snack =
+      "Snack spot remembered. He’ll occasionally check the usual establishment.";
+  } else if (meals > 0) {
+    snack = `Noticing a snack spot · ${meals}/3 meals here.`;
+  }
+  $("#snack-ritual").textContent = snack;
+  const scratches = memory?.learned?.scratchesAfterPlay ?? 0;
+  let scratch =
+    "Scratch his head after cap football or a chip toss to start a ritual.";
+  if (scratches >= 3) {
+    scratch =
+      "After-play scratches remembered. He’ll present his head after a game.";
+  } else if (scratches > 0) {
+    scratch = `Learning your after-play ritual · ${scratches}/3 head scratches.`;
+  }
+  $("#scratch-ritual").textContent = scratch;
   const entries = Object.entries(memory?.collection ?? {}).filter(
     (entry): entry is [Collectible, number] => {
       return isCollectible(entry[0]) && entry[1] > 0;

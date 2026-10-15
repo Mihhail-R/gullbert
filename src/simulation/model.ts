@@ -33,8 +33,16 @@ export interface Cone extends Point {
 }
 export type QuietName = "nap" | "preen" | "tilt" | "stretch";
 export type Sound = "squawk" | "plop" | "munch" | "pop" | "splash";
+export type Trick = "come" | "spin" | "dead";
+export interface LearnedHabits {
+  tricks: Record<Trick, number>;
+  snackSpot: (Point & { meals: number }) | null;
+  snackCandidate: (Point & { meals: number }) | null;
+  scratchesAfterPlay: number;
+}
 export interface Memory {
   version: 1;
+  learned: LearnedHabits;
   perch: Point | null;
   collection: Partial<Record<Collectible, number>>;
   greetings: {

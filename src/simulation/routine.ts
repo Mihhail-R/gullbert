@@ -43,6 +43,7 @@ export interface SceneOwner extends Routine {
 }
 
 export interface RoutinePresentation {
+  readonly rotation?: number;
   readonly pose?: Pose;
   readonly props?: readonly SceneProp[];
   readonly looseProps?: readonly SceneProp[];

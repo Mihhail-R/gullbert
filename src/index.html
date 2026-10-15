@@ -42,6 +42,7 @@
             <span>Snacks</span><small>Chips, bags &amp; snack hunts</small>
           </summary>
           <div class="section-content">
+            <button data-action="feed_here">Leave a chip here…</button>
             <div class="pair">
               <button data-action="feed"><span>▰</span> Offer a chip</button
               ><button data-action="place_bag">
@@ -53,7 +54,57 @@
                 <span>⌕</span> Find a snack</button
               ><button data-action="chip_toss">Chip toss…</button>
             </div>
-            <p class="hint">Place a bag, then let curiosity do the rest.</p>
+            <p class="hint">
+              Offer a chip feeds him where he is. Leave one in a chosen spot, or
+              press Ctrl + Alt + F at your pointer in the desktop app. Repeated
+              meals teach him where to check.
+            </p>
+          </div>
+        </details>
+        <details class="control-section" id="learning" name="control-room">
+          <summary>
+            <span>Tricks &amp; rituals</span
+            ><small id="learning-summary">Getting to know you</small>
+          </summary>
+          <div class="section-content">
+            <p class="hint">
+              Ask for a trick, wait for “chip please,” then reward him within 20
+              seconds. Three rewarded performances make it familiar. Six make
+              him insufferable.
+            </p>
+            <div class="trick-row">
+              <button data-action="trick_come">Come here…</button
+              ><span id="lesson-come">New trick</span>
+            </div>
+            <div class="trick-row">
+              <button data-action="trick_spin">Spin</button
+              ><span id="lesson-spin">New trick</span>
+            </div>
+            <div class="trick-row">
+              <button data-action="trick_dead">Play dead</button
+              ><span id="lesson-dead">New trick</span>
+            </div>
+            <div class="pair">
+              <button class="primary" data-action="feed">
+                Reward with a chip</button
+              ><button data-action="feed_here">Leave a chip here…</button>
+            </div>
+            <div class="ritual-notes" aria-live="polite">
+              <p id="snack-ritual">
+                Feed him in the same spot a few times. He’ll remember.
+              </p>
+              <p id="scratch-ritual">
+                Scratch his head after cap football or a chip toss to start a
+                ritual.
+              </p>
+            </div>
+            <p class="hint">
+              His lessons and rituals stay between visits. There’s no forgetting
+              from being away.
+            </p>
+            <button class="subtle" data-action="forget_learning">
+              Forget tricks &amp; rituals
+            </button>
           </div>
         </details>
         <details class="control-section" id="routines" name="control-room">

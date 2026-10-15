@@ -32,6 +32,10 @@ body {
   height: 96px;
   transform-origin: 50% 90%;
 }
+#gull.trick #bird {
+  transform-origin: 50% 50%;
+  transform: rotate(var(--routine-rotation, 0deg));
+}
 .sprite {
   width: 96px;
   height: 96px;

@@ -28,6 +28,12 @@ pub(crate) enum Action {
     Hide,
     Show,
     Feed,
+    FeedHere,
+    FeedAtCursor,
+    TrickCome,
+    TrickSpin,
+    TrickDead,
+    ForgetLearning,
     Squawk,
     Nap,
     Preen,
@@ -103,18 +109,27 @@ fn perform_action(app: tauri::AppHandle, action: Action) -> Result<(), String> {
             cancel_target(&app);
             set_visible(&app, true)
         }
-        Action::PoopAtCursor => {
+        Action::PoopAtCursor | Action::FeedAtCursor => {
             cancel_target(&app);
             let point = fit_to_cursor_monitor(&app)?;
             set_visible(&app, true)?;
-            emit_action(&app, "poop", Some(point))
+            let command = if matches!(action, Action::FeedAtCursor) {
+                "feed_here"
+            } else {
+                "poop"
+            };
+            emit_action(&app, command, Some(point))
         }
         Action::Target
+        | Action::FeedHere
+        | Action::TrickCome
         | Action::PlaceBag
         | Action::PlacePerch
         | Action::ChipToss
         | Action::Tidy => {
             let purpose = match action {
+                Action::FeedHere => TargetPurpose::Placement("feed_here"),
+                Action::TrickCome => TargetPurpose::Placement("trick_come"),
                 Action::Tidy => TargetPurpose::Tidy,
                 Action::ChipToss => TargetPurpose::Placement("chip_toss"),
                 Action::PlaceBag => TargetPurpose::Placement("place_bag"),
@@ -150,6 +165,9 @@ fn perform_action(app: tauri::AppHandle, action: Action) -> Result<(), String> {
             Ok(())
         }
         Action::Feed
+        | Action::TrickSpin
+        | Action::TrickDead
+        | Action::ForgetLearning
         | Action::Squawk
         | Action::Poop
         | Action::Nap
@@ -184,6 +202,9 @@ fn perform_action(app: tauri::AppHandle, action: Action) -> Result<(), String> {
                 &app,
                 match action {
                     Action::Feed => "feed",
+                    Action::TrickSpin => "trick_spin",
+                    Action::TrickDead => "trick_dead",
+                    Action::ForgetLearning => "forget_learning",
                     Action::Squawk => "squawk",
                     Action::Nap => "nap",
                     Action::Preen => "preen",
@@ -258,6 +279,11 @@ pub(crate) fn from_cli(flag: Option<&str>) -> Action {
         Some("--postcards") => Action::Postcards,
         Some("--tidy") => Action::Tidy,
         Some("--feed") => Action::Feed,
+        Some("--feed-here") => Action::FeedAtCursor,
+        Some("--place-chip") => Action::FeedHere,
+        Some("--trick-come") => Action::TrickCome,
+        Some("--trick-spin") => Action::TrickSpin,
+        Some("--trick-dead") => Action::TrickDead,
         Some("--bring-gift") => Action::BringGift,
         Some("--place-perch") => Action::PlacePerch,
         Some("--clear-perch") => Action::ClearPerch,
@@ -278,6 +304,12 @@ mod tests {
             "bath_time",
             "chip_toss",
             "play_cap",
+            "feed_here",
+            "feed_at_cursor",
+            "trick_come",
+            "trick_spin",
+            "trick_dead",
+            "forget_learning",
             "invite_pigeon",
             "gull_argument",
             "baguette_parade",

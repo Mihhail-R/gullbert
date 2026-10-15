@@ -25,6 +25,7 @@ pub(crate) fn install(app: &tauri::App) -> tauri::Result<()> {
             "Snacks",
             &[
                 ("feed", "Offer a chip"),
+                ("feed_here", "Leave a chip here…  ·  Ctrl+Alt+F at pointer"),
                 ("place_bag", "Place chip bag…"),
                 ("search_snack", "Find a snack"),
                 ("chip_toss", "Chip toss…"),
@@ -53,6 +54,14 @@ pub(crate) fn install(app: &tauri::App) -> tauri::Result<()> {
             ],
         ),
         ("Play", &[("play_cap", "Play with a cap")]),
+        (
+            "Tricks",
+            &[
+                ("trick_come", "Come here…"),
+                ("trick_spin", "Spin"),
+                ("trick_dead", "Play dead"),
+            ],
+        ),
         (
             "Theatre",
             &[
@@ -153,6 +162,10 @@ pub(crate) fn install(app: &tauri::App) -> tauri::Result<()> {
                 "controls" => Action::Controls,
                 "summon" => Action::Summon,
                 "feed" => Action::Feed,
+                "feed_here" => Action::FeedHere,
+                "trick_come" => Action::TrickCome,
+                "trick_spin" => Action::TrickSpin,
+                "trick_dead" => Action::TrickDead,
                 "place_bag" => Action::PlaceBag,
                 "search_snack" => Action::SearchSnack,
                 "nibble_cursor" => Action::NibbleCursor,

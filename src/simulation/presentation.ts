@@ -51,6 +51,7 @@ export function projectPresentation(
   }
   const view = {
     affection,
+    rotation: routine.rotation ?? 0,
     width: sim.width,
     height: sim.height,
     time: sim.time,
