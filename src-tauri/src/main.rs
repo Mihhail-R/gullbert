@@ -24,6 +24,14 @@ fn prepare_pet(app: tauri::AppHandle) -> Result<Snapshot, String> {
     Ok(state::snapshot(app))
 }
 fn main() {
+    #[cfg(all(debug_assertions, target_os = "macos"))]
+    if std::env::args().nth(1).as_deref() == Some("--window-spike-access") {
+        println!(
+            "Window spike: Accessibility trusted={}",
+            native_input::window_spike::trusted()
+        );
+        return;
+    }
     tauri::Builder::default()
         .manage(State::default())
         .manage(updates::Runtime::default())
@@ -86,6 +94,14 @@ fn main() {
             shortcuts::register(app.handle());
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("Gullbert could not start");
+        .build(tauri::generate_context!())
+        .expect("Gullbert could not start")
+        .run(|_app, _event| {
+            #[cfg(all(debug_assertions, target_os = "macos"))]
+            if let tauri::RunEvent::ExitRequested { api, .. } = _event {
+                if native_input::window_spike::quit() {
+                    api.prevent_exit();
+                }
+            }
+        });
 }

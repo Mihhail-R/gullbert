@@ -128,7 +128,7 @@ impl Effects for Desktop {
     }
     fn escape(&self, only_if_missing: bool) -> Result<(), String> {
         let shortcut = Shortcut::new(None, Code::Escape);
-        if only_if_missing && self.0.global_shortcut().is_registered(shortcut) {
+        if (only_if_missing || spike_active()) && self.0.global_shortcut().is_registered(shortcut) {
             return Ok(());
         }
         self.0
@@ -137,6 +137,9 @@ impl Effects for Desktop {
             .map_err(|error| error.to_string())
     }
     fn release_escape(&self) {
+        if spike_active() {
+            return;
+        }
         let _ = self
             .0
             .global_shortcut()
@@ -271,6 +274,7 @@ pub(crate) async fn begin_pickup(
         return None;
     }
     request(app, move |app| {
+        cancel_spike();
         with_input(app, |input, effects| input.begin_pickup(effects, rect))
     })
     .await
@@ -351,21 +355,50 @@ pub(crate) fn cancel_target(app: &tauri::AppHandle) {
     with_input(app, |input, effects| input.cancel_target(effects));
 }
 pub(crate) fn set_visible(app: &tauri::AppHandle, visible: bool) -> Result<(), String> {
+    cancel_spike();
     with_input(app, |input, effects| input.set_visible(effects, visible))
 }
 pub(crate) fn interrupt(app: &tauri::AppHandle) {
+    cancel_spike();
     with_input(app, |input, effects| input.interrupt(effects));
 }
 pub(crate) fn eat_cursor(app: &tauri::AppHandle) -> Result<(), String> {
     with_input(app, |input, effects| input.eat_cursor(effects))
 }
 pub(crate) fn begin_target(app: &tauri::AppHandle, purpose: Purpose) -> Result<(), String> {
+    cancel_spike();
     with_input(app, |input, effects| input.begin_target(effects, purpose))
 }
 pub(crate) fn escape(app: &tauri::AppHandle) -> Result<(), String> {
+    cancel_spike();
     with_input(app, |input, effects| input.escape(effects))
 }
 
 pub(crate) fn ready(app: &tauri::AppHandle) -> Result<(), String> {
+    cancel_spike();
     with_input(app, |input, effects| input.ready(effects))
+}
+
+fn spike_active() -> bool {
+    #[cfg(all(debug_assertions, target_os = "macos"))]
+    {
+        return super::window_spike::active();
+    }
+    #[cfg(not(all(debug_assertions, target_os = "macos")))]
+    false
+}
+fn cancel_spike() {
+    #[cfg(all(debug_assertions, target_os = "macos"))]
+    super::window_spike::cancel();
+}
+#[cfg(all(debug_assertions, target_os = "macos"))]
+pub(super) fn finish_window_spike(app: &tauri::AppHandle) {
+    with_input(app, |input, effects| {
+        if !input.targeting.is_active()
+            && !input.pickup.active(effects.now())
+            && !input.cursor.armed()
+        {
+            effects.release_escape();
+        }
+    });
 }

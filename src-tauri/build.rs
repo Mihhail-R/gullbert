@@ -48,6 +48,33 @@ fn main() {
             .status()
             .unwrap();
         assert!(status.success(), "Could not archive local vision");
+        println!("cargo:rerun-if-changed=native/window_spike.m");
+        if env::var("DEBUG").as_deref() == Ok("true") {
+            let status = Command::new("xcrun")
+                .args([
+                    "clang",
+                    "-arch",
+                    arch,
+                    "-mmacosx-version-min=11.0",
+                    "-fobjc-arc",
+                    "-O2",
+                    "-c",
+                    "native/window_spike.m",
+                    "-o",
+                ])
+                .arg(out.join("window_spike.o"))
+                .status()
+                .unwrap();
+            assert!(status.success(), "Could not compile window spike");
+            let status = Command::new("ar")
+                .arg("crs")
+                .arg(out.join("libgullbert_spike.a"))
+                .arg(out.join("window_spike.o"))
+                .status()
+                .unwrap();
+            assert!(status.success());
+            println!("cargo:rustc-link-lib=static=gullbert_spike");
+        }
         println!("cargo:rustc-link-search=native={}", out.display());
         println!("cargo:rustc-link-lib=static=gullbert_vision");
         println!("cargo:rustc-link-lib=framework=AppKit");

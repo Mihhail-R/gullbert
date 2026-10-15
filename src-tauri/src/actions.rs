@@ -20,6 +20,10 @@ pub(crate) struct Message {
 #[derive(Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum Action {
+    #[cfg(all(debug_assertions, target_os = "macos"))]
+    WindowProbe,
+    #[cfg(all(debug_assertions, target_os = "macos"))]
+    WindowSpike,
     Summon,
     Hide,
     Show,
@@ -81,6 +85,11 @@ pub(crate) async fn act(app: tauri::AppHandle, action: Action) -> Result<(), Str
 fn perform_action(app: tauri::AppHandle, action: Action) -> Result<(), String> {
     native_input::interrupt(&app);
     match action {
+        #[cfg(all(debug_assertions, target_os = "macos"))]
+        Action::WindowProbe | Action::WindowSpike => {
+            cancel_target(&app);
+            native_input::window_spike::start(&app, matches!(action, Action::WindowSpike))
+        }
         Action::EatCursor => native_input::eat_cursor(&app),
         Action::Summon => {
             cancel_target(&app);
@@ -132,6 +141,10 @@ fn perform_action(app: tauri::AppHandle, action: Action) -> Result<(), String> {
         }
         Action::Quit => {
             cancel_target(&app);
+            #[cfg(all(debug_assertions, target_os = "macos"))]
+            if native_input::window_spike::quit() {
+                return Ok(());
+            }
             app.exit(0);
             Ok(())
         }
@@ -212,6 +225,10 @@ pub(crate) fn report(result: Result<(), String>) {
 
 pub(crate) fn from_cli(flag: Option<&str>) -> Action {
     match flag {
+        #[cfg(all(debug_assertions, target_os = "macos"))]
+        Some("--window-probe") => Action::WindowProbe,
+        #[cfg(all(debug_assertions, target_os = "macos"))]
+        Some("--window-spike") => Action::WindowSpike,
         Some("--summon") => Action::Summon,
         Some("--hide") => Action::Hide,
         Some("--show") => Action::Show,
