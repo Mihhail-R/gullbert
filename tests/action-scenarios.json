@@ -330,5 +330,69 @@
         "targeting": false
       }
     }
+  ],
+  "Escape after successful placement cannot cancel the selected reward chip": [
+    {
+      "action": "trick_spin"
+    },
+    {
+      "advance": "reward"
+    },
+    {
+      "action": "feed_here"
+    },
+    {
+      "pick": [500, 400]
+    },
+    {
+      "escape": true
+    },
+    {
+      "escape": true
+    },
+    {
+      "advance": 8
+    },
+    {
+      "expect": {
+        "lessons": 1
+      }
+    }
+  ],
+  "show replaces focused tidying without discarding food": [
+    {
+      "action": "feed"
+    },
+    {
+      "action": "tidy"
+    },
+    {
+      "action": "show"
+    },
+    {
+      "expect": {
+        "chip": true,
+        "tidying": false,
+        "targeting": false
+      }
+    }
+  ],
+  "controls replaces focused tidying without discarding food": [
+    {
+      "action": "feed"
+    },
+    {
+      "action": "tidy"
+    },
+    {
+      "action": "controls"
+    },
+    {
+      "expect": {
+        "chip": true,
+        "tidying": false,
+        "targeting": false
+      }
+    }
   ]
 }

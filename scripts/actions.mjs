@@ -64,6 +64,14 @@ export function validateActions(catalog) {
     ) {
       fail(name);
     }
+    if (route !== "target" && "preparation" in action) {
+      fields.push("preparation");
+      if (
+        !["show", "controls", "window_probe", "window_spike"].includes(route) ||
+        action.preparation !== "tidy_cancel"
+      )
+        fail(name);
+    }
     let visibility = "show";
     if (route === "hide") visibility = "hide";
     else if (

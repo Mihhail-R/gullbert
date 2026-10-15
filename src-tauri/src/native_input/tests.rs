@@ -259,7 +259,7 @@ fn completion_and_cancellation_have_distinct_tidy_outcomes() {
                     effects.advance(purpose.timeout());
                     effects.fire_due(&mut input);
                 }
-                "replacement" => input.cancel_target(&effects),
+                "replacement" => input.replace_target(&effects),
                 "hide" => input.set_visible(&effects, false).unwrap(),
                 _ => unreachable!(),
             }
@@ -643,7 +643,7 @@ impl crate::actions::Effects for Routing<'_> {
         self.input.interrupt(self.effects);
     }
     fn replace_target(&mut self) {
-        self.input.cancel_target(self.effects);
+        self.input.replace_target(self.effects);
     }
     fn visible(&self) -> bool {
         self.effects.visible()

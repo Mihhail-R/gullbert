@@ -12,7 +12,7 @@ mod tests;
 pub(crate) mod window_spike;
 
 pub(crate) use desktop::{
-    begin_target, cancel_target, dispatch, eat_cursor, escape, interrupt, ready, request,
+    begin_target, dispatch, eat_cursor, escape, interrupt, ready, replace_target, request,
     set_visible, Runtime,
 };
 pub(crate) use interaction::Rect;
@@ -69,7 +69,7 @@ struct Input {
 
 impl Input {
     fn ready(&mut self, effects: &impl Effects) -> Result<(), String> {
-        self.cancel_target(effects);
+        self.replace_target(effects);
         effects.position_for_cursor()?;
         effects.capture(false)?;
         effects.all_workspaces()?;
@@ -233,7 +233,7 @@ impl Input {
         Some((id, purpose))
     }
 
-    fn cancel_target(&mut self, effects: &impl Effects) {
+    fn replace_target(&mut self, effects: &impl Effects) {
         if let Some((id, _)) = self.release_target(effects) {
             let _ = effects.target_notice(Notice::Replaced { id });
         }
@@ -261,7 +261,7 @@ impl Input {
 
     fn set_visible(&mut self, effects: &impl Effects, visible: bool) -> Result<(), String> {
         if !visible {
-            self.cancel_target(effects);
+            self.replace_target(effects);
         }
         effects.visibility(visible)
     }
@@ -272,7 +272,7 @@ impl Input {
         purpose: Purpose,
         preparation: &'static str,
     ) -> Result<(), String> {
-        self.cancel_target(effects);
+        self.replace_target(effects);
         self.interrupt(effects);
         let id = self.targeting.begin(purpose);
         let start = Notice::Started {
@@ -337,7 +337,7 @@ impl Input {
     }
 
     fn eat_cursor(&mut self, effects: &impl Effects) -> Result<(), String> {
-        self.cancel_target(effects);
+        self.replace_target(effects);
         effects.position_for_cursor()?;
         self.set_visible(effects, true)?;
         let id = self.cursor.arm(effects.now());
@@ -357,7 +357,7 @@ impl Input {
             self.finish_target(effects);
         } else if self.cursor.armed() || self.pickup.active(effects.now()) {
             self.interrupt(effects);
-            self.cancel_target(effects);
+            self.replace_target(effects);
             effects.emit("cancel", None, None)?;
         }
         Ok(())

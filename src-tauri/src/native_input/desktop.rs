@@ -365,8 +365,8 @@ pub(crate) async fn cancel_targeting(app: tauri::AppHandle, id: Option<u64>) {
 
 // Called by application routing inside a dispatched job. Lease state and the
 // effect seam remain private; callers cannot reconstruct cross-lease policy.
-pub(crate) fn cancel_target(app: &tauri::AppHandle) {
-    with_input(app, |input, effects| input.cancel_target(effects));
+pub(crate) fn replace_target(app: &tauri::AppHandle) {
+    with_input(app, |input, effects| input.replace_target(effects));
 }
 pub(crate) fn set_visible(app: &tauri::AppHandle, visible: bool) -> Result<(), String> {
     cancel_spike();

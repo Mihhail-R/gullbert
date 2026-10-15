@@ -4,14 +4,16 @@
     "aliases": ["--window-probe"],
     "availability": "debug_macos",
     "visibility": "preserve",
-    "route": "window_probe"
+    "route": "window_probe",
+    "preparation": "tidy_cancel"
   },
   "window_spike": {
     "variant": "WindowSpike",
     "aliases": ["--window-spike"],
     "availability": "debug_macos",
     "visibility": "preserve",
-    "route": "window_spike"
+    "route": "window_spike",
+    "preparation": "tidy_cancel"
   },
   "summon": {
     "variant": "Summon",
@@ -33,7 +35,8 @@
     "aliases": ["--show"],
     "availability": "all",
     "visibility": "show",
-    "route": "show"
+    "route": "show",
+    "preparation": "tidy_cancel"
   },
   "feed": {
     "variant": "Feed",
@@ -374,7 +377,8 @@
     "aliases": [],
     "availability": "all",
     "visibility": "preserve",
-    "route": "controls"
+    "route": "controls",
+    "preparation": "tidy_cancel"
   },
   "quit": {
     "variant": "Quit",

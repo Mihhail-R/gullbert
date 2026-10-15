@@ -21,6 +21,9 @@ export function submitPreviewAction(name: string, effects: Effects): void {
     throw new Error(`Action unavailable in preview: ${name}`);
   }
   effects.replace();
+  if (action.route !== "target" && "preparation" in action) {
+    effects.command(action.preparation);
+  }
   if (action.visibility === "show") {
     effects.visibility(true);
   } else if (action.visibility === "hide") {

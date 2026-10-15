@@ -252,3 +252,35 @@ test("frontend catalog validation rejects malformed definitions and incompatible
     assert.throws(() => validateActions(catalog), /Invalid/);
   }
 });
+
+test("preview Escape still releases Pickup, Cursor, and pickup retaliation", async (t) => {
+  const sim = new Gullbert(800, 600, () => 0);
+  const h = harness({ simulation: sim });
+  t.after(() => h.app.dispose());
+  await h.app.start();
+  sim.configure({ paused: false, mischief: 1 });
+  function grab() {
+    const rect = sim.pickupRect();
+    h.emit(
+      "pointerdown",
+      pointerEvent({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 }),
+    );
+  }
+  grab();
+  assert.equal(sim.status().held, true);
+  h.emit("keydown", "Escape");
+  assert.equal(sim.status().held, false);
+  h.emit("message", { type: "action", action: "eat_cursor" });
+  assert.ok(sim.cursorEncounter());
+  h.emit("keydown", "Escape");
+  assert.equal(sim.cursorEncounter(), null);
+  for (let pickup = 0; pickup < 3; pickup++) {
+    grab();
+    h.emit("pointermove", pointerEvent({ x: 200 + pickup * 100, y: 200 }));
+    h.emit("pointerup", pointerEvent({ x: 200 + pickup * 100, y: 200 }));
+    await settle();
+  }
+  assert.equal(sim.inspect().scene.revenge, "trash");
+  h.emit("keydown", "Escape");
+  assert.equal(sim.inspect().scene, null);
+});

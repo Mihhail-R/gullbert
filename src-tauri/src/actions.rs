@@ -1,6 +1,6 @@
 //! Shared action routing for frontend commands, tray events, shortcuts, and launchers.
 use crate::{
-    native_input::{self, cancel_target, set_visible, Purpose as TargetPurpose},
+    native_input::{self, replace_target, set_visible, Purpose as TargetPurpose},
     state::State,
     windows::{controls, fit_to_cursor_monitor, pet, Point},
 };
@@ -53,7 +53,7 @@ pub(crate) trait Effects {
 }
 impl Action {
     pub(crate) fn perform(self, effects: &mut impl Effects) -> Result<(), String> {
-        let (visibility, route) = self.routing();
+        let (visibility, route, preparation) = self.routing();
         effects.interrupt();
         effects.replace_target();
         // Targeting and Cursor position and acquire through their native owner.
@@ -61,6 +61,9 @@ impl Action {
             Route::Target(purpose, preparation) => return effects.target(purpose, preparation),
             Route::Cursor => return effects.cursor(),
             _ => {}
+        }
+        if let Some(command) = preparation {
+            effects.command(command, None)?;
         }
         let point = match route {
             Route::Pointer(_) => Some(effects.position()?),
@@ -100,7 +103,7 @@ impl Effects for Desktop<'_> {
         native_input::interrupt(self.0);
     }
     fn replace_target(&mut self) {
-        cancel_target(self.0);
+        replace_target(self.0);
     }
     fn visible(&self) -> bool {
         self.0.state::<State>().visible.load(Ordering::SeqCst)

@@ -54,6 +54,7 @@ export class PetApplication {
   #chewingToken: object | null = null;
   #cursorLeaseScene: CursorLeaseScene | null = null;
   #reactionLease: { token: object; id: number } | null = null;
+  #pickupReaction: object | null = null;
   readonly #memoryWriter: ReturnType<typeof createMemoryWriter>;
   readonly #drag: ReturnType<typeof createPickupDrag>;
   readonly #bite: ReturnType<typeof createCursorBiteBridge>;
@@ -742,8 +743,16 @@ export class PetApplication {
       this.#targetNotice({ id: this.#targetId, outcome: this.#targetEnd() });
       return;
     }
+    const sim = this.#dependencies.simulation;
+    if (
+      !this.#drag.active &&
+      !sim.cursorEncounter() &&
+      !(this.#pickupReaction && sim.currentReaction(this.#pickupReaction))
+    ) {
+      return;
+    }
     this.#cancelDrag();
-    this.#dependencies.simulation.action("cancel");
+    sim.action("cancel");
     this.#wake();
   }
 
@@ -925,6 +934,7 @@ export class PetApplication {
       cancelled,
       this.#dependencies.clock.wallNow(),
     );
+    this.#pickupReaction = reaction;
     this.#render();
     this.#syncPointer();
     return reaction;

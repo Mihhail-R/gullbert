@@ -87,6 +87,17 @@ pub fn generate(source: &str) -> Result<String, String> {
             "window_spike" => "Route::WindowSpike".into(),
             _ => return Err(error()),
         };
+        let preparation = if route != "target" && entry.contains_key("preparation") {
+            fields.push("preparation");
+            if !matches!(route, "show" | "controls" | "window_probe" | "window_spike")
+                || string("preparation")? != "tidy_cancel"
+            {
+                return Err(error());
+            }
+            format!("Some({:?})", string("preparation")?)
+        } else {
+            "None".into()
+        };
         let expected_visibility = match route {
             "hide" => "hide",
             "controls" | "quit" | "window_probe" | "window_spike" => "preserve",
@@ -119,7 +130,7 @@ pub fn generate(source: &str) -> Result<String, String> {
         declarations.push_str(&format!("{cfg}#[serde(rename = {name:?})]\n{variant},\n"));
         names.push_str(&format!("{cfg}{name:?} => Some(Self::{variant}),\n"));
         routes.push_str(&format!(
-            "{cfg}Self::{variant} => ({visibility}, {routing}),\n"
+            "{cfg}Self::{variant} => ({visibility}, {routing}, {preparation}),\n"
         ));
     }
     Ok(format!(
@@ -128,7 +139,7 @@ pub fn generate(source: &str) -> Result<String, String> {
 pub(crate) enum Action {{ {declarations} }}
 impl Action {{
     pub(crate) fn named(name: &str) -> Option<Self> {{ match name {{ {names} _ => None }} }}
-    fn routing(self) -> (Visibility, Route) {{ match self {{ {routes} }} }}
+    fn routing(self) -> (Visibility, Route, Option<&'static str>) {{ match self {{ {routes} }} }}
 }}
 pub(crate) fn from_cli(flag: Option<&str>) -> Action {{ match flag {{ {launchers} _ => Action::Controls }} }}
 "#
