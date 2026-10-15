@@ -5,24 +5,63 @@ on:
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing version tag to build or retry (leave empty for checks only)"
+        required: false
+        type: string
 permissions:
   contents: read
+env:
+  RELEASE_TAG: ${{ inputs.release_tag || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.ref_name) || '' }}
 jobs:
   test:
     runs-on: ubuntu-latest
+    outputs:
+      source_sha: ${{ steps.source.outputs.sha }}
     steps:
       - uses: actions/checkout@v4
+      # Keep the selected workflow's release tooling when retrying an older tag.
+      - name: Preserve release tooling
+        if: env.RELEASE_TAG != ''
+        run: cp scripts/release.mjs "$RUNNER_TEMP/gullbert-release.mjs"
+      - name: Check out the existing release tag
+        if: github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
+        uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ inputs.release_tag }}
+      - id: source
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+      - name: Set embedded versions from the release tag
+        if: env.RELEASE_TAG != ''
+        run: |
+          cp "$RUNNER_TEMP/gullbert-release.mjs" scripts/release.mjs
+          node scripts/release.mjs prepare "$RELEASE_TAG"
+      - run: node scripts/release.mjs check
       - run: npm ci
       - run: npm test
-      - run: node scripts/release.mjs check
       - run: npm run check
       - run: npm run format:check
+      - name: Share validated release metadata
+        if: env.RELEASE_TAG != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-metadata
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            scripts/release.mjs
+            package.json
+            package-lock.json
+            src-tauri/Cargo.toml
+            src-tauri/Cargo.lock
+            src-tauri/tauri.conf.json
   desktop:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
     needs: test
     strategy:
       fail-fast: false
@@ -43,6 +82,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.test.outputs.source_sha }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-metadata
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -72,13 +116,18 @@ jobs:
           retention-days: 14
           path: dist/*
   draft-release:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    needs: desktop
+    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
+    needs: [test, desktop]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.test.outputs.source_sha }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-metadata
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -91,9 +140,10 @@ jobs:
         run: node scripts/release.mjs merge artifacts
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ env.RELEASE_TAG }}
           draft: true
           generate_release_notes: true
-          prerelease: ${{ contains(github.ref_name, '-') }}
+          prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
           files: |
             artifacts/*.dmg
             artifacts/*.exe
