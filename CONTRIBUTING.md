@@ -17,6 +17,8 @@ Use `npm run format` to format assets and documentation with Prettier, then fix 
 
 ESLint owns TypeScript and JavaScript layout; Prettier ignores those files to preserve wrapped calls and chains. Lint enforces a strict 100-character limit, braces, block spacing, and simple ternaries.
 
+Cyclomatic complexity above 10 per function produces a warning. Complexity warnings are advisory and do not fail local lint or CI; style errors still fail both. Lint checks never rewrite files unless explicitly run with `--fix`.
+
 CI runs `npm run lint` and rejects style violations. Naming, meaningful statement groups, the three-check condition limit, and module ownership still require review. `npm run check` remains the TypeScript correctness check; Babel parses TypeScript syntax for linting without depending on the compiler version.
 
 For native changes, also run `cargo fmt --manifest-path src-tauri/Cargo.toml --check`, test the desktop overlay, and state which operating system you used. Check click-through, dragging, targeting, Escape, hiding, and shortcuts; browser mocks cannot verify OS input delivery. Include a screenshot or short clip for a new gag.

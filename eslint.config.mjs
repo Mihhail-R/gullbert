@@ -18,6 +18,7 @@ export default [
     files: ["src/**/*.ts", "scripts/**/*.mjs", "tests/**/*.mjs", "eslint.config.mjs"],
     plugins: { "@stylistic": stylistic },
     rules: {
+      complexity: ["warn", { max: 10 }],
       curly: ["error", "all"],
       "no-nested-ternary": "error",
       "@stylistic/brace-style": ["error", "1tbs", { allowSingleLine: false }],

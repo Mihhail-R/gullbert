@@ -4,6 +4,26 @@ import { ESLint } from "eslint";
 
 const eslint = new ESLint();
 
+test("complexity above ten warns without becoming a lint error", async () => {
+  const branch = "  if (ready) {\n    work();\n  }\n";
+  const atLimit = `function act() {\n${Array(9)
+    .fill(branch)
+    .join("\n")}}\n`;
+  const aboveLimit = `function act() {\n${Array(10)
+    .fill(branch)
+    .join("\n")}}\n`;
+  const options = { filePath: "src/style-fixture.ts" };
+  const [accepted] = await eslint.lintText(atLimit, options);
+  const [warned] = await eslint.lintText(aboveLimit, options);
+
+  assert.equal(accepted.warningCount, 0);
+  assert.equal(accepted.errorCount, 0);
+  assert.equal(warned.errorCount, 0);
+  assert.equal(warned.warningCount, 1);
+  assert.equal(warned.messages[0].ruleId, "complexity");
+  assert.equal(warned.messages[0].severity, 1);
+});
+
 async function lint(code) {
   const [result] = await eslint.lintText(code, { filePath: "src/style-fixture.ts" });
   assert.equal(result.fatalErrorCount, 0);

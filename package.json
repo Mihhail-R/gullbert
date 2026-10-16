@@ -20,7 +20,7 @@
     "prepare:vision": "node scripts/prepare-vision.mjs",
     "predev": "node scripts/prepare-vision.mjs --if-windows",
     "prebuild": "node scripts/prepare-vision.mjs --if-windows",
-    "lint": "eslint src scripts tests eslint.config.mjs --max-warnings 0",
+    "lint": "eslint src scripts tests eslint.config.mjs",
     "lint:fix": "npm run lint -- --fix"
   },
   "devDependencies": {
