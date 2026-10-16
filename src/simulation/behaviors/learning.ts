@@ -3,8 +3,8 @@ import {
   type BehaviorCapabilities,
 } from "../capabilities.js";
 import { dialogue } from "../dialogue.js";
-import { clamp } from "../geometry.js";
-import type { Point, Trick } from "../model.js";
+import { beakOffsetX, clamp } from "../geometry.js";
+import type { Point, SceneProp, Trick } from "../model.js";
 import { observe } from "../observation.js";
 import type { Pose } from "../poses.js";
 import type { ReadonlyValue } from "../presentation.js";
@@ -13,6 +13,7 @@ import type { LearningScene, Scene } from "../scenes.js";
 
 type Environment = Pick<
   BehaviorCapabilities,
+  | "moods"
   | "body"
   | "clock"
   | "belongings"
@@ -32,7 +33,7 @@ const commands: Partial<Record<string, Trick>> = {
   show_dead: "dead",
 };
 
-/** Reward associations last for one interaction; only earned lessons are durable. */
+/** Reward associations are transient; completed work and snack disputes are durable. */
 export class LearningRoutine implements SceneOwner {
   #environment: Environment;
   #scene: LearningScene | null = null;
@@ -43,6 +44,7 @@ export class LearningRoutine implements SceneOwner {
 
   constructor(environment: Environment) {
     this.#environment = scopeCapabilities(environment, [
+      "moods",
       "body",
       "clock",
       "belongings",
@@ -93,7 +95,9 @@ export class LearningRoutine implements SceneOwner {
 
   ateChip(point: Point): void {
     const sim = this.#environment;
+    const wasUnpaid = sim.belongings.snapshot().memory.unpaidTricks >= 2;
     sim.belongings.rememberMeal(point);
+    sim.moods.settleOffence();
     const trick = this.#mealReward;
     this.#mealReward = null;
 
@@ -110,6 +114,10 @@ export class LearningRoutine implements SceneOwner {
       const performed = sim.belongings.snapshot().memory.performances[trick];
       const line = bank[(performed - 1) % bank.length];
       sim.speech.say(line, 4);
+    }
+
+    if (wasUnpaid && !trick) {
+      sim.speech.say(lines.settled, 4);
     }
 
     this.#nextHabit = Math.max(this.#nextHabit, sim.clock.now + 90);
@@ -180,7 +188,9 @@ export class LearningRoutine implements SceneOwner {
 
     if (sim.policy.settings().mischief > 0) {
       for (const trick of ["spin", "dead"] as const) {
-        if (learned.tricks[trick] >= 3) {
+        const paid = sim.belongings.snapshot().memory.unpaidTricks < 2;
+
+        if (learned.tricks[trick] >= 3 && paid) {
           choices.push(`show_${trick}`);
         }
       }
@@ -238,6 +248,8 @@ export class LearningRoutine implements SceneOwner {
       kind = "habit";
     }
 
+    const memory = sim.belongings.snapshot().memory;
+    const requested = name.startsWith("trick_");
     const chosen = trick ?? "come";
     const practiced =
       sim.belongings.snapshot().memory.learned.tricks[chosen] >= 3;
@@ -252,6 +264,7 @@ export class LearningRoutine implements SceneOwner {
       facing: sim.body.facing,
       practiced,
       unsolicited: name.startsWith("show_"),
+      reluctant: requested && memory.unpaidTricks === 1,
     };
 
     if (practiced || habit) {
@@ -260,7 +273,20 @@ export class LearningRoutine implements SceneOwner {
 
     this.#identity = Object.freeze({});
     sim.activity.beginRoutine(kind);
-    const performed = sim.belongings.snapshot().memory.performances[chosen];
+
+    if (requested && memory.unpaidTricks >= 2) {
+      const refusals = sim.belongings.refuseTrick(sim.body);
+      this.#scene.target = sim.body.safePoint({
+        x: origin.x + sim.body.facing * 32,
+        y: origin.y,
+      });
+      this.#phase("refuse", 2.5);
+      sim.moods.set("offended", sim.clock.now, { speak: false });
+      sim.speech.say(lines.refuse[(refusals - 1) % lines.refuse.length], 4);
+      return true;
+    }
+
+    const performed = memory.performances[chosen];
     let bank = lines.consider[chosen];
 
     if (practiced) {
@@ -273,6 +299,8 @@ export class LearningRoutine implements SceneOwner {
       line = lines.checkSpot;
     } else if (this.#scene.unsolicited) {
       line = lines.showoff;
+    } else if (this.#scene.reluctant) {
+      line = lines.reluctant[chosen];
     }
 
     sim.speech.say(line, 3);
@@ -294,62 +322,47 @@ export class LearningRoutine implements SceneOwner {
       return "complete";
     }
 
-    if (scene.phase === "consider" && sim.clock.now >= scene.until) {
-      let duration = 2.5;
-
-      if (scene.trick === "come") {
-        duration = 18;
-      } else if (scene.trick === "dead") {
-        duration = 3.5;
-      }
-
-      this.#phase("perform", duration);
-    } else if (scene.phase === "perform") {
-      const elapsed = sim.clock.now - scene.phaseStarted;
-
-      if (scene.trick === "come") {
-        let speed = 150;
-
-        if (scene.practiced) {
-          speed = 270;
-        }
-
-        if (sim.body.moveToward(scene.target, speed, dt)) {
-          this.#performed();
-        } else if (sim.clock.now >= scene.until) {
-          // Never offer reinforcement for a destination he did not reach.
+    switch (scene.phase) {
+      case "refuse":
+        if (sim.belongings.snapshot().memory.unpaidTricks === 0) {
           this.#finish();
-        }
-      } else if (scene.trick === "spin") {
-        const angle = clamp(elapsed / 2.5, 0, 1) * Math.PI * 2;
-        sim.body.place(
-          sim.body.safePoint({
-            x: scene.origin.x + Math.sin(angle) * 14,
-            y: scene.origin.y + (1 - Math.cos(angle)) * 6,
-          }),
-        );
-
-        if (Math.cos(angle) >= 0) {
-          sim.body.face(scene.facing);
-        } else {
-          sim.body.face(-scene.facing);
+          break;
         }
 
-        sim.body.advanceMotion(dt);
+        if (sim.clock.now - scene.phaseStarted < 1) {
+          sim.body.moveToward(scene.target, 32, dt);
+        }
 
         if (sim.clock.now >= scene.until) {
-          sim.body.place(sim.body.safePoint(scene.origin));
-          this.#performed();
+          this.#protest();
         }
-      } else if (sim.clock.now >= scene.until) {
-        this.#performed();
-      }
-    } else if (sim.clock.now >= scene.until) {
-      if (scene.phase === "reward") {
-        sim.speech.say(lines.unpaid, 3);
-      }
 
-      this.#finish();
+        break;
+
+      case "consider":
+        if (sim.clock.now >= scene.until) {
+          const durations = { come: 18, spin: 2.5, dead: 3.5 };
+          const pace = scene.reluctant ? 2.4 : 1;
+          this.#phase("perform", durations[scene.trick] * pace);
+        }
+
+        break;
+
+      case "perform":
+        this.#perform(scene, dt);
+        break;
+
+      case "reward":
+      case "check":
+        if (sim.clock.now >= scene.until) {
+          if (scene.phase === "reward") {
+            sim.speech.say(lines.unpaid, 3);
+          }
+
+          this.#finish();
+        }
+
+        break;
     }
 
     if (!this.#scene) {
@@ -381,12 +394,18 @@ export class LearningRoutine implements SceneOwner {
     }
 
     const sim = this.#environment;
+
+    if (scene.phase === "refuse") {
+      return this.#invoice(scene);
+    }
+
     let pose: Pose = "tilt";
     let rotation = 0;
 
     if (scene.phase === "perform") {
       if (scene.trick === "dead") {
-        const elapsed = sim.clock.now - scene.phaseStarted;
+        const pace = scene.reluctant ? 2.4 : 1;
+        const elapsed = (sim.clock.now - scene.phaseStarted) / pace;
         rotation = 85 * clamp(elapsed / 0.6, 0, 1) * scene.facing;
         pose = "nap-sleep";
 
@@ -403,6 +422,80 @@ export class LearningRoutine implements SceneOwner {
     return { pose, rotation };
   }
 
+  #invoice(scene: LearningScene): RoutinePresentation {
+    const sim = this.#environment;
+    const elapsed = sim.clock.now - scene.phaseStarted;
+    const dragging = elapsed < 1;
+    const pecking = !dragging && Math.floor((elapsed - 1) * 4) % 2 === 0;
+    const width = Math.min(88, sim.body.width);
+    const height = Math.min(42, sim.body.height);
+    const beakX = sim.body.x + beakOffsetX(sim.body.facing);
+    const paper: SceneProp = {
+      id: "snack-invoice",
+      asset: "snack-invoice",
+      text: lines.invoice,
+      x: clamp(beakX - width / 2, 0, sim.body.width - width),
+      y: clamp(sim.body.y + 50, 0, sim.body.height - height),
+      width,
+      height,
+      rotation: dragging ? -sim.body.facing * 6 : 0,
+    };
+    let pose: Pose = "bag-offended";
+
+    if (dragging || pecking) {
+      pose = "nibble";
+    }
+
+    return { pose, props: [paper], rotation: pecking ? sim.body.facing * 4 : 0 };
+  }
+
+  #perform(scene: LearningScene, dt: number): void {
+    const sim = this.#environment;
+    const pace = scene.reluctant ? 2.4 : 1;
+    const elapsed = (sim.clock.now - scene.phaseStarted) / pace;
+
+    switch (scene.trick) {
+      case "come": {
+        const speed = scene.practiced ? 270 : 150;
+
+        if (sim.body.moveToward(scene.target, speed / pace, dt)) {
+          this.#performed();
+        } else if (sim.clock.now >= scene.until) {
+          // Never offer reinforcement for a destination he did not reach.
+          this.#finish();
+        }
+
+        break;
+      }
+
+      case "spin": {
+        const angle = clamp(elapsed / 2.5, 0, 1) * Math.PI * 2;
+        sim.body.place(
+          sim.body.safePoint({
+            x: scene.origin.x + Math.sin(angle) * 14,
+            y: scene.origin.y + (1 - Math.cos(angle)) * 6,
+          }),
+        );
+        sim.body.face(Math.cos(angle) >= 0 ? scene.facing : -scene.facing);
+        sim.body.advanceMotion(dt / pace);
+
+        if (sim.clock.now >= scene.until) {
+          sim.body.place(sim.body.safePoint(scene.origin));
+          this.#performed();
+        }
+
+        break;
+      }
+
+      case "dead":
+        if (sim.clock.now >= scene.until) {
+          this.#performed();
+        }
+
+        break;
+    }
+  }
+
   #phase(phase: LearningScene["phase"], duration: number): void {
     const scene = this.#scene!;
     scene.phase = phase;
@@ -417,12 +510,41 @@ export class LearningRoutine implements SceneOwner {
       sim.speech.say(lines.emptySpot, 3);
     } else {
       const trick = this.#scene!.trick;
-      sim.belongings.performed(trick, sim.body);
+      sim.belongings.performed(trick, sim.body, !this.#scene!.unsolicited);
       const performed = sim.belongings.snapshot().memory.performances[trick];
       this.#phase("reward", 20);
-      sim.speech.say(lines.reward[(performed - 1) % lines.reward.length], 20);
+      let line = lines.reward[(performed - 1) % lines.reward.length];
+
+      if (this.#scene!.reluctant) {
+        line = lines.reluctantReward;
+      }
+
+      sim.speech.say(line, 20);
     }
   }
+  #protest(): void {
+    const sim = this.#environment;
+    const refusals = sim.belongings.snapshot().memory.trickRefusals;
+    const settings = sim.policy.settings();
+    this.#finish();
+
+    if (settings.paused || settings.mischief <= 0 || !sim.policy.visible()) {
+      return;
+    }
+
+    if (refusals < 2) {
+      return;
+    }
+
+    if (settings.mischief >= 2 && refusals % 2 === 1) {
+      sim.commands.action("nibble_cursor");
+      sim.speech.say(lines.collectPayment, 3);
+    } else {
+      sim.commands.action("pretend_leave");
+      sim.speech.say(lines.movingOut, 3);
+    }
+  }
+
   #finish(): void {
     this.#environment.lifecycle.complete();
     this.#environment.lifecycle.rest(4);

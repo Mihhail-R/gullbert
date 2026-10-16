@@ -558,3 +558,15 @@ body.gull-dragging {
 #gull.typing[data-phase="innocent"] #bird {
   transform: rotate(-4deg);
 }
+
+.theatre-prop[data-asset="snack-invoice"] {
+  box-sizing: border-box;
+  padding: 5px 2px;
+  border: 2px solid #74694e;
+  background: #f5e8c6;
+  color: #633d32;
+  box-shadow: 2px 2px 0 #0003;
+  font: bold 10px/14px monospace;
+  text-align: center;
+  white-space: pre-line;
+}

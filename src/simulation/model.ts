@@ -44,6 +44,9 @@ export interface Memory {
   version: 2;
   episodes: MemoryEpisode[];
   performances: Record<Trick, number>;
+  unpaidTricks: number;
+  trickCooldownUntilMs: number | null;
+  trickRefusals: number;
   visits: Record<"pigeon" | "gull", number>;
   learned: LearnedHabits;
   perch: Point | null;
