@@ -479,43 +479,52 @@ export class PetApplication {
   }
 
   #previewMessage(message: PreviewMessage): void {
-    if (message.type === "action") {
-      if (!this.#running()) {
-        return;
-      }
+    switch (message.type) {
+      case "action":
+        if (!this.#running()) {
+          return;
+        }
 
-      try {
-        submitPreviewAction(message.action, {
-          replace: () => {
-            this.#targeting.replace();
-          },
-          visibility: (visible) => {
-            this.#changeVisibility(visible);
-            this.#dependencies.browser.publish({ type: "visible", visible });
-          },
-          command: (action, point) => {
-            this.#action({ action, point });
-          },
-          target: (purpose, preparation) => {
-            this.#targeting.startPreview(purpose, preparation);
-          },
-          center: () => {
-            const size = this.#dependencies.browser.size();
-            return { x: size.width / 2, y: size.height / 2 };
-          },
-          quit: () => {
-            this.#dependencies.browser.publish({ type: "preview-quit" });
-          },
-        });
-      } catch (error) {
-        this.#dependencies.reportError(error);
-      }
-    } else if (message.type === "escape") {
-      this.#cancel();
-    } else if (message.type === "settings") {
-      this.#configure(message.settings);
-    } else if (message.type === "visible") {
-      this.#changeVisibility(message.visible);
+        try {
+          submitPreviewAction(message.action, {
+            replace: () => {
+              this.#targeting.replace();
+            },
+            visibility: (visible) => {
+              this.#changeVisibility(visible);
+              this.#dependencies.browser.publish({ type: "visible", visible });
+            },
+            command: (action, point) => {
+              this.#action({ action, point });
+            },
+            target: (purpose, preparation) => {
+              this.#targeting.startPreview(purpose, preparation);
+            },
+            center: () => {
+              const size = this.#dependencies.browser.size();
+              return { x: size.width / 2, y: size.height / 2 };
+            },
+            quit: () => {
+              this.#dependencies.browser.publish({ type: "preview-quit" });
+            },
+          });
+        } catch (error) {
+          this.#dependencies.reportError(error);
+        }
+
+        return;
+
+      case "escape":
+        this.#cancel();
+        return;
+
+      case "settings":
+        this.#configure(message.settings);
+        return;
+
+      case "visible":
+        this.#changeVisibility(message.visible);
+        return;
     }
   }
 

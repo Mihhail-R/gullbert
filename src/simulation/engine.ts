@@ -493,6 +493,7 @@ export class Gullbert {
       name = "cancel";
     }
 
+    // Direct picks preserve the current pickup and accumulated touch reactions.
     if (name === "direct_pick") {
       if (point && this.flickCap(point)) {
         return;
@@ -508,33 +509,30 @@ export class Gullbert {
     this.#pickup.cancel();
     this.#touch.reset();
 
-    // Picking must preserve the other props, especially the loose chip.
-    if (name === "tidy_pick") {
-      if (point) {
-        this.#cleanup.pick(point);
-      }
+    // Tidying has its own interruption rules and must preserve eligible props.
+    switch (name) {
+      case "tidy_pick":
+        if (point) {
+          this.#cleanup.pick(point);
+        }
 
-      return;
-    }
+        return;
 
-    if (name === "tidy_cancel") {
-      this.#cleanup.cancel();
-      return;
-    }
+      case "tidy_cancel":
+        this.#cleanup.cancel();
+        return;
 
-    if (name === "tidy_done") {
-      this.#cleanup.finish();
-      return;
-    }
+      case "tidy_done":
+        this.#cleanup.finish();
+        return;
 
-    if (name === "tidy") {
-      this.#beginTidying();
-      return;
-    }
+      case "tidy":
+        this.#beginTidying();
+        return;
 
-    if (name === "clean") {
-      this.clean();
-      return;
+      case "clean":
+        this.clean();
+        return;
     }
 
     const wasOffended =
@@ -550,6 +548,7 @@ export class Gullbert {
       return;
     }
 
+    // Capture the completed trick before replacement interrupts its scene.
     let reward = null;
 
     if (name === "feed" || name === "feed_here") {
@@ -562,59 +561,61 @@ export class Gullbert {
       return;
     }
 
-    if (name === "cancel") {
-      this.#rest();
-      return;
-    }
+    // Unknown commands still replace activity, but do not change its mode or deadline.
+    switch (name) {
+      case "cancel":
+        this.#rest();
+        return;
 
-    if (name === "summon") {
-      const destination = this.#body.safePoint({
-        x: (point?.x ?? this.#body.width / 2) - SIZE / 2,
-        y: (point?.y ?? this.#body.height / 2) - SIZE / 2,
-      });
-      this.#body.place(destination);
-      this.#rest(3);
-      this.greet();
-      return;
-    }
-
-    if (name === "feed" || name === "feed_here") {
-      this.#food.clearRequest();
-      this.#learning.offerReward(reward);
-      let destination = { x: this.#body.x, y: this.#body.y };
-
-      if (point) {
-        destination = { x: point.x - 60, y: point.y - 78 };
+      case "summon": {
+        const destination = this.#body.safePoint({
+          x: (point?.x ?? this.#body.width / 2) - SIZE / 2,
+          y: (point?.y ?? this.#body.height / 2) - SIZE / 2,
+        });
+        this.#body.place(destination);
+        this.#rest(3);
+        this.greet();
+        return;
       }
 
-      this.#activity.fetch(destination);
+      case "feed":
+      case "feed_here": {
+        this.#food.clearRequest();
+        this.#learning.offerReward(reward);
+        let destination = { x: this.#body.x, y: this.#body.y };
 
-      if (wasOffended) {
-        this.#say(dialogue.gullbert.general.weCanSettleOutOfCourt, 2);
-      } else {
-        this.#say(dialogue.gullbert.general.chipDetected, 2);
+        if (point) {
+          destination = { x: point.x - 60, y: point.y - 78 };
+        }
+
+        this.#activity.fetch(destination);
+
+        if (wasOffended) {
+          this.#say(dialogue.gullbert.general.weCanSettleOutOfCourt, 2);
+        } else {
+          this.#say(dialogue.gullbert.general.chipDetected, 2);
+        }
+
+        return;
       }
 
-      return;
-    }
+      case "squawk":
+        this.#activity.squawk(this.#time);
+        this.#say(
+          hatRemark({ ...this.#observe(), random: this.#random }) ??
+            this.#moods.remark(this.#time) ??
+            remarks[Math.floor(this.#random() * remarks.length)],
+        );
+        this.#sounds.push("squawk");
+        return;
 
-    if (name === "squawk") {
-      this.#activity.squawk(this.#time);
-      this.#say(
-        hatRemark({ ...this.#observe(), random: this.#random }) ??
-          this.#moods.remark(this.#time) ??
-          remarks[Math.floor(this.#random() * remarks.length)],
-      );
-      this.#sounds.push("squawk");
-      return;
-    }
-
-    if (name === "poop") {
-      this.#activity.beginDrop(
-        point ?? { x: this.#body.x + 48, y: this.#body.y + 86 },
-        this.#time,
-      );
-      this.#say(dialogue.gullbert.general.precisionArtistry, 2);
+      case "poop":
+        this.#activity.beginDrop(
+          point ?? { x: this.#body.x + 48, y: this.#body.y + 86 },
+          this.#time,
+        );
+        this.#say(dialogue.gullbert.general.precisionArtistry, 2);
+        return;
     }
   }
   #startRoutine(name: string, point?: Point): boolean {

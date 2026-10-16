@@ -388,14 +388,22 @@ export class TheatreRoutine implements SceneOwner {
       return true;
     }
 
-    if (scene.kind === "bubbles") {
-      this.#stepBubbles(dt);
-    } else if (scene.kind === "bath") {
-      this.#stepBath(dt);
-    } else if (scene.kind === "toss") {
-      this.#stepToss(dt);
-    } else {
-      this.#stepBaguette(dt);
+    switch (scene.kind) {
+      case "bubbles":
+        this.#stepBubbles(dt);
+        break;
+
+      case "bath":
+        this.#stepBath(dt);
+        break;
+
+      case "toss":
+        this.#stepToss(dt);
+        break;
+
+      case "baguette":
+        this.#stepBaguette(dt);
+        break;
     }
 
     return true;

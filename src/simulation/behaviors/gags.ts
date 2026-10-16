@@ -378,106 +378,121 @@ export class GagRoutine implements SceneOwner {
     };
     this.#gagSchedule = { ...this.#schedule(), last: name };
 
-    if (name === "postcards") {
-      const choices = postcards.filter((photo) => {
-        return photo.photo !== this.#lastPostcard;
-      });
-      const photo =
-        choices[
-          Math.min(
-            choices.length - 1,
-            Math.floor(sim.random() * choices.length),
-          )
-        ];
-      this.#lastPostcard = photo.photo;
-      let side: -1 | 1 = 1;
+    switch (name) {
+      case "postcards": {
+        const choices = postcards.filter((photo) => {
+          return photo.photo !== this.#lastPostcard;
+        });
+        const photo =
+          choices[
+            Math.min(
+              choices.length - 1,
+              Math.floor(sim.random() * choices.length),
+            )
+          ];
+        this.#lastPostcard = photo.photo;
+        let side: -1 | 1 = 1;
 
-      if (sim.body.x + SIZE / 2 < sim.body.width / 2) {
-        side = -1;
+        if (sim.body.x + SIZE / 2 < sim.body.width / 2) {
+          side = -1;
+        }
+
+        this.#scene = {
+          ...clock,
+          kind: "postcards",
+          phase: "approach",
+          side,
+          ...photo,
+          target: sim.body.safePoint({
+            x: clamp(sim.body.x, 100, sim.body.width - SIZE - 100),
+            y: clamp(sim.body.y, 0, sim.body.height - 126),
+          }),
+        };
+        sim.speech.say(dialogue.gullbert.gags.waitIHaveHolidayPhotos);
+        break;
       }
 
-      this.#scene = {
-        ...clock,
-        kind: "postcards",
-        phase: "approach",
-        side,
-        ...photo,
-        target: sim.body.safePoint({
-          x: clamp(sim.body.x, 100, sim.body.width - SIZE - 100),
-          y: clamp(sim.body.y, 0, sim.body.height - 126),
-        }),
-      };
-      sim.speech.say(dialogue.gullbert.gags.waitIHaveHolidayPhotos);
-    } else if (name === "pretend_leave") {
-      let side: -1 | 1;
+      case "pretend_leave": {
+        let side: -1 | 1;
 
-      if (sim.body.x + SIZE / 2 < sim.body.width / 2) {
-        side = -1;
-      } else {
-        side = 1;
+        if (sim.body.x + SIZE / 2 < sim.body.width / 2) {
+          side = -1;
+        } else {
+          side = 1;
+        }
+
+        this.#scene = {
+          ...clock,
+          kind: name,
+          phase: "approach",
+          side,
+          origin: { x: sim.body.x, y: sim.body.y },
+        };
+        sim.speech.say(dialogue.gullbert.gags.fineIShallLeave);
+        break;
       }
 
-      this.#scene = {
-        ...clock,
-        kind: name,
-        phase: "approach",
-        side,
-        origin: { x: sim.body.x, y: sim.body.y },
-      };
-      sim.speech.say(dialogue.gullbert.gags.fineIShallLeave);
-    } else if (name === "cursor_egg") {
-      this.#scene = {
-        ...clock,
-        kind: name,
-        phase: "approach",
-        pointer: null,
-        stablePoint: null,
-        stableSince: sim.clock.now,
-        nest: null,
-        until: sim.clock.now + 8,
-      };
-      sim.speech.say(dialogue.gullbert.gags.aPromisingEgg);
-    } else if (name === "municipal_gull") {
-      sim.objects.clearCones();
-      const patch = this.#onScreen({ x: sim.body.x + 48, y: sim.body.y + 78 });
-      const placements = [
-        { x: patch.x - 40, y: patch.y + 14 },
-        { x: patch.x + 40, y: patch.y + 14 },
-        { x: patch.x, y: patch.y - 30 },
-      ].map((p) => {
-        return this.#onScreen(p);
-      });
-      this.#scene = {
-        ...clock,
-        kind: name,
-        phase: "place",
-        patch,
-        placements,
-        placed: 0,
-        movedId: null,
-        target: sim.body.safePoint({ x: patch.x + 90, y: patch.y - 78 }),
-      };
-      sim.speech.say(dialogue.gullbert.gags.essentialInfrastructure);
-    } else {
-      let sidestepDistance;
-
-      if (sim.body.x < sim.body.width / 2) {
-        sidestepDistance = 90;
-      } else {
-        sidestepDistance = -90;
+      case "cursor_egg": {
+        this.#scene = {
+          ...clock,
+          kind: name,
+          phase: "approach",
+          pointer: null,
+          stablePoint: null,
+          stableSince: sim.clock.now,
+          nest: null,
+          until: sim.clock.now + 8,
+        };
+        sim.speech.say(dialogue.gullbert.gags.aPromisingEgg);
+        break;
       }
 
-      this.#scene = {
-        ...clock,
-        deadline: sim.clock.now + 9.9,
-        kind: "apology",
-        phase: "carry",
-        target: sim.body.safePoint({
-          x: sim.body.x + sidestepDistance,
-          y: sim.body.y,
-        }),
-      };
-      sim.speech.say(dialogue.gullbert.gags.aGestureOfGoodwill);
+      case "municipal_gull": {
+        sim.objects.clearCones();
+        const patch = this.#onScreen({ x: sim.body.x + 48, y: sim.body.y + 78 });
+        const placements = [
+          { x: patch.x - 40, y: patch.y + 14 },
+          { x: patch.x + 40, y: patch.y + 14 },
+          { x: patch.x, y: patch.y - 30 },
+        ].map((p) => {
+          return this.#onScreen(p);
+        });
+        this.#scene = {
+          ...clock,
+          kind: name,
+          phase: "place",
+          patch,
+          placements,
+          placed: 0,
+          movedId: null,
+          target: sim.body.safePoint({ x: patch.x + 90, y: patch.y - 78 }),
+        };
+        sim.speech.say(dialogue.gullbert.gags.essentialInfrastructure);
+        break;
+      }
+
+      case "apology": {
+        let sidestepDistance;
+
+        if (sim.body.x < sim.body.width / 2) {
+          sidestepDistance = 90;
+        } else {
+          sidestepDistance = -90;
+        }
+
+        this.#scene = {
+          ...clock,
+          deadline: sim.clock.now + 9.9,
+          kind: "apology",
+          phase: "carry",
+          target: sim.body.safePoint({
+            x: sim.body.x + sidestepDistance,
+            y: sim.body.y,
+          }),
+        };
+        sim.speech.say(dialogue.gullbert.gags.aGestureOfGoodwill);
+        break;
+      }
     }
 
     if (this.#scene) {
