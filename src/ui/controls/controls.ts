@@ -8,7 +8,7 @@ import {
   type RoommateStatus,
   type PreviewMessage,
 } from "../../platform/bridge.js";
-import type { Settings } from "../../simulation/model.js";
+import type { Memory, MemoryEpisode, Settings } from "../../simulation/model.js";
 import {
   ITEMS,
   isCollectible,
@@ -230,6 +230,7 @@ function roommate(data: RoommateStatus) {
   }
 
   $("#learning-summary").textContent = summary;
+
   const meals = memory?.learned?.snackSpot?.meals ?? 0;
   let snack = "Feed him in the same spot a few times. He’ll remember.";
 
@@ -241,6 +242,7 @@ function roommate(data: RoommateStatus) {
   }
 
   $("#snack-ritual").textContent = snack;
+
   const scratches = memory?.learned?.scratchesAfterPlay ?? 0;
   let scratch =
     "Scratch his head after cap football or a chip toss to start a ritual.";
@@ -253,7 +255,16 @@ function roommate(data: RoommateStatus) {
   }
 
   $("#scratch-ritual").textContent = scratch;
-  const episodes = memory?.episodes ?? [];
+
+  renderMemories(memory?.episodes ?? []);
+  renderCollection(memory?.collection ?? {});
+
+  const storageError = $("#storage-error");
+  storageError.textContent = data.error ?? "";
+  storageError.hidden = !data.error;
+}
+
+function renderMemories(episodes: readonly MemoryEpisode[]) {
   let memorySummary = "A fresh start";
 
   if (episodes.length === 1) {
@@ -270,10 +281,11 @@ function roommate(data: RoommateStatus) {
         .slice(-12)
         .reverse()
         .map((event) => {
-          const li = document.createElement("li");
+          const listItem = document.createElement("li");
           const label = document.createElement("strong");
           const context = document.createElement("small");
           const time = document.createElement("time");
+
           label.textContent = memoryDescription(event);
           const date = new Date(event.at);
           time.dateTime = date.toISOString();
@@ -283,12 +295,16 @@ function roommate(data: RoommateStatus) {
             hour: "2-digit",
             minute: "2-digit",
           });
+
           context.append(time, ` · ${memoryLocation(event)}`);
-          li.append(label, context);
-          return li;
+          listItem.append(label, context);
+          return listItem;
         }),
     );
-  const entries = Object.entries(memory?.collection ?? {})
+}
+
+function renderCollection(collection: Memory["collection"]) {
+  const entries = Object.entries(collection)
     .filter(
       (entry): entry is [Collectible, number] => {
         return isCollectible(entry[0]) && entry[1] > 0;
@@ -297,6 +313,7 @@ function roommate(data: RoommateStatus) {
   const count = entries.reduce((sum, [, count]) => {
     return sum + count;
   }, 0);
+
   $("#collection-count").textContent = String(count);
 
   if (count) {
@@ -310,24 +327,23 @@ function roommate(data: RoommateStatus) {
     .replaceChildren(
       ...entries.map(([id, count]) => {
         const item = ITEMS[id];
-        const li = document.createElement("li");
-        const img = document.createElement("img");
+        const listItem = document.createElement("li");
+        const image = document.createElement("img");
         const label = document.createElement("strong");
         const description = document.createElement("small");
         const quantity = document.createElement("span");
-        img.src = `assets/belongings/${id}.svg`;
-        img.alt = "";
+
+        image.src = `assets/belongings/${id}.svg`;
+        image.alt = "";
         label.textContent = item.name;
         description.textContent = item.description;
         label.append(description);
         quantity.textContent = `×${count}`;
-        li.append(img, label, quantity);
-        return li;
+
+        listItem.append(image, label, quantity);
+        return listItem;
       }),
     );
-  const storageError = $("#storage-error");
-  storageError.textContent = data.error ?? "";
-  storageError.hidden = !data.error;
 }
 
 if (native) {
