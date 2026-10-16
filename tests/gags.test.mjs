@@ -92,6 +92,27 @@ test("every postcard can be selected and consecutive shows choose different phot
   assert.deepEqual([...seen].sort(), ["car", "eiffel", "giza", "liberty"]);
 });
 
+test("postcard startup rolls its schedule before selecting a photo", () => {
+  const rolls = [0.25, 0.99, 0.75, 0];
+  let randomCalls = 0;
+  const sim = routineFixture(GagRoutine, () => {
+    assert.ok(randomCalls < rolls.length, "no unexpected random draw");
+    return rolls[randomCalls++];
+  });
+  sim.settings.mischief = 1;
+  sim.time = 10;
+  sim.action("postcards");
+  assert.equal(randomCalls, 2);
+  assert.equal(sim.gagSchedule.at, 10 + 240 + 0.25 * 180);
+  assert.equal(sim.scene.photo, "eiffel");
+
+  sim.time = 20;
+  sim.action("postcards");
+  assert.equal(randomCalls, 4);
+  assert.equal(sim.gagSchedule.at, 20 + 240 + 0.75 * 180);
+  assert.equal(sim.scene.photo, "liberty");
+});
+
 test("fake departure walks to the nearest edge, disappears two seconds, peeks and returns", () => {
   for (const x of [30, 750]) {
     const sim = setup();
