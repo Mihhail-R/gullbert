@@ -1,10 +1,6 @@
 import { submitPreviewAction } from "../../actions/preview.js";
 import { dialogue } from "../../simulation/dialogue.js";
-import type {
-  ActionMessage,
-  PreviewMessage,
-  TargetNotice,
-} from "../../platform/bridge.js";
+import type { ActionMessage, PreviewMessage } from "../../platform/bridge.js";
 import { createPickupDrag } from "../../platform/pickup-drag.js";
 import { createCursorBiteBridge } from "../../platform/cursor-bite.js";
 import { MemoryPersistence } from "../../platform/roommate-store.js";
@@ -19,6 +15,7 @@ import type {
   ApplicationPointerEvent,
   PointerListener,
 } from "./application-contracts.js";
+import { Targeting } from "./targeting.js";
 
 type Lifecycle = "new" | "starting" | "running" | "disposed";
 interface CursorLeaseScene {
@@ -35,14 +32,9 @@ export class PetApplication {
   #shutdown: Promise<void> | null = null;
   readonly #unlisteners: (() => void)[] = [];
   #visible = true;
-  #targeting = false;
-  #targetGeneration = 0;
-  #targetId: number | null = null;
-  #lastTargetId = 0;
-  #targetPurpose = "poop";
+  readonly #targeting: Targeting;
   #tidyPoint: Point | null = null;
   #timer: ReturnType<typeof setTimeout> | undefined;
-  #targetTimer: ReturnType<typeof setTimeout> | undefined;
   #biteTimer: ReturnType<typeof setTimeout> | undefined;
   #last = 0;
   #frame: number | undefined;
@@ -64,6 +56,32 @@ export class PetApplication {
 
   constructor(dependencies: ApplicationDependencies) {
     this.#dependencies = dependencies;
+    const native = dependencies.native;
+    this.#targeting = new Targeting({
+      clock: dependencies.clock,
+      action: (action, point) => dependencies.simulation.action(action, point),
+      running: () => this.#running(),
+      prepare: () => {
+        this.#caret.stop();
+        this.#cancelDrag();
+      },
+      cancelDrag: () => this.#cancelDrag(),
+      clearPointer: () => {
+        this.#tidyPoint = null;
+        dependencies.simulation.tidyPointer(null);
+      },
+      syncPointer: () => this.#syncPointer(),
+      updateView: () => this.#updateView(),
+      resize: () => this.#resizeSimulation(),
+      render: () => this.#render(),
+      wake: () => this.#wake(),
+      size: () => dependencies.browser.size(),
+      pick: native
+        ? (id, point) => native.invoke("target_picked", { id, ...point })
+        : null,
+      cancelNative: (id) => this.#cancelNativeTargeting(id),
+      reportError: (error) => dependencies.reportError(error),
+    });
     this.#persistence = new MemoryPersistence({
       storage: dependencies.storage,
       clock: dependencies.clock,
@@ -213,13 +231,11 @@ export class PetApplication {
     this.#shutdown = this.#persistence.dispose();
     this.#lifecycle = "disposed";
     this.#generation++;
-    this.#targetGeneration++;
     this.#cancelTick();
     this.#cancelRender();
-    this.#dependencies.clock.cancel(this.#targetTimer);
+    this.#targeting.stopDeadline();
     this.#dependencies.clock.cancel(this.#biteTimer);
     this.#timer = undefined;
-    this.#targetTimer = undefined;
     this.#biteTimer = undefined;
     this.#cancelDrag();
     this.#dependencies.simulation.setVisible(false);
@@ -231,10 +247,7 @@ export class PetApplication {
       this.#releaseCursorLease(this.#reactionLease.id);
       this.#reactionLease = null;
     }
-    if (this.#targeting) {
-      this.#cancelNativeTargeting();
-    }
-    this.#targeting = false;
+    this.#targeting.dispose();
     for (const unlisten of this.#unlisteners.splice(0)) {
       unlisten();
     }
@@ -332,7 +345,7 @@ export class PetApplication {
       },
       () => {
         return native.listen("gullbert-target", (event) => {
-          this.#targetNotice(event.payload);
+          this.#targeting.notice(event.payload);
         });
       },
       () => {
@@ -427,7 +440,7 @@ export class PetApplication {
       try {
         submitPreviewAction(message.action, {
           replace: () => {
-            this.#targetMode(false);
+            this.#targeting.replace();
           },
           visibility: (visible) => {
             this.#changeVisibility(visible);
@@ -437,12 +450,7 @@ export class PetApplication {
             this.#action({ action, point });
           },
           target: (purpose, preparation) => {
-            this.#targetNotice({
-              outcome: "started",
-              id: this.#lastTargetId + 1,
-              purpose,
-              preparation,
-            });
+            this.#targeting.startPreview(purpose, preparation);
           },
           center: () => {
             const size = this.#dependencies.browser.size();
@@ -551,7 +559,10 @@ export class PetApplication {
       return;
     }
     this.#dependencies.view.render(
-      this.#dependencies.simulation.present(this.#tidyPoint, !this.#targeting),
+      this.#dependencies.simulation.present(
+        this.#tidyPoint,
+        !this.#targeting.active,
+      ),
     );
     this.#updateView();
     this.#remember();
@@ -570,7 +581,11 @@ export class PetApplication {
     const sim = this.#dependencies.simulation;
     const encounter = sim.cursorEncounter();
     let caughtPointer = null;
-    if (!this.#dependencies.native && this.#visible && !this.#targeting) {
+    if (
+      !this.#dependencies.native &&
+      this.#visible &&
+      !this.#targeting.active
+    ) {
       if (encounter?.phase === "chew") {
         caughtPointer = encounter.beak;
       }
@@ -580,7 +595,7 @@ export class PetApplication {
     if (this.#tidyPoint) {
       grabbable =
         sim.canPickup() && contains(sim.pickupRect(), this.#tidyPoint);
-      if (!this.#targeting) {
+      if (!this.#targeting.active) {
         const point = this.#tidyPoint;
         interactiveHover = sim.interactionRects().some((rect) => {
           return contains(rect, point);
@@ -589,8 +604,8 @@ export class PetApplication {
     }
     this.#dependencies.view.update({
       visible: this.#visible,
-      targeting: this.#targeting,
-      purpose: this.#targetPurpose,
+      targeting: this.#targeting.active,
+      purpose: this.#targeting.purpose,
       dragging: sim.status().dragged,
       grabbable,
       interactiveHover,
@@ -609,7 +624,7 @@ export class PetApplication {
     if (this.#drag.active && !sim.status().held) {
       this.#cancelDrag();
     }
-    if (!this.#targeting || this.#targetPurpose === "tidy") {
+    if (!this.#targeting.active || this.#targeting.purpose === "tidy") {
       sim.step((now - this.#last) / 1000);
     }
     this.#last = now;
@@ -663,7 +678,7 @@ export class PetApplication {
     if (!next) {
       this.#cancelDrag();
       this.#tidyPoint = null;
-      this.#targetMode(false);
+      this.#targeting.replace();
     }
     if (
       returning &&
@@ -675,62 +690,11 @@ export class PetApplication {
     this.#wake();
   }
 
-  #targetMode(active: boolean, purpose = "poop"): void {
-    if (active) {
-      this.#cancelDrag();
-      this.#targetPurpose = purpose;
-    }
-    this.#dependencies.clock.cancel(this.#targetTimer);
-    this.#targetTimer = undefined;
-    const generation = ++this.#targetGeneration;
-    this.#targeting = active;
-    if (!active) {
-      this.#targetId = null;
-      this.#tidyPoint = null;
-      this.#dependencies.simulation.tidyPointer(null);
-    }
-    this.#syncPointer();
-    if (active) {
-      let timeout = 12000;
-      if (this.#targetPurpose === "tidy") {
-        timeout = 30000;
-      }
-      const id = this.#targetId;
-      this.#targetTimer = this.#dependencies.clock.schedule(() => {
-        if (
-          this.#running() &&
-          generation === this.#targetGeneration &&
-          id !== null
-        ) {
-          // Native expiry is independent. This remains a frontend fallback if
-          // terminal event delivery fails after native ownership is released.
-          this.#cancelNativeTargeting(id);
-          this.#targetNotice({ id, outcome: this.#targetEnd() });
-        }
-      }, timeout);
-    }
-    this.#updateView();
-  }
-
-  #targetEnd(): "finished_tidying" | "abandoned" {
-    if (this.#targetPurpose === "tidy") {
-      return "finished_tidying";
-    }
-    return "abandoned";
-  }
-
   #cancel(): void {
     if (!this.#running()) {
       return;
     }
-    if (this.#dependencies.native) {
-      // Both webview and global Escape terminate through the native owner.
-      // A repeated request after its lease ended must never become Stop routine.
-      this.#cancelNativeTargeting();
-      return;
-    }
-    if (this.#targetId !== null) {
-      this.#targetNotice({ id: this.#targetId, outcome: this.#targetEnd() });
+    if (this.#targeting.cancel()) {
       return;
     }
     const sim = this.#dependencies.simulation;
@@ -744,47 +708,6 @@ export class PetApplication {
     this.#wake();
   }
 
-  #targetNotice(notice: TargetNotice): void {
-    if (!this.#running()) {
-      return;
-    }
-    const sim = this.#dependencies.simulation;
-    if (notice.outcome === "started") {
-      if (notice.id <= this.#lastTargetId) {
-        return;
-      }
-      this.#lastTargetId = notice.id;
-      this.#targetMode(false);
-      this.#targetId = notice.id;
-      this.#caret.stop();
-      this.#cancelDrag();
-      sim.action(notice.preparation);
-      this.#targetMode(true, notice.purpose);
-      this.#wake();
-      return;
-    }
-    if (notice.id !== this.#targetId) {
-      return;
-    }
-    const purpose = this.#targetPurpose;
-    if (notice.outcome === "selected" && purpose === "tidy") {
-      sim.action("tidy_pick", notice.point);
-      this.#render();
-      return;
-    }
-    // Forget the accepted identity before applying a terminal simulation effect.
-    this.#targetMode(false);
-    if (notice.outcome === "selected") {
-      this.#resizeSimulation();
-      sim.action(purpose, notice.point);
-    } else if (notice.outcome === "abandoned") {
-      sim.action("cancel");
-    } else if (notice.outcome === "finished_tidying") {
-      sim.action("tidy_done");
-    }
-    this.#wake();
-  }
-
   #action(message: ActionMessage): void {
     if (!this.#running()) {
       return;
@@ -792,7 +715,7 @@ export class PetApplication {
     const sim = this.#dependencies.simulation;
     this.#caret.stop();
     this.#cancelDrag();
-    this.#targetMode(false);
+    this.#targeting.replace();
     this.#resizeSimulation();
     sim.action(message.action, message.point);
     if (message.cursor_id != null) {
@@ -807,7 +730,7 @@ export class PetApplication {
     }
     const sim = this.#dependencies.simulation;
     const point = { x: event.x, y: event.y };
-    if (!this.#targeting) {
+    if (!this.#targeting.active) {
       if (sim.flickCap(point)) {
         event.preventDefault();
         this.#releaseInteraction();
@@ -831,37 +754,7 @@ export class PetApplication {
     if (event.onBanner) {
       return;
     }
-    const id = this.#targetId;
-    if (id === null) {
-      return;
-    }
-    const lifecycleGeneration = this.#generation;
-    const native = this.#dependencies.native;
-    if (native) {
-      native.invoke("target_picked", { id, ...point }).catch((error) => {
-        if (!this.#current(lifecycleGeneration) || id !== this.#targetId) {
-          return;
-        }
-        this.#dependencies.reportError(error);
-        this.#cancelNativeTargeting(id);
-        this.#targetNotice({ outcome: "abandoned", id });
-      });
-    } else {
-      const size = this.#dependencies.browser.size();
-      if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) {
-        this.#targetNotice({ outcome: "abandoned", id });
-        return;
-      }
-      if (point.x < 0 || point.y < 0) {
-        this.#targetNotice({ outcome: "abandoned", id });
-        return;
-      }
-      if (point.x >= size.width || point.y >= size.height) {
-        this.#targetNotice({ outcome: "abandoned", id });
-        return;
-      }
-      this.#targetNotice({ outcome: "selected", id, point });
-    }
+    this.#targeting.select(point);
   }
 
   #pointerUp(event: ApplicationPointerEvent): void {
@@ -884,7 +777,7 @@ export class PetApplication {
       }
       this.#drag.move({ x: event.x, y: event.y });
     }
-    if (this.#targeting && this.#targetPurpose === "tidy") {
+    if (this.#targeting.active && this.#targeting.purpose === "tidy") {
       this.#tidyPoint = { x: event.x, y: event.y };
       this.#dependencies.simulation.tidyPointer(this.#tidyPoint);
       this.#requestRender();
@@ -939,7 +832,7 @@ export class PetApplication {
     let rects: ReturnType<
       ApplicationDependencies["simulation"]["interactionRects"]
     > = [];
-    if (this.#visible && !this.#targeting) {
+    if (this.#visible && !this.#targeting.active) {
       rects = this.#dependencies.simulation.interactionRects();
     }
     const point = await native
@@ -1008,13 +901,14 @@ export class PetApplication {
       return;
     }
     this.#syncBite();
-    const canObserve = this.#visible && !this.#targeting && !this.#drag.active;
+    const canObserve =
+      this.#visible && !this.#targeting.active && !this.#drag.active;
     if (canObserve && this.#dependencies.simulation.status().watchTyping) {
       this.#caret.start();
     } else {
       this.#caret.stop();
     }
-    if (this.#visible && !this.#targeting) {
+    if (this.#visible && !this.#targeting.active) {
       this.#pointer.start();
     } else if (this.#pointer.running) {
       this.#pointer.stop();
@@ -1036,7 +930,7 @@ export class PetApplication {
       this.#releaseCursorLease(id);
     }
     let encounter = sim.cursorEncounter();
-    if (!this.#visible || this.#targeting) {
+    if (!this.#visible || this.#targeting.active) {
       encounter = null;
     }
     let token = null;
@@ -1109,7 +1003,7 @@ export class PetApplication {
     }
   }
 
-  #cancelNativeTargeting(id = this.#targetId): void {
+  #cancelNativeTargeting(id: number | null): void {
     const native = this.#dependencies.native;
     if (native) {
       this.#runNative(
