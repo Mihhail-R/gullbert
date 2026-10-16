@@ -14,11 +14,15 @@ function setup() {
   return sim;
 }
 function advance(sim, seconds) {
-  for (let i = 0; i < Math.ceil(seconds * 20); i++) sim.step(0.05);
+  for (let i = 0; i < Math.ceil(seconds * 20); i++) {
+    sim.step(0.05);
+  }
 }
 function until(sim, phase) {
-  for (let i = 0; i < 1800 && sim.inspect().scene?.phase !== phase; i++)
+  for (let i = 0; i < 1800 && sim.inspect().scene?.phase !== phase; i++) {
     sim.step(0.05);
+  }
+
   assert.equal(sim.inspect().scene?.phase, phase);
 }
 function assertGone(sim) {
@@ -29,10 +33,16 @@ function assertGone(sim) {
 
 function drainFixtureBag(sim) {
   const id = sim.bag.id;
-  for (let serving = 0; serving < 3; serving++) sim.objects.consumeBag(id);
+
+  for (let serving = 0; serving < 3; serving++) {
+    sim.objects.consumeBag(id);
+  }
 }
 function untilFixture(sim, phase) {
-  for (let i = 0; i < 1800 && sim.scene?.phase !== phase; i++) sim.step(0.05);
+  for (let i = 0; i < 1800 && sim.scene?.phase !== phase; i++) {
+    sim.step(0.05);
+  }
+
   assert.equal(sim.scene?.phase, phase);
 }
 function assertFixtureGone(sim) {
@@ -52,20 +62,27 @@ test("pigeon inspects the existing usable bag, faces off, judges and leaves", ()
   assert.equal(sim.present().props.length, 1);
   const phases = new Set();
   const guestLines = new Set();
+
   for (let i = 0; i < 1800; i++) {
     phases.add(sim.inspect().scene?.phase);
-    if (sim.present().guestSpeech)
+
+    if (sim.present().guestSpeech) {
       guestLines.add(sim.present().guestSpeech.text);
+    }
+
     sim.step(0.05);
   }
+
   for (const phase of [
     "arrival",
     "inspect",
     "faceoff",
     "judgment",
     "departure",
-  ])
+  ]) {
     assert.ok(phases.has(phase), phase);
+  }
+
   assert.ok(guestLines.has("communal chips?"));
   assert.deepEqual(sim.inspect().bag, bag);
   assert.equal(bag.servings, 3);
@@ -77,16 +94,34 @@ test("pigeon inspects the existing usable bag, faces off, judges and leaves", ()
 test("absent, empty, and vanished bags produce judgment without creating snacks", () => {
   for (const state of ["absent", "empty", "vanished", "emptied"]) {
     const sim = routineFixture(GuestRoutine);
-    if (state !== "absent") sim.action("place_bag", { x: 400, y: 400 });
-    if (state === "empty") drainFixtureBag(sim);
+
+    if (state !== "absent") {
+      sim.action("place_bag", { x: 400, y: 400 });
+    }
+
+    if (state === "empty") {
+      drainFixtureBag(sim);
+    }
+
     sim.action("invite_pigeon");
     untilFixture(sim, "inspect");
-    if (state === "vanished") sim.objects.remove("bag", sim.bag.id);
-    if (state === "emptied") drainFixtureBag(sim);
+
+    if (state === "vanished") {
+      sim.objects.remove("bag", sim.bag.id);
+    }
+
+    if (state === "emptied") {
+      drainFixtureBag(sim);
+    }
+
     untilFixture(sim, "faceoff");
     assert.equal(sim.scene.hasSnack, false);
     assert.equal(guestSpeech(sim), null);
-    for (let tick = 0; tick < 200 && !guestSpeech(sim); tick++) sim.step(0.05);
+
+    for (let tick = 0; tick < 200 && !guestSpeech(sim); tick++) {
+      sim.step(0.05);
+    }
+
     assert.equal(guestSpeech(sim).text, "clearly.");
     assert.equal(guestProps(sim).length, 1);
     advance(sim, 60);
@@ -107,10 +142,12 @@ test("gull argument alternates visual reactions over one chip and ignores five",
   let sawGuestSquawk = false;
   let sawSnatchedChip = false;
   let sawContact = false;
+
   for (let i = 0; i < 1800; i++) {
     const phase = sim.inspect().scene?.phase;
     phases.add(phase);
     const props = sim.present().props;
+
     if (sim.inspect().scene?.kind === "guest") {
       assert.equal(
         props.filter((prop) => prop.id.startsWith("ignored-chip-")).length,
@@ -119,18 +156,21 @@ test("gull argument alternates visual reactions over one chip and ignores five",
       assert.equal(props.filter((prop) => prop.id === "visitor").length, 1);
       assert.equal(props.length, 7);
     }
+
     if (phase === "squawk-main") {
       sawMainSquawk = true;
       assert.equal(sim.inspect().pose, "squawk");
       assert.equal(sim.inspect().bubble, "MINE.");
       assert.equal(sim.present().guestSpeech, null);
     }
+
     if (phase === "squawk-guest") {
       sawGuestSquawk = true;
       assert.equal(props[0].asset, "guest-squawk");
       assert.equal(sim.inspect().bubble, "");
       assert.equal(sim.present().guestSpeech.text, "MINE, ACTUALLY.");
     }
+
     if (
       phase === "snatch" &&
       sim.inspect().time - sim.inspect().scene.phaseStarted >= 0.6
@@ -141,13 +181,16 @@ test("gull argument alternates visual reactions over one chip and ignores five",
       assert.equal(sim.inspect().scene.chipTaken, false);
       sawContact = true;
     }
+
     if (phase === "reaction") {
       sawSnatchedChip = true;
       assert.ok(props.some((prop) => prop.id === "snatched-chip"));
       assert.ok(!props.some((prop) => prop.id === "disputed-chip"));
     }
+
     sim.step(0.05);
   }
+
   for (const phase of [
     "arrival",
     "stare",
@@ -157,8 +200,10 @@ test("gull argument alternates visual reactions over one chip and ignores five",
     "snatch",
     "reaction",
     "departure",
-  ])
+  ]) {
     assert.ok(phases.has(phase), phase);
+  }
+
   assert.ok(sawMainSquawk, "Gullbert squawked");
   assert.ok(sawGuestSquawk, "The guest squawked");
   assert.ok(sawSnatchedChip, "The chip was snatched");
@@ -169,6 +214,7 @@ test("gull argument alternates visual reactions over one chip and ignores five",
 
 test("guests replace each other with only one visitor and no previous props", () => {
   const sim = setup();
+
   for (const command of [
     "invite_pigeon",
     "gull_argument",
@@ -298,11 +344,13 @@ test("deadline bounds unusual visits and resizing leaves readable props on scree
     sim.step(0.05);
     assert.ok(sim.x >= 0 && sim.x <= 4);
     assert.ok(sim.y >= 0 && sim.y <= 4);
+
     for (const prop of guestProps(sim)) {
       assert.ok(Number.isFinite(prop.x) && Number.isFinite(prop.y));
       assert.ok(prop.x >= 0 && prop.x + prop.width <= sim.width, prop.id);
       assert.ok(prop.y >= 0 && prop.y + prop.height <= sim.height, prop.id);
     }
+
     sim.time = sim.scene.deadline;
     sim.step(0.05);
     assertFixtureGone(sim);

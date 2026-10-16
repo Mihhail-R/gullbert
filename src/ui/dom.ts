@@ -5,9 +5,11 @@ export function requiredElement<T extends HTMLElement = HTMLElement>(
   root: ParentNode = document,
 ): T {
   const node = root.querySelector<T>(selector);
+
   if (!node) {
     throw new Error(`Missing required element: ${selector}`);
   }
+
   return node;
 }
 

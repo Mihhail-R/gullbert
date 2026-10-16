@@ -72,6 +72,7 @@ test("content validation reports empty banks, blank lines, duplicates and bad pl
       /both speakers/,
     ],
   ];
+
   for (const [edit, error] of cases) {
     const copy = structuredClone(authored);
     edit(copy);
@@ -84,6 +85,7 @@ test("a single remaining greeting or mood option remains speakable on repetition
   const greetingLines = dialogue.gullbert.greetings.return;
   const savedMood = [...moodLines];
   const savedGreetings = [...greetingLines];
+
   try {
     moodLines.splice(1);
     greetingLines.splice(1);
@@ -110,14 +112,17 @@ test("a single remaining greeting or mood option remains speakable on repetition
 });
 
 function until(sim, phase) {
-  for (let i = 0; i < 600 && sim.inspect().scene?.phase !== phase; i++)
+  for (let i = 0; i < 600 && sim.inspect().scene?.phase !== phase; i++) {
     sim.step(0.05);
+  }
+
   assert.equal(sim.inspect().scene?.phase, phase);
 }
 
 test("repeat guest visits rotate paired dialogue independently for each species", () => {
   const sim = new Gullbert(900, 650, () => 0.5);
   sim.configure({ paused: true, sound: false, mischief: 0 });
+
   for (let visit = 0; visit < 3; visit++) {
     for (const [command, species, phase, beat] of [
       ["invite_pigeon", "pigeon", "faceoff", "faceoffWithoutSnacks"],
@@ -134,8 +139,11 @@ test("repeat guest visits rotate paired dialogue independently for each species"
       const expected = alternatives[visit % alternatives.length];
       assert.equal(sim.inspect().bubble, expected.gullbert);
       assert.equal(sim.present().guestSpeech, null);
-      for (let tick = 0; tick < 200 && !sim.present().guestSpeech; tick++)
+
+      for (let tick = 0; tick < 200 && !sim.present().guestSpeech; tick++) {
         sim.step(0.05);
+      }
+
       assert.equal(sim.inspect().bubble, "");
       assert.equal(sim.present().guestSpeech.text, expected.visitor);
       sim.action("cancel");

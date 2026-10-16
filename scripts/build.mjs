@@ -21,6 +21,7 @@ export function buildFrontend() {
   // Build a complete snapshot first. Errors leave the last working preview
   // intact; successful builds remove stale files, including nested modules.
   const staging = mkdtempSync(path.join(project, ".web-build-"));
+
   try {
     const catalog = JSON.parse(
       readFileSync(path.join(source, "simulation/dialogue.json"), "utf8"),
@@ -39,8 +40,15 @@ export function buildFrontend() {
       ],
       { cwd: project, stdio: "inherit" },
     );
-    if (result.error) throw result.error;
-    if (result.status !== 0) throw new Error("Frontend type checking failed");
+
+    if (result.error) {
+      throw result.error;
+    }
+
+    if (result.status !== 0) {
+      throw new Error("Frontend type checking failed");
+    }
+
     cpSync(source, staging, {
       recursive: true,
       filter: (file) => !file.endsWith(".ts"),
@@ -51,7 +59,8 @@ export function buildFrontend() {
     const index = path.join(staging, "index.html");
     writeFileSync(
       index,
-      readFileSync(index, "utf8").replaceAll("__APP_VERSION__", version),
+      readFileSync(index, "utf8")
+        .replaceAll("__APP_VERSION__", version),
     );
     // Emit ordinary ESM so older desktop WebViews need no JSON-module support.
     // TypeScript checks the source JSON import; this embeds that same catalog.
@@ -97,5 +106,8 @@ if (
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
   buildFrontend();
-  if (process.argv.includes("--watch")) watchFrontend();
+
+  if (process.argv.includes("--watch")) {
+    watchFrontend();
+  }
 }

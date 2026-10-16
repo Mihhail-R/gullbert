@@ -22,17 +22,26 @@ const native = spawnSync(
   ],
   { cwd: project, encoding: "utf8" },
 );
-if (native.error) throw native.error;
+
+if (native.error) {
+  throw native.error;
+}
+
 if (native.status !== 0) {
   process.stderr.write(native.stderr + native.stdout);
   process.exit(native.status ?? 1);
 }
+
 const trace = native.stdout
   .split("\n")
   .find((line) => line.startsWith("GULLBERT_ROUTING_TRACES="));
-if (!trace)
+
+if (!trace) {
   throw new Error("Native routing test did not produce application traces");
+}
+
 const directory = mkdtempSync(path.join(tmpdir(), "gullbert-routing-"));
+
 try {
   const file = path.join(directory, "traces.json");
   writeFileSync(file, trace.slice("GULLBERT_ROUTING_TRACES=".length));
@@ -45,7 +54,11 @@ try {
       env: { ...process.env, GULLBERT_ROUTING_TRACES: file },
     },
   );
-  if (tests.error) throw tests.error;
+
+  if (tests.error) {
+    throw tests.error;
+  }
+
   process.exitCode = tests.status ?? 1;
 } finally {
   rmSync(directory, { recursive: true, force: true });

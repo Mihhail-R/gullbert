@@ -39,18 +39,23 @@ export function createPointerTracker({
     if (running) {
       return;
     }
+
     running = true;
     const token = ++generation;
+
     if (read) {
       const readPointer = read;
       async function poll() {
         timer = undefined;
+
         if (!running || token !== generation) {
           return;
         }
+
         try {
           last = now();
           const point = await readPointer();
+
           if (running && token === generation && point !== undefined) {
             sample(point);
           }
@@ -59,6 +64,7 @@ export function createPointerTracker({
             sample(null);
           }
         }
+
         if (running && token === generation) {
           timer = schedule(poll, 100);
         }
@@ -68,12 +74,15 @@ export function createPointerTracker({
     } else if (listen) {
       function flush() {
         timer = undefined;
+
         if (!running || token !== generation || !pending) {
           return;
         }
+
         const latest = pending;
         pending = null;
         last = now();
+
         if (typeof latest === "function") {
           sample(latest());
         } else {
@@ -84,7 +93,9 @@ export function createPointerTracker({
         if (!running || token !== generation) {
           return;
         }
+
         pending = point;
+
         if (now() - last >= 100) {
           cancel(timer);
           flush();

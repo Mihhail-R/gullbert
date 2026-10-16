@@ -20,6 +20,7 @@ export class CaretTracker {
     if (this.#running) {
       return;
     }
+
     this.#running = true;
     this.#generation++;
     this.#schedule();
@@ -28,6 +29,7 @@ export class CaretTracker {
     if (!this.#running) {
       return;
     }
+
     this.#running = false;
     this.#generation++;
     this.#options.cancel(this.#timer);
@@ -38,19 +40,24 @@ export class CaretTracker {
     if (!this.#running || this.#pending) {
       return;
     }
+
     this.#timer = this.#options.schedule(() => {
       void this.#poll();
     }, 300);
   }
   async #poll(): Promise<void> {
     this.#timer = undefined;
+
     if (!this.#running || this.#pending) {
       return;
     }
+
     const generation = this.#generation;
     this.#pending = true;
+
     try {
       const value = await this.#options.read();
+
       if (this.#running && generation === this.#generation) {
         this.#options.sample(value);
       }

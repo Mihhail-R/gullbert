@@ -56,6 +56,7 @@ export class FoodPolicy {
     ) {
       this.#nibbleEligibleAt = now;
     }
+
     return (
       this.#nibbleEligibleAt !== null &&
       now >= this.#nibbleEligibleAt &&

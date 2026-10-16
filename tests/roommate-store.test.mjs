@@ -49,7 +49,8 @@ function persistence(options = {}) {
     },
     retry() {
       assert.equal(timers.size, 1);
-      const [id, timer] = timers.entries().next().value;
+      const [id, timer] = timers.entries()
+        .next().value;
       assert.equal(timer.delay, 5000);
       timers.delete(id);
       timer.callback();
@@ -107,7 +108,9 @@ test("retry reads the latest memory without another change notification", async 
   let fail = true;
   const h = persistence({
     save() {
-      if (fail) throw new Error("disk unavailable");
+      if (fail) {
+        throw new Error("disk unavailable");
+      }
     },
   });
   await h.store.restore();
@@ -132,7 +135,9 @@ test("failed writes retry even when the memory revision has not changed", async 
   let fail = true;
   const h = persistence({
     save() {
-      if (fail) throw new Error("disk busy");
+      if (fail) {
+        throw new Error("disk busy");
+      }
     },
   });
   await h.store.restore();
@@ -210,9 +215,10 @@ test("shutdown waits for writes but ignores their late failures", async () => {
   await h.store.restore();
   h.store.start();
   let finished = false;
-  const shutdown = h.store.dispose().then(() => {
-    finished = true;
-  });
+  const shutdown = h.store.dispose()
+    .then(() => {
+      finished = true;
+    });
   await settle();
   assert.equal(finished, false);
   pending.reject(new Error("late failure"));

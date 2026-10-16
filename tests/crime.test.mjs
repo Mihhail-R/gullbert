@@ -10,11 +10,15 @@ function setup(width = 900, height = 650) {
   return sim;
 }
 function advance(sim, seconds) {
-  for (let i = 0; i < seconds * 20; i++) sim.step(0.05);
+  for (let i = 0; i < seconds * 20; i++) {
+    sim.step(0.05);
+  }
 }
 function until(sim, phase) {
-  for (let i = 0; i < 600 && sim.inspect().scene?.phase !== phase; i++)
+  for (let i = 0; i < 600 && sim.inspect().scene?.phase !== phase; i++) {
     sim.step(0.05);
+  }
+
   assert.equal(sim.inspect().scene?.phase, phase);
 }
 
@@ -60,11 +64,15 @@ test("caper has inspect, trapped, running, shaking, and offended beats", () => {
   const phases = new Set(),
     poses = new Set(),
     panicPositions = new Set();
+
   for (let i = 0; i < 520; i++) {
     phases.add(sim.inspect().scene?.phase);
     poses.add(sim.inspect().pose);
-    if (sim.inspect().scene?.phase === "panic")
+
+    if (sim.inspect().scene?.phase === "panic") {
       panicPositions.add(Math.round(sim.inspect().x));
+    }
+
     sim.step(0.05);
     assert.ok(
       sim.inspect().x >= 0 && sim.inspect().x <= sim.inspect().width - 96,
@@ -81,16 +89,21 @@ test("caper has inspect, trapped, running, shaking, and offended beats", () => {
         sim.inspect().bag.y <= sim.inspect().height - 48,
     );
   }
-  for (const phase of ["inspect", "trapped", "panic", "shake", "offended"])
+
+  for (const phase of ["inspect", "trapped", "panic", "shake", "offended"]) {
     assert.ok(phases.has(phase), phase);
+  }
+
   for (const pose of [
     "bag-inspect",
     "bag-trapped",
     "bag-panic",
     "bag-shake",
     "bag-offended",
-  ])
+  ]) {
     assert.ok(poses.has(pose), pose);
+  }
+
   assert.ok(panicPositions.size > 20);
   assert.equal(sim.inspect().scene, null);
   assert.equal(sim.inspect().bag.id, bagId);
@@ -123,12 +136,22 @@ test("every attached crime beat can be replaced or cleaned without a stale prop"
         until(sim, phase);
         const oldBag = sim.inspect().bag;
         sim.action(replacement);
-        if (sim.inspect().bag) assert.equal(sim.inspect().bag.attached, false);
+
+        if (sim.inspect().bag) {
+          assert.equal(sim.inspect().bag.attached, false);
+        }
+
         assert.notEqual(sim.inspect().scene?.kind, "theft");
         assert.notEqual(sim.inspect().scene?.kind, "caper");
-        if (replacement === "clean") assert.equal(sim.inspect().bag, null);
-        if (replacement === "place_bag")
+
+        if (replacement === "clean") {
+          assert.equal(sim.inspect().bag, null);
+        }
+
+        if (replacement === "place_bag") {
           assert.notEqual(sim.inspect().bag.id, oldBag.id);
+        }
+
         advance(sim, 20);
         assert.notEqual(sim.inspect().scene?.kind, "theft");
         assert.notEqual(sim.inspect().scene?.kind, "caper");
@@ -140,16 +163,19 @@ test("every attached crime beat can be replaced or cleaned without a stale prop"
 test("crime actions without a bag give feedback, and resize bounds attached props", () => {
   const sim = setup();
   sim.action("clean");
+
   for (const action of ["steal_bag", "bag_caper", "caught"]) {
     sim.action(action);
     assert.equal(sim.inspect().scene, null);
     assert.ok(sim.inspect().bubble);
   }
+
   for (const action of ["steal_bag", "bag_caper"]) {
     sim.action("place_bag");
     sim.action(action);
     until(sim, action === "steal_bag" ? "drag" : "panic");
     sim.resize(100, 100);
+
     for (let i = 0; i < 400; i++) {
       sim.step(0.05);
       assert.ok(sim.inspect().x >= 0 && sim.inspect().x <= 4);
@@ -157,6 +183,7 @@ test("crime actions without a bag give feedback, and resize bounds attached prop
       assert.ok(sim.inspect().bag.x >= 0 && sim.inspect().bag.x <= 52);
       assert.ok(sim.inspect().bag.y >= 0 && sim.inspect().bag.y <= 52);
     }
+
     assert.equal(sim.inspect().bag.attached, false);
   }
 });

@@ -13,22 +13,28 @@ const mime = {
 export function createPreviewServer(root = frontendRoot) {
   return http.createServer(async (req, res) => {
     let pathname;
+
     try {
       pathname = decodeURIComponent(
         new URL(req.url, "http://localhost").pathname,
       );
     } catch {
-      res.writeHead(400).end("Bad request");
+      res.writeHead(400)
+        .end("Bad request");
       return;
     }
+
     const file = path.resolve(
       root,
       `.${pathname === "/" ? "/index.html" : pathname}`,
     );
+
     if (!file.startsWith(root + path.sep)) {
-      res.writeHead(403).end();
+      res.writeHead(403)
+        .end();
       return;
     }
+
     try {
       const content = await readFile(file);
       res.writeHead(200, {
@@ -36,7 +42,8 @@ export function createPreviewServer(root = frontendRoot) {
       });
       res.end(content);
     } catch {
-      res.writeHead(404).end("Not found");
+      res.writeHead(404)
+        .end("Not found");
     }
   });
 }

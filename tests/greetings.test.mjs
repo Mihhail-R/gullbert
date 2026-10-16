@@ -9,7 +9,9 @@ function bird() {
   return sim;
 }
 function advance(sim, seconds) {
-  for (let i = 0; i < seconds * 20; i++) sim.step(0.05);
+  for (let i = 0; i < seconds * 20; i++) {
+    sim.step(0.05);
+  }
 }
 
 test("first launch and ordinary returns vary and persist a wall-time cooldown", () => {
@@ -66,6 +68,7 @@ test("hiding and repeated summons do not bypass cooldown or record hidden greeti
   sim.setVisible(true);
   assert.equal(sim.greet(), true);
   const lastAt = sim.inspect().memory.greetings.lastAt;
+
   for (let i = 0; i < 5; i++) {
     sim.setVisible(false);
     sim.setVisible(true);

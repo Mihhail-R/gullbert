@@ -8,11 +8,15 @@ function bird() {
   return sim;
 }
 function advance(sim, seconds) {
-  for (let i = 0; i < seconds * 20; i++) sim.step(0.05);
+  for (let i = 0; i < seconds * 20; i++) {
+    sim.step(0.05);
+  }
 }
 function arrive(sim) {
-  for (let i = 0; i < 600 && sim.inspect().scene?.phase === "approach"; i++)
+  for (let i = 0; i < 600 && sim.inspect().scene?.phase === "approach"; i++) {
     sim.step(0.05);
+  }
+
   assert.equal(sim.inspect().scene?.phase, "settle");
 }
 

@@ -5,6 +5,7 @@ import { Gullbert } from "../web-dist/simulation/engine.js";
 function assertFrozen(value) {
   if (value && typeof value === "object") {
     assert.equal(Object.isFrozen(value), true);
+
     for (const child of Object.values(value)) {
       assertFrozen(child);
     }
@@ -38,9 +39,11 @@ test("published snapshots remain stable while a routine advances", () => {
   const presentation = sim.present();
   const savedInspection = structuredClone(inspection);
   const savedPresentation = structuredClone(presentation);
+
   for (let tick = 0; tick < 30; tick++) {
     sim.step(0.05);
   }
+
   assert.notEqual(sim.inspect().scene.phase, inspection.scene.phase);
   assert.deepEqual(inspection, savedInspection);
   assert.deepEqual(presentation, savedPresentation);

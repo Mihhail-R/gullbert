@@ -1,0 +1,4 @@
+# ESLint owns code layout so Prettier cannot collapse chains or wrapped arguments.
+**/*.ts
+**/*.js
+**/*.mjs

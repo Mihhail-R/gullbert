@@ -8,7 +8,9 @@ function bird() {
   return g;
 }
 function advance(g, t) {
-  for (let i = 0; i < t * 20; i++) g.step(0.05);
+  for (let i = 0; i < t * 20; i++) {
+    g.step(0.05);
+  }
 }
 test("stationary cursor has stare, stalk, peck, recoil and finishes in eight seconds", () => {
   const g = bird();
@@ -16,32 +18,49 @@ test("stationary cursor has stare, stalk, peck, recoil and finishes in eight sec
   g.pointer({ x: g.inspect().x + 90, y: g.inspect().y + 48 });
   const phases = new Set();
   let complained = false;
+
   for (let i = 0; i < 160; i++) {
-    if (g.inspect().scene) phases.add(g.inspect().scene.phase);
-    if (g.inspect().bubble.includes("not a chip")) complained = true;
+    if (g.inspect().scene) {
+      phases.add(g.inspect().scene.phase);
+    }
+
+    if (g.inspect().bubble.includes("not a chip")) {
+      complained = true;
+    }
+
     g.step(0.05);
   }
-  for (const p of ["stare", "stalk", "peck", "recoil"])
+
+  for (const p of ["stare", "stalk", "peck", "recoil"]) {
     assert.ok(phases.has(p), p);
+  }
+
   assert.equal(g.inspect().scene, null);
   assert.ok(g.inspect().nextNibble > 90);
   assert.ok(complained);
 });
-test("escaping pointer and unavailable tracking terminate gracefully, with a strict deadline", () => {
-  for (const point of [null, { x: -1, y: 3, inside: false }]) {
+test(
+  "escaping pointer and unavailable tracking terminate gracefully, with a strict " +
+  "deadline",
+  () => {
+    for (const point of [null, { x: -1, y: 3, inside: false }]) {
+      const g = bird();
+      g.action("nibble_cursor");
+      g.pointer(point);
+      assert.equal(g.inspect().scene, null);
+    }
+
     const g = bird();
     g.action("nibble_cursor");
-    g.pointer(point);
+
+    for (let i = 0; i < 161; i++) {
+      g.pointer({ x: 0, y: 0 });
+      g.step(0.05);
+    }
+
     assert.equal(g.inspect().scene, null);
   }
-  const g = bird();
-  g.action("nibble_cursor");
-  for (let i = 0; i < 161; i++) {
-    g.pointer({ x: 0, y: 0 });
-    g.step(0.05);
-  }
-  assert.equal(g.inspect().scene, null);
-});
+);
 test("food, commands, hiding and pausing cancel cursor sampling immediately", () => {
   for (const command of ["feed", "place_bag", "nap", "clean"]) {
     const g = bird();
@@ -50,6 +69,7 @@ test("food, commands, hiding and pausing cancel cursor sampling immediately", ()
     g.action(command);
     assert.equal(g.inspect().wantsPointer, false);
   }
+
   const g = bird();
   g.action("nibble_cursor");
   g.setVisible(false);
@@ -64,81 +84,98 @@ test("food, commands, hiding and pausing cancel cursor sampling immediately", ()
   assert.equal(g.inspect().wantsPointer, false);
   assert.equal(g.inspect().scene, null);
 });
-test("autonomous nibble requires fifteen visible unanswered seconds and respects its cooldown", () => {
-  const g = bird();
-  g.configure({ mischief: 1 });
-  for (
-    let tick = 0;
-    tick < 8000 && g.inspect().snackRequestAt === null;
-    tick++
-  ) {
-    g.step(0.05);
-  }
-  const requestedAt = g.inspect().snackRequestAt;
-  assert.notEqual(requestedAt, null);
-  while (g.inspect().time < requestedAt + 14.8) {
-    g.step(0.05);
+test(
+  "autonomous nibble requires fifteen visible unanswered seconds and respects its " +
+  "cooldown",
+  () => {
+    const g = bird();
+    g.configure({ mischief: 1 });
+
+    for (
+      let tick = 0;
+      tick < 8000 && g.inspect().snackRequestAt === null;
+      tick++
+    ) {
+      g.step(0.05);
+    }
+
+    const requestedAt = g.inspect().snackRequestAt;
+    assert.notEqual(requestedAt, null);
+
+    while (g.inspect().time < requestedAt + 14.8) {
+      g.step(0.05);
+      assert.notEqual(g.inspect().scene?.kind, "cursor");
+    }
+
+    for (
+      let tick = 0;
+      tick < 1600 && g.inspect().scene?.kind !== "cursor";
+      tick++
+    ) {
+      g.step(0.05);
+    }
+
+    assert.equal(g.inspect().scene?.kind, "cursor");
+    assert.ok(g.inspect().time >= requestedAt + 15);
+    g.pointer(null);
+    const cooldown = g.inspect().nextNibble;
+    g.action("search_snack");
+    advance(g, 7);
     assert.notEqual(g.inspect().scene?.kind, "cursor");
+    assert.ok(g.inspect().time < cooldown);
+
+    for (
+      let tick = 0;
+      tick < 4000 && g.inspect().scene?.kind !== "cursor";
+      tick++
+    ) {
+      g.step(0.05);
+    }
+
+    assert.equal(g.inspect().scene?.kind, "cursor");
+    assert.ok(g.inspect().time >= cooldown);
+    const polite = bird();
+    polite.action("search_snack");
+    advance(polite, 7);
+    assert.notEqual(polite.inspect().scene?.kind, "cursor");
   }
-  for (
-    let tick = 0;
-    tick < 1600 && g.inspect().scene?.kind !== "cursor";
-    tick++
-  ) {
-    g.step(0.05);
+);
+test(
+  "browser pointer listener exists only while active and throttles to ten samples " +
+  "per second",
+  () => {
+    let time = 0,
+      listener = null,
+      removed = 0;
+    const points = [];
+    const tracker = createPointerTracker({
+      now: () => time,
+      listen: (fn) => {
+        listener = fn;
+        return () => {
+          listener = null;
+          removed++;
+        };
+      },
+      sample: (p) => points.push(p),
+    });
+    tracker.start();
+
+    for (let i = 0; i < 100; i++) {
+      time = i * 10;
+      listener({ x: i, y: 0 });
+    }
+
+    assert.equal(points.length, 10);
+    tracker.stop();
+    assert.equal(listener, null);
+    assert.equal(removed, 1);
+    tracker.start();
+    listener({ x: 999, y: 0 });
+    assert.equal(points.length, 10);
+    tracker.stop();
   }
-  assert.equal(g.inspect().scene?.kind, "cursor");
-  assert.ok(g.inspect().time >= requestedAt + 15);
-  g.pointer(null);
-  const cooldown = g.inspect().nextNibble;
-  g.action("search_snack");
-  advance(g, 7);
-  assert.notEqual(g.inspect().scene?.kind, "cursor");
-  assert.ok(g.inspect().time < cooldown);
-  for (
-    let tick = 0;
-    tick < 4000 && g.inspect().scene?.kind !== "cursor";
-    tick++
-  ) {
-    g.step(0.05);
-  }
-  assert.equal(g.inspect().scene?.kind, "cursor");
-  assert.ok(g.inspect().time >= cooldown);
-  const polite = bird();
-  polite.action("search_snack");
-  advance(polite, 7);
-  assert.notEqual(polite.inspect().scene?.kind, "cursor");
-});
-test("browser pointer listener exists only while active and throttles to ten samples per second", () => {
-  let time = 0,
-    listener = null,
-    removed = 0;
-  const points = [];
-  const tracker = createPointerTracker({
-    now: () => time,
-    listen: (fn) => {
-      listener = fn;
-      return () => {
-        listener = null;
-        removed++;
-      };
-    },
-    sample: (p) => points.push(p),
-  });
-  tracker.start();
-  for (let i = 0; i < 100; i++) {
-    time = i * 10;
-    listener({ x: i, y: 0 });
-  }
-  assert.equal(points.length, 10);
-  tracker.stop();
-  assert.equal(listener, null);
-  assert.equal(removed, 1);
-  tracker.start();
-  listener({ x: 999, y: 0 });
-  assert.equal(points.length, 10);
-  tracker.stop();
-});
+);
 test("native pointer polling is bounded and in-flight results are discarded on stop", async () => {
   let time = 0,
     next = null,

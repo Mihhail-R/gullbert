@@ -10,7 +10,9 @@ function freeze<T>(value: T): ReadonlyValue<T> {
     for (const child of Object.values(value)) {
       freeze(child);
     }
+
     Object.freeze(value);
   }
+
   return value as ReadonlyValue<T>;
 }

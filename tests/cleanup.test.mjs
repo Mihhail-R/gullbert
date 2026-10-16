@@ -14,15 +14,22 @@ function bird(level = 1, roll = 0) {
   return sim;
 }
 function advance(sim, seconds) {
-  for (let i = 0; i < Math.ceil(seconds * 20); i++) sim.step(0.05);
+  for (let i = 0; i < Math.ceil(seconds * 20); i++) {
+    sim.step(0.05);
+  }
 }
 function setup(sim, bag = true, empty = true) {
   const paused = sim.inspect().settings.paused;
   sim.configure({ paused: true });
+
   if (bag) {
     sim.action("place_bag", { x: 124, y: 124 });
-    if (empty) emptyBag(sim);
+
+    if (empty) {
+      emptyBag(sim);
+    }
   }
+
   sim.action("feed");
   sim.splat({ x: 300, y: 100 });
   sim.configure({ paused });
@@ -76,16 +83,22 @@ function cleanupFixture() {
       return cleanupTarget(this, point);
     },
     action(name, point) {
-      if (name === "tidy") this.owner.begin();
-      else if (name === "tidy_pick") this.owner.pick(point);
-      else if (name === "tidy_done") this.owner.finish();
+      if (name === "tidy") {
+        this.owner.begin();
+      } else if (name === "tidy_pick") {
+        this.owner.pick(point);
+      } else if (name === "tidy_done") {
+        this.owner.finish();
+      }
     },
   };
   sim.objects = {
     remove(kind, id) {
-      if (kind === "bag") sim.bag = null;
-      else if (kind === "chip" && id == null) sim.crumb = null;
-      else {
+      if (kind === "bag") {
+        sim.bag = null;
+      } else if (kind === "chip" && id == null) {
+        sim.crumb = null;
+      } else {
         const field = {
           chip: "looseChips",
           splat: "splats",
@@ -96,7 +109,10 @@ function cleanupFixture() {
       }
     },
     restoreBag(bag) {
-      if (sim.bag) return false;
+      if (sim.bag) {
+        return false;
+      }
+
       sim.bag = { ...bag, id: ++sim.serial };
       return true;
     },
@@ -146,24 +162,28 @@ function cleanupFixture() {
   return sim;
 }
 
-test("tidying cancels a routine without clearing loose objects; repeated and empty clicks are isolated", () => {
-  const sim = bird();
-  sim.action("feed");
-  const crumb = { ...sim.inspect().crumb };
-  sim.action("tidy");
-  assert.deepEqual(sim.inspect().crumb, crumb);
-  assert.equal(sim.inspect().goal, null);
-  assert.equal(sim.inspect().tidying, true);
-  sim.action("tidy_pick", { x: 1, y: 1 });
-  assert.deepEqual(sim.inspect().crumb, crumb);
-  assert.equal(sim.inspect().cleanup.session.removals, 0);
-  sim.action("tidy_pick", crumb);
-  assert.equal(sim.inspect().crumb, null);
-  assert.equal(sim.inspect().cleanup.session.removals, 1);
-  sim.action("tidy_pick", crumb);
-  assert.equal(sim.inspect().cleanup.session.removals, 1);
-  assert.equal(sim.inspect().tidying, true);
-});
+test(
+  "tidying cancels a routine without clearing loose objects; repeated and empty " +
+  "clicks are isolated",
+  () => {
+    const sim = bird();
+    sim.action("feed");
+    const crumb = { ...sim.inspect().crumb };
+    sim.action("tidy");
+    assert.deepEqual(sim.inspect().crumb, crumb);
+    assert.equal(sim.inspect().goal, null);
+    assert.equal(sim.inspect().tidying, true);
+    sim.action("tidy_pick", { x: 1, y: 1 });
+    assert.deepEqual(sim.inspect().crumb, crumb);
+    assert.equal(sim.inspect().cleanup.session.removals, 0);
+    sim.action("tidy_pick", crumb);
+    assert.equal(sim.inspect().crumb, null);
+    assert.equal(sim.inspect().cleanup.session.removals, 1);
+    sim.action("tidy_pick", crumb);
+    assert.equal(sim.inspect().cleanup.session.removals, 1);
+    assert.equal(sim.inspect().tidying, true);
+  }
+);
 
 test("shared rectangles select topmost eligible object with an eight pixel halo", () => {
   const sim = cleanupFixture();
@@ -177,13 +197,16 @@ test("shared rectangles select topmost eligible object with an eight pixel halo"
   const memory = sim.exportMemory();
   sim.action("tidy");
   assert.deepEqual(
-    cleanupObjects(sim).map((o) => o.kind),
+    cleanupObjects(sim)
+      .map((o) => o.kind),
     ["bag", "chip", "splat", "splat", "cone"],
   );
+
   for (const id of [4, 3, 2]) {
     assert.equal(sim.cleanupTarget({ x: 105, y: 105 }).id, id);
     sim.action("tidy_pick", { x: 105, y: 105 });
   }
+
   assert.equal(sim.cleanupTarget({ x: 93, y: 100 }).kind, "chip");
   sim.action("tidy_pick", { x: 105, y: 105 });
   assert.equal(sim.cleanupTarget({ x: 105, y: 105 }).kind, "bag");
@@ -253,25 +276,29 @@ test("Polite-ish never retaliates; Menace restores one empty bag after five seco
   assert.equal(sim.inspect().cleanup.retaliation, null);
 });
 
-test("retaliation probabilities have distinct thresholds and Public enemy can add one splat", () => {
-  const menace = bird(1, 0.4);
-  removeTwo(menace);
-  menace.action("tidy_done");
-  assert.equal(menace.inspect().cleanup.retaliation, null);
-  const enemy = bird(2, 0.55);
-  removeTwo(enemy);
-  enemy.action("tidy_done");
-  assert.equal(enemy.inspect().cleanup.retaliation.kind, "splat");
-  const before = enemy.inspect().splats.length;
-  advance(enemy, 5.1);
-  assert.equal(enemy.inspect().splats.length, before + 1);
-  advance(enemy, 1);
-  assert.equal(enemy.inspect().splats.length, before + 1);
-  const no = bird(2, 0.61);
-  removeTwo(no);
-  no.action("tidy_done");
-  assert.equal(no.inspect().cleanup.retaliation, null);
-});
+test(
+  "retaliation probabilities have distinct thresholds and Public enemy can add one " +
+  "splat",
+  () => {
+    const menace = bird(1, 0.4);
+    removeTwo(menace);
+    menace.action("tidy_done");
+    assert.equal(menace.inspect().cleanup.retaliation, null);
+    const enemy = bird(2, 0.55);
+    removeTwo(enemy);
+    enemy.action("tidy_done");
+    assert.equal(enemy.inspect().cleanup.retaliation.kind, "splat");
+    const before = enemy.inspect().splats.length;
+    advance(enemy, 5.1);
+    assert.equal(enemy.inspect().splats.length, before + 1);
+    advance(enemy, 1);
+    assert.equal(enemy.inspect().splats.length, before + 1);
+    const no = bird(2, 0.61);
+    removeTwo(no);
+    no.action("tidy_done");
+    assert.equal(no.inspect().cleanup.retaliation, null);
+  }
+);
 
 test("restoration skips an existing bag and cancellation never schedules replacement mess", () => {
   const fixture = cleanupFixture();
@@ -287,6 +314,7 @@ test("restoration skips an existing bag and cancellation never schedules replace
   fixture.time = 5.1;
   fixture.owner.update(0.05);
   assert.equal(fixture.bag, other);
+
   for (const cancel of [
     (s) => s.action("clean"),
     (s) => s.action("cancel"),
@@ -318,69 +346,90 @@ test("lowering mischief cancels disallowed splats and feeding settles anger imme
   assert.equal(sim.inspect().mode, "fetch");
 });
 
-test("bulk cleanup clears transient props, preserves belongings, suppresses autonomous mess and permits play", () => {
-  const sim = bird(2);
-  sim.configure({ paused: true });
-  advance(sim, 1000);
-  sim.action("municipal_gull");
-  reachPhase(sim, "inspect");
-  sim.configure({ paused: false });
-  removeTwo(sim);
-  sim.restoreMemory({
-    perch: { x: 200, y: 200 },
-    collection: { bottle_cap: 1 },
-  });
-  const memory = sim.exportMemory();
-  sim.action("clean");
-  assert.equal(sim.inspect().tidying, false);
-  assert.equal(sim.inspect().bag, null);
-  assert.equal(sim.inspect().crumb, null);
-  assert.equal(sim.inspect().cones.length, 0);
-  assert.equal(sim.inspect().splats.length, 0);
-  assert.deepEqual(sim.exportMemory(), memory);
-  advance(sim, 29);
-  assert.equal(sim.inspect().splats.length, 0);
-  sim.action("poop");
-  advance(sim, 7);
-  assert.equal(sim.inspect().splats.length, 1);
-});
+test(
+  "bulk cleanup clears transient props, preserves belongings, suppresses autonomous " +
+  "mess and permits play",
+  () => {
+    const sim = bird(2);
+    sim.configure({ paused: true });
+    advance(sim, 1000);
+    sim.action("municipal_gull");
+    reachPhase(sim, "inspect");
+    sim.configure({ paused: false });
+    removeTwo(sim);
+    sim.restoreMemory({
+      perch: { x: 200, y: 200 },
+      collection: { bottle_cap: 1 },
+    });
+    const memory = sim.exportMemory();
+    sim.action("clean");
+    assert.equal(sim.inspect().tidying, false);
+    assert.equal(sim.inspect().bag, null);
+    assert.equal(sim.inspect().crumb, null);
+    assert.equal(sim.inspect().cones.length, 0);
+    assert.equal(sim.inspect().splats.length, 0);
+    assert.deepEqual(sim.exportMemory(), memory);
+    advance(sim, 29);
+    assert.equal(sim.inspect().splats.length, 0);
+    sim.action("poop");
+    advance(sim, 7);
+    assert.equal(sim.inspect().splats.length, 1);
+  }
+);
 
 test("successful cleanup lines do not repeat across each category's four-line cycle", () => {
   const sim = cleanupFixture();
   sim.action("tidy");
+
   for (const kind of ["splat", "chip", "bag", "cone"]) {
     const said = new Set();
+
     for (let i = 0; i < 4; i++) {
       const id = ++sim.serial;
-      if (kind === "splat")
+
+      if (kind === "splat") {
         sim.splats.push({ id, x: 100, y: 100, born: sim.time });
-      if (kind === "chip") sim.crumb = { x: 100, y: 100 };
-      if (kind === "bag")
+      }
+
+      if (kind === "chip") {
+        sim.crumb = { x: 100, y: 100 };
+      }
+
+      if (kind === "bag") {
         sim.bag = { id, x: 100, y: 100, servings: 0, attached: false };
-      if (kind === "cone")
+      }
+
+      if (kind === "cone") {
         sim.cones.push({ id, x: 100, y: 120, born: sim.time });
+      }
+
       sim.action("tidy_pick", { x: 100, y: 100 });
       said.add(sim.bubble);
     }
+
     assert.equal(said.size, 4, kind);
   }
 });
 
-test("apology follows a completed sulk only without retaliation and without an intervening command", () => {
-  const sim = bird(0);
-  setup(sim, false);
-  pick(sim, "chip");
-  sim.action("tidy_done");
-  advance(sim, 10.1);
-  assert.equal(sim.inspect().scene.kind, "apology");
-  const canceled = bird(0);
-  setup(canceled, false);
-  pick(canceled, "chip");
-  canceled.action("tidy_done");
-  canceled.action("cancel");
-  advance(canceled, 11);
-  assert.notEqual(canceled.inspect().scene?.kind, "apology");
-});
+test(
+  "apology follows a completed sulk only without retaliation and without an " +
+  "intervening command",
+  () => {
+    const sim = bird(0);
+    setup(sim, false);
+    pick(sim, "chip");
+    sim.action("tidy_done");
+    advance(sim, 10.1);
+    assert.equal(sim.inspect().scene.kind, "apology");
+    const canceled = bird(0);
+    setup(canceled, false);
+    pick(canceled, "chip");
+    canceled.action("tidy_done");
+    canceled.action("cancel");
+    advance(canceled, 11);
+    assert.notEqual(canceled.inspect().scene?.kind, "apology");
+  }
+);
 
 test("Menace restores only a removed empty bag, never converts a full bag into retaliation", () => {
   const sim = bird(1);
@@ -393,61 +442,71 @@ test("Menace restores only a removed empty bag, never converts a full bag into r
   assert.equal(sim.inspect().bag, null);
 });
 
-test("cones expire during active tidying, while hidden time cannot consume retaliation cooldown", () => {
-  const sim = bird(1);
-  sim.configure({ paused: true });
-  sim.action("municipal_gull");
-  reachPhase(sim, "inspect");
-  const expiry = Math.max(...sim.inspect().cones.map((cone) => cone.born)) + 90;
-  advance(sim, expiry - sim.inspect().time - 0.5);
-  sim.configure({ paused: false });
-  sim.action("tidy");
-  advance(sim, 1.1);
-  assert.equal(sim.inspect().cones.length, 0);
-  removeTwo(sim);
-  sim.action("tidy_done");
-  const cooldown = sim.inspect().cleanup.retaliationAllowedAt;
-  sim.setVisible(false);
-  advance(sim, 100);
-  assert.ok(sim.inspect().time < cooldown);
-  sim.setVisible(true);
-  removeTwo(sim);
-  sim.action("tidy_done");
-  assert.equal(sim.inspect().cleanup.retaliation, null);
-  advance(sim, 91);
-  removeTwo(sim);
-  sim.action("tidy_done");
-  assert.equal(sim.inspect().cleanup.retaliation.kind, "bag");
-});
+test(
+  "cones expire during active tidying, while hidden time cannot consume retaliation " +
+  "cooldown",
+  () => {
+    const sim = bird(1);
+    sim.configure({ paused: true });
+    sim.action("municipal_gull");
+    reachPhase(sim, "inspect");
+    const expiry = Math.max(...sim.inspect().cones.map((cone) => cone.born)) + 90;
+    advance(sim, expiry - sim.inspect().time - 0.5);
+    sim.configure({ paused: false });
+    sim.action("tidy");
+    advance(sim, 1.1);
+    assert.equal(sim.inspect().cones.length, 0);
+    removeTwo(sim);
+    sim.action("tidy_done");
+    const cooldown = sim.inspect().cleanup.retaliationAllowedAt;
+    sim.setVisible(false);
+    advance(sim, 100);
+    assert.ok(sim.inspect().time < cooldown);
+    sim.setVisible(true);
+    removeTwo(sim);
+    sim.action("tidy_done");
+    assert.equal(sim.inspect().cleanup.retaliation, null);
+    advance(sim, 91);
+    removeTwo(sim);
+    sim.action("tidy_done");
+    assert.equal(sim.inspect().cleanup.retaliation.kind, "bag");
+  }
+);
 
 function reachPhase(sim, phase) {
-  for (let i = 0; i < 600 && sim.inspect().scene?.phase !== phase; i++)
+  for (let i = 0; i < 600 && sim.inspect().scene?.phase !== phase; i++) {
     sim.step(0.05);
+  }
+
   assert.equal(sim.inspect().scene?.phase, phase);
 }
 const geometry = ({ id, ...prop }) => prop;
 
-test("tidying preserves a missed toss chip at its exact painted size and removes it only on click", () => {
-  const sim = new Gullbert(2400, 650, () => 0.1);
-  sim.configure({ paused: true, mischief: 0 });
-  sim.action("chip_toss", { x: 2300, y: 500 });
-  reachPhase(sim, "miss");
-  const props = sim.present().props;
-  assert.equal(props.length, 1);
-  sim.action("tidy");
-  assert.equal(sim.inspect().scene, null);
-  assert.equal(sim.inspect().crumb, null);
-  assert.deepEqual(sim.inspect().looseChips.map(geometry), props.map(geometry));
-  const chip = sim.inspect().looseChips[0];
-  assert.equal(sim.cleanupTarget({ x: chip.x - 7, y: chip.y }).id, chip.id);
-  sim.action("tidy_pick", { x: 1, y: 1 });
-  assert.equal(sim.inspect().looseChips.length, 1);
-  sim.action("tidy_pick", { x: chip.x + 12, y: chip.y + 12 });
-  assert.deepEqual(sim.inspect().looseChips, []);
-  assert.equal(sim.inspect().cleanup.session.removals, 1);
-  sim.action("tidy_pick", { x: chip.x + 12, y: chip.y + 12 });
-  assert.equal(sim.inspect().cleanup.session.removals, 1);
-});
+test(
+  "tidying preserves a missed toss chip at its exact painted size and removes it " +
+  "only on click",
+  () => {
+    const sim = new Gullbert(2400, 650, () => 0.1);
+    sim.configure({ paused: true, mischief: 0 });
+    sim.action("chip_toss", { x: 2300, y: 500 });
+    reachPhase(sim, "miss");
+    const props = sim.present().props;
+    assert.equal(props.length, 1);
+    sim.action("tidy");
+    assert.equal(sim.inspect().scene, null);
+    assert.equal(sim.inspect().crumb, null);
+    assert.deepEqual(sim.inspect().looseChips.map(geometry), props.map(geometry));
+    const chip = sim.inspect().looseChips[0];
+    assert.equal(sim.cleanupTarget({ x: chip.x - 7, y: chip.y }).id, chip.id);
+    sim.action("tidy_pick", { x: 1, y: 1 });
+    assert.equal(sim.inspect().looseChips.length, 1);
+    sim.action("tidy_pick", { x: chip.x + 12, y: chip.y + 12 });
+    assert.deepEqual(sim.inspect().looseChips, []);
+    assert.equal(sim.inspect().cleanup.session.removals, 1);
+    sim.action("tidy_pick", { x: chip.x + 12, y: chip.y + 12 });
+    assert.equal(sim.inspect().cleanup.session.removals, 1);
+  }
+);
 
 test("tidying a gull argument preserves all six loose chips, including the disputed chip", () => {
   const sim = bird(0);
@@ -474,6 +533,7 @@ test("tidying a gull argument preserves all six loose chips, including the dispu
     sim.inspect().looseChips.map((chip) => chip.id),
     ids,
   );
+
   while (sim.inspect().looseChips.length) {
     const chip = sim.inspect().looseChips.at(-1);
     sim.action("tidy_pick", {
@@ -482,58 +542,69 @@ test("tidying a gull argument preserves all six loose chips, including the dispu
     });
     assert.ok(!sim.inspect().looseChips.some((other) => other.id === chip.id));
   }
+
   assert.equal(sim.inspect().cleanup.session.removals, 6);
 });
 
-test("tidying excludes the guest's snatched chip, eaten toss chips and the held apology chip", () => {
-  const sim = bird(0);
-  sim.configure({ paused: true });
-  sim.action("gull_argument");
-  reachPhase(sim, "reaction");
-  const props = sim.present().props;
-  assert.ok(props.some((prop) => prop.id === "snatched-chip"));
-  const ignored = props.filter((prop) =>
-    String(prop.id).startsWith("ignored-chip-"),
-  );
-  sim.action("tidy");
-  assert.equal(sim.inspect().looseChips.length, 5);
-  assert.deepEqual(
-    sim.inspect().looseChips.map(geometry),
-    ignored.map(geometry),
-  );
-  sim.action("apology");
-  sim.action("tidy");
-  assert.deepEqual(sim.inspect().looseChips, []);
-  sim.action("chip_toss", { x: 600, y: 450 });
-  reachPhase(sim, "eat");
-  assert.deepEqual(sim.present().props, []);
-  sim.action("tidy");
-  assert.deepEqual(sim.inspect().looseChips, []);
-});
-
-test("preserved chips clamp on resize, survive hide, and clear on bulk or replacement commands", () => {
-  for (const command of ["clean", "feed", "cancel", "municipal_gull"]) {
+test(
+  "tidying excludes the guest's snatched chip, eaten toss chips and the held apology " +
+  "chip",
+  () => {
     const sim = bird(0);
     sim.configure({ paused: true });
     sim.action("gull_argument");
+    reachPhase(sim, "reaction");
+    const props = sim.present().props;
+    assert.ok(props.some((prop) => prop.id === "snatched-chip"));
+    const ignored = props.filter((prop) =>
+      String(prop.id)
+        .startsWith("ignored-chip-"),);
     sim.action("tidy");
-    const ids = sim.inspect().looseChips.map((chip) => chip.id);
-    sim.setVisible(false);
-    sim.setVisible(true);
+    assert.equal(sim.inspect().looseChips.length, 5);
     assert.deepEqual(
-      sim.inspect().looseChips.map((chip) => chip.id),
-      ids,
+      sim.inspect().looseChips.map(geometry),
+      ignored.map(geometry),
     );
-    sim.resize(100, 100);
-    for (const chip of sim.inspect().looseChips) {
-      assert.ok(chip.x >= 0 && chip.x + chip.width <= 100);
-      assert.ok(chip.y >= 0 && chip.y + chip.height <= 100);
-    }
-    assert.deepEqual(
-      sim.inspect().looseChips.map((chip) => chip.id),
-      ids,
-    );
-    sim.action(command);
-    assert.deepEqual(sim.inspect().looseChips, [], command);
+    sim.action("apology");
+    sim.action("tidy");
+    assert.deepEqual(sim.inspect().looseChips, []);
+    sim.action("chip_toss", { x: 600, y: 450 });
+    reachPhase(sim, "eat");
+    assert.deepEqual(sim.present().props, []);
+    sim.action("tidy");
+    assert.deepEqual(sim.inspect().looseChips, []);
   }
-});
+);
+
+test(
+  "preserved chips clamp on resize, survive hide, and clear on bulk or replacement " +
+  "commands",
+  () => {
+    for (const command of ["clean", "feed", "cancel", "municipal_gull"]) {
+      const sim = bird(0);
+      sim.configure({ paused: true });
+      sim.action("gull_argument");
+      sim.action("tidy");
+      const ids = sim.inspect().looseChips.map((chip) => chip.id);
+      sim.setVisible(false);
+      sim.setVisible(true);
+      assert.deepEqual(
+        sim.inspect().looseChips.map((chip) => chip.id),
+        ids,
+      );
+      sim.resize(100, 100);
+
+      for (const chip of sim.inspect().looseChips) {
+        assert.ok(chip.x >= 0 && chip.x + chip.width <= 100);
+        assert.ok(chip.y >= 0 && chip.y + chip.height <= 100);
+      }
+
+      assert.deepEqual(
+        sim.inspect().looseChips.map((chip) => chip.id),
+        ids,
+      );
+      sim.action(command);
+      assert.deepEqual(sim.inspect().looseChips, [], command);
+    }
+  }
+);

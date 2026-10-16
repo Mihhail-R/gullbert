@@ -16,11 +16,15 @@ function setup(width = 900, height = 650, random = () => 0.5) {
   return sim;
 }
 function advance(sim, seconds) {
-  for (let i = 0; i < seconds * 20; i++) sim.step(0.05);
+  for (let i = 0; i < seconds * 20; i++) {
+    sim.step(0.05);
+  }
 }
 function until(sim, phase) {
-  for (let i = 0; i < 400 && sim.inspect().scene?.phase !== phase; i++)
+  for (let i = 0; i < 400 && sim.inspect().scene?.phase !== phase; i++) {
     sim.step(0.05);
+  }
+
   assert.equal(sim.inspect().scene?.phase, phase);
 }
 const commands = ["blow_bubbles", "bath_time", "chip_toss", "baguette_parade"];
@@ -30,18 +34,25 @@ test("bubbles stay bounded, pop on contact, startle and recover within twenty se
   sim.action("blow_bubbles");
   const phases = new Set(),
     poses = new Set();
+
   for (let i = 0; i < 400; i++) {
     phases.add(sim.inspect().scene?.phase);
     poses.add(sim.inspect().pose);
     const props = sim.present().props;
     assert.ok(props.filter((prop) => prop.asset === "bubble").length <= 6);
     assert.ok(props.length <= 6);
-    if (sim.inspect().scene?.kind === "bubbles" && sim.inspect().scene.targetId)
+
+    if (sim.inspect().scene?.kind === "bubbles" && sim.inspect().scene.targetId) {
       assert.ok(sim.inspect().scene.targetId > 0);
+    }
+
     sim.step(0.05);
   }
-  for (const phase of ["chase", "peck", "startle", "proud"])
+
+  for (const phase of ["chase", "peck", "startle", "proud"]) {
     assert.ok(phases.has(phase), phase);
+  }
+
   assert.ok(poses.has("nap-startle"));
   assert.ok(sim.inspect().events.includes("pop"));
   assert.equal(sim.inspect().scene, null);
@@ -53,6 +64,7 @@ test("bath approaches, splashes with eight droplets, shakes and leaves", () => {
   sim.action("bath_time");
   const phases = new Set(),
     poses = new Set();
+
   for (let i = 0; i < 400; i++) {
     phases.add(sim.inspect().scene?.phase);
     poses.add(sim.inspect().pose);
@@ -61,10 +73,15 @@ test("bath approaches, splashes with eight droplets, shakes and leaves", () => {
     assert.ok(props.filter((prop) => prop.asset === "drop").length <= 8);
     sim.step(0.05);
   }
-  for (const phase of ["approach", "splash", "shake", "exit"])
+
+  for (const phase of ["approach", "splash", "shake", "exit"]) {
     assert.ok(phases.has(phase), phase);
-  for (const pose of ["bath-wet", "bath-shake-a", "bath-shake-b"])
+  }
+
+  for (const pose of ["bath-wet", "bath-shake-a", "bath-shake-b"]) {
     assert.ok(poses.has(pose), pose);
+  }
+
   assert.equal(sim.inspect().scene, null);
   assert.deepEqual(sim.present().props, []);
 });
@@ -100,11 +117,14 @@ const chipRuns = [
   ...readFileSync(
     new URL("../web-dist/assets/theatre/chip.svg", import.meta.url),
     "utf8",
-  ).matchAll(/<rect x="(\d+)" y="(\d+)" width="(\d+)" height="(\d+)"/g),
-].map((match) => match.slice(1).map(Number));
+  )
+    .matchAll(/<rect x="(\d+)" y="(\d+)" width="(\d+)" height="(\d+)"/g),
+].map((match) => match.slice(1)
+  .map(Number));
 
 function paintedBeakTouchesChip(sim, prop) {
   const angle = (-(prop.rotation ?? 0) * Math.PI) / 180;
+
   for (const [x, y, width] of flightBeakRuns) {
     for (let px = x * 3 + 0.25; px < (x + width) * 3; px += 0.5) {
       for (let py = y * 3 + 0.25; py < (y + 1) * 3; py += 0.5) {
@@ -119,22 +139,26 @@ function paintedBeakTouchesChip(sim, prop) {
           ((dx * Math.sin(angle) + dy * Math.cos(angle) + prop.height / 2) *
             16) /
           prop.height;
+
         if (
           chipRuns.some(([cx, cy, cw, ch]) => {
             const withinWidth = localX >= cx && localX < cx + cw;
             const withinHeight = localY >= cy && localY < cy + ch;
             return withinWidth && withinHeight;
           })
-        )
+        ) {
           return true;
+        }
       }
     }
   }
+
   return false;
 }
 
 test("awarded catches overlap the painted rotating chip and flight beak", () => {
   let catches = 0;
+
   for (const target of [
     { x: 650, y: 350 },
     { x: 650, y: 480 },
@@ -143,12 +167,16 @@ test("awarded catches overlap the painted rotating chip and flight beak", () => 
     for (const dt of [0.033, 0.05, 0.1]) {
       const sim = setup();
       sim.action("chip_toss", target);
-      for (let i = 0; i < 150 && sim.inspect().scene?.phase !== "land"; i++)
+
+      for (let i = 0; i < 150 && sim.inspect().scene?.phase !== "land"; i++) {
         sim.step(dt);
+      }
+
       if (!sim.inspect().scene?.caught) {
         assert.ok(!sim.inspect().events.includes("munch"));
         continue;
       }
+
       catches += 1;
       // Reconstruct only the chip consumed on this frame through the real
       // renderer contract, including its spin and SVG aspect ratio.
@@ -167,6 +195,7 @@ test("awarded catches overlap the painted rotating chip and flight beak", () => 
       );
     }
   }
+
   assert.ok(catches >= 6, `Only ${catches} geometry cases reached a catch`);
 });
 
@@ -177,16 +206,20 @@ test("a missed chip stays visible and retrievable after a display resize", () =>
     until(sim, phase);
     assert.equal(sim.inspect().scene.caught, false);
     sim.resize(400, 250);
+
     // The immediate render is safe even before physics reclamps the object.
     for (const prop of sim.present().props) {
       assert.ok(prop.x >= 0 && prop.x + prop.width <= sim.inspect().width);
       assert.ok(prop.y >= 0 && prop.y + prop.height <= sim.inspect().height);
     }
+
     sim.step(0.05);
+
     for (const prop of sim.present().props) {
       assert.ok(prop.x >= 0 && prop.x + prop.width <= sim.inspect().width);
       assert.ok(prop.y >= 0 && prop.y + prop.height <= sim.inspect().height);
     }
+
     advance(sim, 12);
     assert.equal(sim.inspect().scene, null);
     assert.ok(sim.inspect().events.includes("munch"), phase);
@@ -243,17 +276,23 @@ test("baguette enters, carries, pauses, leaves completely and returns to its ori
   assert.equal(sim.present().props[0].width, 156);
   const phases = new Set();
   let sawGone = false;
+
   for (let i = 0; i < 400; i++) {
     phases.add(sim.inspect().scene?.phase);
+
     if (sim.inspect().scene?.phase === "gone") {
       sawGone = true;
       assert.equal(sim.present().visualOffset.opacity, 0);
       assert.equal(sim.present().props[0].opacity, 0);
     }
+
     sim.step(0.05);
   }
-  for (const phase of ["entrance", "carry", "pause", "exit", "departure"])
+
+  for (const phase of ["entrance", "carry", "pause", "exit", "departure"]) {
     assert.ok(phases.has(phase), phase);
+  }
+
   assert.ok(sawGone);
   assert.equal(sim.inspect().scene, null);
   assert.deepEqual({ x: sim.inspect().x, y: sim.inspect().y }, origin);
@@ -298,7 +337,7 @@ test("commands and Clean replace every active theatre phase with normal state", 
       ["entrance", "carry", "pause", "exit", "departure", "gone"],
     ],
   ]) {
-    for (const phase of phases)
+    for (const phase of phases) {
       for (const replacement of ["nap", "clean", "cancel"]) {
         const sim = setup();
         sim.action(
@@ -319,6 +358,7 @@ test("commands and Clean replace every active theatre phase with normal state", 
         advance(sim, 20);
         assert.equal(sim.inspect().scene, null);
       }
+    }
   }
 });
 
@@ -328,6 +368,7 @@ test("resizing all theatre scenes keeps Gullbert and finite effects safe", () =>
     sim.action(command);
     advance(sim, 0.5);
     sim.resize(100, 100);
+
     for (let i = 0; i < 400; i++) {
       sim.step(0.05);
       assert.ok(
@@ -340,6 +381,7 @@ test("resizing all theatre scenes keeps Gullbert and finite effects safe", () =>
       );
       assert.ok(sim.present().props.length <= 9);
     }
+
     assert.equal(sim.inspect().scene, null);
   }
 });
@@ -377,7 +419,11 @@ test("rare autonomy obeys hide, pause and mischief, with bounded recent memory",
   sim.setVisible(false);
   assert.equal(sim.routine.maybeTheatre(), false);
   sim.setVisible(true);
-  for (let i = 0; i < 10; i++) sim.action("baguette_parade");
+
+  for (let i = 0; i < 10; i++) {
+    sim.action("baguette_parade");
+  }
+
   assert.deepEqual(sim.rareTheatre.recent, [
     "baguette",
     "baguette",
@@ -409,6 +455,7 @@ test("theatre pose selection preserves walking defaults and animation parity", (
     ["baguette", "exit", "walkLeft", "walkLeft"],
     ["baguette", "pause", "nibble", "nibble"],
   ];
+
   for (const [kind, phase, even, odd] of cases) {
     const view = { scene: { kind, phase }, motionTime: 0.15, time: 0 };
     assert.equal(theatrePose(view), even, `${kind}/${phase} even`);
@@ -418,6 +465,7 @@ test("theatre pose selection preserves walking defaults and animation parity", (
       `${kind}/${phase} odd`,
     );
   }
+
   assert.equal(theatrePose({ scene: null, motionTime: 0, time: 0 }), null);
   assert.equal(
     theatrePose({
@@ -447,6 +495,7 @@ test("baguette offsets preserve direction, interpolation, clamping and visibilit
       );
     }
   }
+
   for (const [phase, opacity] of [
     ["gone", 0],
     ["pause", 1],
@@ -460,6 +509,7 @@ test("baguette offsets preserve direction, interpolation, clamping and visibilit
       { x: 0, opacity },
     );
   }
+
   assert.deepEqual(theatreOffset({ scene: null, time: 0 }), {
     x: 0,
     opacity: 1,

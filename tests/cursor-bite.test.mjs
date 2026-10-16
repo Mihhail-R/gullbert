@@ -8,7 +8,11 @@ function catchPointer(action = "eat_cursor") {
   sim.configure({ paused: false, mischief: 0 });
   sim.action(action);
   sim.pointer({ x: sim.inspect().x + 78, y: sim.inspect().y + 48 });
-  for (let i = 0; i < 30; i++) sim.step(0.05);
+
+  for (let i = 0; i < 30; i++) {
+    sim.step(0.05);
+  }
+
   return sim;
 }
 test("explicit eating catches, tugs briefly and spits out the pointer", () => {
@@ -18,25 +22,36 @@ test("explicit eating catches, tugs briefly and spits out the pointer", () => {
   const x = sim.inspect().x;
   const facing = sim.inspect().facing;
   const start = sim.inspect().time;
+
   while (sim.inspect().scene.phase === "chew") {
     sim.step(0.05);
     assert.equal(sim.inspect().facing, facing);
   }
+
   assert.ok(sim.inspect().time - start <= 1.25);
   assert.ok(
     Math.abs(sim.inspect().x - x) > 20 && Math.abs(sim.inspect().x - x) < 40,
   );
   assert.equal(sim.inspect().scene.phase, "recoil");
   assert.match(sim.inspect().bubble, /not a chip/);
-  assert.equal(catchPointer("nibble_cursor").inspect().scene.phase, "recoil");
+  assert.equal(catchPointer("nibble_cursor")
+    .inspect().scene.phase, "recoil");
 });
 test("a pointer that escapes mid-peck is never caught remotely", () => {
   const sim = new Gullbert(800, 600, () => 0.5);
   sim.action("eat_cursor");
   sim.pointer({ x: sim.inspect().x + 78, y: sim.inspect().y + 48 });
-  while (sim.inspect().scene.phase !== "peck") sim.step(0.05);
+
+  while (sim.inspect().scene.phase !== "peck") {
+    sim.step(0.05);
+  }
+
   sim.pointer({ x: 790, y: 590 });
-  for (let i = 0; i < 8; i++) sim.step(0.05);
+
+  for (let i = 0; i < 8; i++) {
+    sim.step(0.05);
+  }
+
   assert.equal(sim.inspect().scene.phase, "stalk");
 });
 test("every interruption drops a caught pointer", () => {
@@ -71,7 +86,11 @@ test("late failed tugs cannot cancel a replacement encounter or pile up IPC", as
   const first = { phase: "chew", cursorId: 1 };
   bridge.sync(first, { x: 10, y: 10 });
   await flush();
-  for (let i = 0; i < 10; i++) bridge.sync(first, { x: 20, y: 10 });
+
+  for (let i = 0; i < 10; i++) {
+    bridge.sync(first, { x: 20, y: 10 });
+  }
+
   assert.equal(calls, 1);
   const next = { phase: "stare", cursorId: 2 };
   bridge.sync(next);

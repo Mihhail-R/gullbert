@@ -7,13 +7,16 @@ export function createAudioPlayer() {
       if (!audio) {
         audio = new AudioContext();
       }
-      audio.resume().catch(() => {});
+
+      audio.resume()
+        .catch(() => {});
       const t = audio.currentTime;
       const osc = audio.createOscillator();
       const gain = audio.createGain();
       let frequency = 130;
       let endingFrequency = 45;
       osc.type = "sine";
+
       if (kind === "squawk") {
         osc.type = "sawtooth";
         frequency = 760;
@@ -25,6 +28,7 @@ export function createAudioPlayer() {
       } else if (kind === "munch") {
         frequency = 240;
       }
+
       osc.frequency.setValueAtTime(frequency, t);
       osc.frequency.exponentialRampToValueAtTime(endingFrequency, t + 0.14);
       gain.gain.setValueAtTime(0.0001, t);
@@ -42,12 +46,14 @@ export function createAudioPlayer() {
   return {
     play,
     suspend: () => {
-      audio?.suspend().catch(() => {});
+      audio?.suspend()
+        .catch(() => {});
     },
     dispose: () => {
       const current = audio;
       audio = null;
-      current?.close().catch(() => {});
+      current?.close()
+        .catch(() => {});
     },
   };
 }

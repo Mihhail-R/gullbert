@@ -23,29 +23,35 @@ test("application starts once and disposes all browser resources and scheduled w
   assert.equal(h.timers.size, 0);
   assert.equal(h.viewDisposed, 1);
   assert.equal(h.audioDisposed, 1);
+
   for (const callback of callbacks) {
     callback();
   }
+
   h.emit("message", { type: "action", action: "feed" });
   await h.app.start();
   assert.equal(h.greeted, 1);
   assert.deepEqual(h.calls.slice(before), [["visible", false]]);
 });
 
-test("disposing during storage initialization cannot restore, greet, save, or restart timers", async () => {
-  const pending = deferred();
-  const h = harness({ load: () => pending.promise });
-  const startup = h.app.start();
-  h.emit("pagehide");
-  pending.resolve({ collection: { sock: 9 } });
-  await startup;
-  assert.equal(h.greeted, 0);
-  assert.deepEqual(h.restored, []);
-  assert.deepEqual(h.saved, []);
-  assert.equal(h.activeListeners, 0);
-  assert.equal(h.timers.size, 0);
-  assert.deepEqual(h.published, []);
-});
+test(
+  "disposing during storage initialization cannot restore, greet, save, or restart " +
+  "timers",
+  async () => {
+    const pending = deferred();
+    const h = harness({ load: () => pending.promise });
+    const startup = h.app.start();
+    h.emit("pagehide");
+    pending.resolve({ collection: { sock: 9 } });
+    await startup;
+    assert.equal(h.greeted, 0);
+    assert.deepEqual(h.restored, []);
+    assert.deepEqual(h.saved, []);
+    assert.equal(h.activeListeners, 0);
+    assert.equal(h.timers.size, 0);
+    assert.deepEqual(h.published, []);
+  }
+);
 
 test("a native listener that arrives after disposal is immediately removed", async () => {
   const pending = deferred();
@@ -98,34 +104,39 @@ test("failed native restore never saves unread belongings even after later comma
   assert.equal(h.nativeListeners.size, 0);
 });
 
-test("late pickup acquisition after application disposal releases its lease without retaliation", async () => {
-  const acquisition = deferred();
-  const h = harness({
-    native: true,
-    invoke(name) {
-      if (name === "begin_pickup") {
-        return acquisition.promise;
-      }
-      if (name === "end_pickup") {
-        return 88;
-      }
-    },
-  });
-  await h.app.start();
-  h.emit("pointerdown", pointerEvent());
-  await h.app.dispose();
-  acquisition.resolve(37);
-  await settle();
-  const release = h.calls.find(([name]) => name === "end_pickup");
-  assert.deepEqual(release, [
-    "end_pickup",
-    { id: 37, retaliate: false, tug: false },
-  ]);
-  assert.ok(
-    h.calls.some(([name, args]) => name === "release_cursor" && args.id === 88),
-  );
-  assert.equal(h.timers.size, 0);
-});
+test(
+  "late pickup acquisition after application disposal releases its lease without " +
+  "retaliation",
+  async () => {
+    const acquisition = deferred();
+    const h = harness({
+      native: true,
+      invoke(name) {
+        if (name === "begin_pickup") {
+          return acquisition.promise;
+        }
+
+        if (name === "end_pickup") {
+          return 88;
+        }
+      },
+    });
+    await h.app.start();
+    h.emit("pointerdown", pointerEvent());
+    await h.app.dispose();
+    acquisition.resolve(37);
+    await settle();
+    const release = h.calls.find(([name]) => name === "end_pickup");
+    assert.deepEqual(release, [
+      "end_pickup",
+      { id: 37, retaliate: false, tug: false },
+    ]);
+    assert.ok(
+      h.calls.some(([name, args]) => name === "release_cursor" && args.id === 88),
+    );
+    assert.equal(h.timers.size, 0);
+  }
+);
 
 test("a cap click takes priority over pickup and releases its native hit region", async () => {
   const flicks = [];
@@ -203,34 +214,37 @@ test("chip placement keeps the reward window available and Escape cancels it", a
   await h.app.dispose();
 });
 
-test("late targeting failure after disposal cannot cancel a scene or wake the overlay", async () => {
-  const picked = deferred();
-  const h = harness({
-    native: true,
-    invoke(name) {
-      if (name === "target_picked") {
-        return picked.promise;
-      }
-    },
-  });
-  await h.app.start();
-  h.nativeListeners.get("gullbert-target")({
-    payload: {
-      outcome: "started",
-      id: 1,
-      purpose: "poop",
-      preparation: "cancel",
-    },
-  });
-  h.emit("pointerdown", pointerEvent({ x: 300 }));
-  await h.app.dispose();
-  const before = h.calls.length;
-  picked.reject(new Error("late native error"));
-  await settle();
-  assert.equal(h.calls.length, before);
-  assert.equal(h.errors.length, 0);
-  assert.equal(h.timers.size, 0);
-});
+test(
+  "late targeting failure after disposal cannot cancel a scene or wake the overlay",
+  async () => {
+    const picked = deferred();
+    const h = harness({
+      native: true,
+      invoke(name) {
+        if (name === "target_picked") {
+          return picked.promise;
+        }
+      },
+    });
+    await h.app.start();
+    h.nativeListeners.get("gullbert-target")({
+      payload: {
+        outcome: "started",
+        id: 1,
+        purpose: "poop",
+        preparation: "cancel",
+      },
+    });
+    h.emit("pointerdown", pointerEvent({ x: 300 }));
+    await h.app.dispose();
+    const before = h.calls.length;
+    picked.reject(new Error("late native error"));
+    await settle();
+    assert.equal(h.calls.length, before);
+    assert.equal(h.errors.length, 0);
+    assert.equal(h.timers.size, 0);
+  }
+);
 
 test("disposal drains queued memory snapshots without publishing late write results", async () => {
   const firstWrite = deferred();
@@ -238,6 +252,7 @@ test("disposal drains queued memory snapshots without publishing late write resu
   const h = harness({
     save() {
       writes++;
+
       if (writes === 1) {
         return firstWrite.promise;
       }
@@ -249,9 +264,10 @@ test("disposal drains queued memory snapshots without publishing late write resu
   assert.equal(h.saved.length, 1);
   const published = h.published.length;
   let finished = false;
-  const shutdown = h.app.dispose().then(() => {
-    finished = true;
-  });
+  const shutdown = h.app.dispose()
+    .then(() => {
+      finished = true;
+    });
   await settle();
   assert.equal(finished, false);
   firstWrite.resolve();
@@ -318,21 +334,27 @@ test("a stale targeting deadline cannot finish a newer targeting session", async
   await h.app.dispose();
 });
 
-test("moving animation advances on display frames instead of missing alternate frames", async () => {
-  const h = harness({ animate: true });
-  await h.app.start();
-  for (let count = 0; count < 60; count++) {
-    h.displayFrame();
+test(
+  "moving animation advances on display frames instead of missing alternate frames",
+  async () => {
+    const h = harness({ animate: true });
+    await h.app.start();
+
+    for (let count = 0; count < 60; count++) {
+      h.displayFrame();
+    }
+
+    assert.equal(
+      h.steps.length,
+      61,
+      "movement should advance on all 60 display frames",
+    );
+    assert.ok(h.steps.slice(1)
+      .every((delta) => Math.abs(delta - 1 / 60) < 1e-9));
+    await h.app.dispose();
+    assert.equal(h.frames.size, 0);
   }
-  assert.equal(
-    h.steps.length,
-    61,
-    "movement should advance on all 60 display frames",
-  );
-  assert.ok(h.steps.slice(1).every((delta) => Math.abs(delta - 1 / 60) < 1e-9));
-  await h.app.dispose();
-  assert.equal(h.frames.size, 0);
-});
+);
 
 test("idle animation keeps the low-frequency timer and hiding cancels display work", async () => {
   const idle = harness();
@@ -361,9 +383,11 @@ for (const animate of [false, true]) {
     await h.app.start();
     h.emit("message", { type: "action", action: "tidy" });
     const before = h.renders;
+
     for (let x = 0; x < 100; x++) {
       h.emit("pointermove", pointerEvent({ x }));
     }
+
     h.displayFrame();
     assert.equal(
       h.renders - before,
@@ -375,7 +399,11 @@ for (const animate of [false, true]) {
     await h.app.dispose();
     assert.equal(h.frames.size, 0);
     const disposed = h.renders;
-    for (const callback of pending) callback();
+
+    for (const callback of pending) {
+      callback();
+    }
+
     assert.equal(h.renders, disposed);
   });
 }

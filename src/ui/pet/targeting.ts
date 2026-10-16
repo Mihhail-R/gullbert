@@ -65,9 +65,11 @@ export class Targeting {
       this.#dependencies.cancelNative(this.#id);
       return true;
     }
+
     if (this.#id === null) {
       return false;
     }
+
     this.notice({ id: this.#id, outcome: this.#end() });
     return true;
   }
@@ -83,6 +85,7 @@ export class Targeting {
     if (this.#active) {
       this.#dependencies.cancelNative(this.#id);
     }
+
     this.#active = false;
   }
 
@@ -91,20 +94,26 @@ export class Targeting {
       this.#dependencies.cancelDrag();
       this.#purpose = purpose;
     }
+
     this.#dependencies.clock.cancel(this.#timer);
     this.#timer = undefined;
     const generation = ++this.#generation;
     this.#active = active;
+
     if (!active) {
       this.#id = null;
       this.#dependencies.clearPointer();
     }
+
     this.#dependencies.syncPointer();
+
     if (active) {
       let timeout = 12000;
+
       if (this.#purpose === "tidy") {
         timeout = 30000;
       }
+
       const id = this.#id;
       this.#timer = this.#dependencies.clock.schedule(() => {
         if (
@@ -119,6 +128,7 @@ export class Targeting {
         }
       }, timeout);
     }
+
     this.#dependencies.updateView();
   }
 
@@ -126,6 +136,7 @@ export class Targeting {
     if (this.#purpose === "tidy") {
       return "finished_tidying";
     }
+
     return "abandoned";
   }
 
@@ -133,10 +144,12 @@ export class Targeting {
     if (!this.#dependencies.running()) {
       return;
     }
+
     if (notice.outcome === "started") {
       if (notice.id <= this.#lastId) {
         return;
       }
+
       this.#lastId = notice.id;
       this.#mode(false);
       this.#id = notice.id;
@@ -146,63 +159,81 @@ export class Targeting {
       this.#dependencies.wake();
       return;
     }
+
     if (notice.id !== this.#id) {
       return;
     }
+
     const purpose = this.#purpose;
+
     if (notice.outcome === "selected" && purpose === "tidy") {
       this.#dependencies.action("tidy_pick", notice.point);
       this.#dependencies.render();
       return;
     }
+
     // Forget the accepted identity before applying a terminal simulation effect.
     this.#mode(false);
+
     switch (notice.outcome) {
       case "selected":
         this.#dependencies.resize();
         this.#dependencies.action(purpose, notice.point);
         break;
+
       case "abandoned":
         this.#dependencies.action("cancel");
         break;
+
       case "finished_tidying":
         this.#dependencies.action("tidy_done");
         break;
+
       case "replaced":
         break;
     }
+
     this.#dependencies.wake();
   }
 
   select(point: Point): void {
     const id = this.#id;
+
     if (id === null) {
       return;
     }
+
     const pick = this.#dependencies.pick;
+
     if (pick) {
-      pick(id, point).catch((error) => {
-        if (!this.#dependencies.running() || id !== this.#id) {
-          return;
-        }
-        this.#dependencies.reportError(error);
-        this.#dependencies.cancelNative(id);
-        this.notice({ outcome: "abandoned", id });
-      });
+      pick(id, point)
+        .catch((error) => {
+          if (!this.#dependencies.running() || id !== this.#id) {
+            return;
+          }
+
+          this.#dependencies.reportError(error);
+          this.#dependencies.cancelNative(id);
+          this.notice({ outcome: "abandoned", id });
+        });
     } else {
       const size = this.#dependencies.size();
+
       if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) {
         this.notice({ outcome: "abandoned", id });
         return;
       }
+
       if (point.x < 0 || point.y < 0) {
         this.notice({ outcome: "abandoned", id });
         return;
       }
+
       if (point.x >= size.width || point.y >= size.height) {
         this.notice({ outcome: "abandoned", id });
         return;
       }
+
       this.notice({ outcome: "selected", id, point });
     }
   }

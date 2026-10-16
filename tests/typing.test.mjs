@@ -14,8 +14,14 @@ function make(level = 2, random = () => 0.5) {
 }
 function tick(sim, seconds, sample = caret, pointer = null) {
   for (let i = 0; i < seconds * 20; i++) {
-    if (sample) sim.caret(sample);
-    if (pointer) sim.pointer(pointer(sim.inspect()));
+    if (sample) {
+      sim.caret(sample);
+    }
+
+    if (pointer) {
+      sim.pointer(pointer(sim.inspect()));
+    }
+
     sim.step(0.05);
   }
 }
@@ -23,12 +29,14 @@ function reach(sim, phase) {
   for (let i = 0; i < 600 && sim.inspect().scene?.phase !== phase; i++) {
     tick(sim, 0.05);
   }
+
   assert.equal(sim.inspect().scene?.phase, phase);
 }
 function nest(sim) {
   return sim
     .present()
-    .props.filter((p) => String(p.id).startsWith("nest-letter-"));
+    .props.filter((p) => String(p.id)
+      .startsWith("nest-letter-"));
 }
 
 test("public enemy catches punctuation and deposits a bounded session nest", () => {
@@ -40,17 +48,21 @@ test("public enemy catches punctuation and deposits a bounded session nest", () 
   );
   tick(sim, 5);
   assert.equal(nest(sim).length, 1);
+
   for (let i = 0; i < 14; i++) {
     sim.caret(caret);
     sim.action("caret_fishing");
     tick(sim, 10);
   }
+
   assert.equal(nest(sim).length, 12);
   sim.resize(240, 160);
+
   for (const prop of sim.present().props) {
     assert.ok(prop.x >= 0 && prop.y >= 0);
     assert.ok(prop.x + prop.width <= 240 && prop.y + prop.height <= 160);
   }
+
   sim.clean();
   assert.equal(nest(sim).length, 0);
 });
@@ -96,7 +108,8 @@ test("menace fishes with occasional letter theft; polite leaves text alone", () 
   );
   tick(thief, 5);
   assert.equal(nest(thief).length, 0);
-  assert.equal(make(0).inspect().scene, null);
+  assert.equal(make(0)
+    .inspect().scene, null);
 });
 
 test("lost, stale or switched caret abandons fishing before awarding loot", () => {
@@ -112,6 +125,7 @@ test("lost, stale or switched caret abandons fishing before awarding loot", () =
     assert.equal(sim.inspect().scene, null);
     assert.equal(nest(sim).length, 0);
   }
+
   const stale = make();
   tick(stale, 1.3, null);
   assert.equal(stale.inspect().scene, null);
@@ -139,6 +153,7 @@ test("feed, cancel, hide, pause, and mischief changes discard in-flight rewards"
 
 test("autonomy requires recent caret movement and higher mischief shortens cooldown", () => {
   const delays = [];
+
   for (const level of [0, 1, 2]) {
     const sim = routineFixture(TypingRoutine);
     sim.configure({ paused: false, mischief: level });
@@ -147,16 +162,26 @@ test("autonomy requires recent caret movement and higher mischief shortens coold
     assert.equal(sim.routine.maybeStart(), false, "focus alone is not typing");
     sim.routine.sample({ ...caret, position: "2" });
     assert.equal(sim.routine.maybeStart(), level > 0);
-    if (level === 0) continue;
+
+    if (level === 0) {
+      continue;
+    }
+
     sim.action("cancel");
     let at = 11;
+
     for (; at < 120; at++) {
       sim.time = at;
       sim.routine.sample({ ...caret, position: String(at) });
-      if (sim.routine.maybeStart()) break;
+
+      if (sim.routine.maybeStart()) {
+        break;
+      }
     }
+
     delays.push(at);
   }
+
   assert.ok(delays[1] < delays[0]);
 });
 
@@ -193,15 +218,18 @@ test("a parked pointer near a vision target does not permanently scare him away"
   sim.pointer({ x: caret.x, y: caret.y });
   sim.action("caret_fishing");
   let caught = false;
+
   for (let i = 0; i < 240; i++) {
     sim.caret(sample);
     sim.pointer({ x: caret.x, y: caret.y });
     sim.step(0.05);
+
     if (sim.inspect().scene?.phase === "carry") {
       caught = true;
       break;
     }
   }
+
   assert.equal(caught, true);
   assert.equal(
     sim.present().props.find((p) => p.id === "stolen-letter").text,

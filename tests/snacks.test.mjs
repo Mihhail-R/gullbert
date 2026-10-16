@@ -7,24 +7,35 @@ function bird() {
   return g;
 }
 function advance(g, t) {
-  for (let i = 0; i < t * 20; i++) g.step(0.05);
-}
-test("one finite bag replaces the old bag, feeds three servings and fails visibly when empty", () => {
-  const g = bird();
-  g.action("place_bag", { x: 300, y: 300 });
-  const first = g.inspect().bag.id;
-  g.action("place_bag", { x: 500, y: 400 });
-  assert.notEqual(g.inspect().bag.id, first);
-  for (let i = 0; i < 3; i++) {
-    if (i) g.action("search_snack");
-    advance(g, 6);
-    assert.equal(g.inspect().bag.servings, 2 - i);
+  for (let i = 0; i < t * 20; i++) {
+    g.step(0.05);
   }
-  g.action("search_snack");
-  advance(g, 3.1);
-  assert.equal(g.inspect().snackSearch, "failed");
-  assert.match(g.inspect().bubble, /betrayal/);
-});
+}
+test(
+  "one finite bag replaces the old bag, feeds three servings and fails visibly when " +
+  "empty",
+  () => {
+    const g = bird();
+    g.action("place_bag", { x: 300, y: 300 });
+    const first = g.inspect().bag.id;
+    g.action("place_bag", { x: 500, y: 400 });
+    assert.notEqual(g.inspect().bag.id, first);
+
+    for (let i = 0; i < 3; i++) {
+      if (i) {
+        g.action("search_snack");
+      }
+
+      advance(g, 6);
+      assert.equal(g.inspect().bag.servings, 2 - i);
+    }
+
+    g.action("search_snack");
+    advance(g, 3.1);
+    assert.equal(g.inspect().snackSearch, "failed");
+    assert.match(g.inspect().bubble, /betrayal/);
+  }
+);
 test("missing snack searches terminate and new commands or cleanup cancel approach", () => {
   const g = bird();
   g.action("search_snack");

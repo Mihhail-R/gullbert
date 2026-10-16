@@ -268,6 +268,7 @@ export function isTheatre(
     case "toss":
     case "baguette":
       return true;
+
     default:
       return false;
   }

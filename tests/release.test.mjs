@@ -24,15 +24,18 @@ const versionFiles = [
 function versionFixture(newline = "\n") {
   const directory = mkdtempSync(path.join(tmpdir(), "gullbert-version-"));
   mkdirSync(path.join(directory, "src-tauri"));
+
   for (const file of versionFiles) {
     writeFileSync(
       path.join(directory, file),
-      readFileSync(new URL(`../${file}`, import.meta.url), "utf8").replace(
-        /\r?\n/g,
-        newline,
-      ),
+      readFileSync(new URL(`../${file}`, import.meta.url), "utf8")
+        .replace(
+          /\r?\n/g,
+          newline,
+        ),
     );
   }
+
   return directory;
 }
 
@@ -55,29 +58,26 @@ function prepare(directory, tag, refType = "tag") {
 for (const newline of ["\n", "\r\n"]) {
   test(`release preparation stamps the tag into every version (${JSON.stringify(newline)})`, () => {
     const directory = versionFixture(newline);
+
     try {
       const before = versionFiles.map((file) =>
-        readFileSync(path.join(directory, file), "utf8"),
-      );
+        readFileSync(path.join(directory, file), "utf8"),);
       const previous = checkVersion(undefined, directory);
       const result = prepare(directory, "v0.3.0-beta.5");
       assert.equal(result.status, 0, result.stderr);
       assert.equal(checkVersion("v0.3.0-beta.5", directory), "0.3.0-beta.5");
       // No dependencies or other config may change, including line endings.
       const after = versionFiles.map((file) =>
-        readFileSync(path.join(directory, file), "utf8"),
-      );
+        readFileSync(path.join(directory, file), "utf8"),);
       assert.deepEqual(
         after,
         before.map((content) =>
-          content.replaceAll(`"${previous}"`, '"0.3.0-beta.5"'),
-        ),
+          content.replaceAll(`"${previous}"`, '"0.3.0-beta.5"'),),
       );
       assert.equal(prepare(directory, "v0.3.0-beta.5", "branch").status, 0);
       assert.deepEqual(
         versionFiles.map((file) =>
-          readFileSync(path.join(directory, file), "utf8"),
-        ),
+          readFileSync(path.join(directory, file), "utf8"),),
         after,
       );
     } finally {
@@ -88,10 +88,11 @@ for (const newline of ["\n", "\r\n"]) {
 
 test("release preparation rejects invalid tags and inconsistent source before writing", () => {
   const directory = versionFixture();
+
   try {
     const before = versionFiles.map((file) =>
-      readFileSync(path.join(directory, file), "utf8"),
-    );
+      readFileSync(path.join(directory, file), "utf8"),);
+
     for (const tag of [
       "",
       "main",
@@ -105,10 +106,10 @@ test("release preparation rejects invalid tags and inconsistent source before wr
       assert.notEqual(result.status, 0, tag);
       assert.match(result.stderr, /Invalid release tag/);
     }
+
     assert.deepEqual(
       versionFiles.map((file) =>
-        readFileSync(path.join(directory, file), "utf8"),
-      ),
+        readFileSync(path.join(directory, file), "utf8"),),
       before,
     );
     writeFileSync(
@@ -129,8 +130,10 @@ test("release preparation rejects invalid tags and inconsistent source before wr
 
 test("release collection preserves distinct architectures and signatures", () => {
   const root = mkdtempSync(path.join(tmpdir(), "gullbert-release-"));
+
   try {
     const destination = path.join(root, "dist");
+
     for (const target of [
       "aarch64-apple-darwin",
       "x86_64-apple-darwin",
@@ -146,12 +149,15 @@ test("release collection preserves distinct architectures and signatures", () =>
       );
       writeFileSync(artifact, target);
       writeFileSync(`${artifact}.sig`, `signature-${target}`);
+
       if (mac) {
         mkdirSync(path.join(bundle, "dmg"));
         writeFileSync(path.join(bundle, "dmg/Gullbert.dmg"), "installer");
       }
+
       collect(bundle, destination, target, "0.3.0-beta.1");
     }
+
     const manifest = merge(destination, "0.3.0-beta.1");
     assert.equal(Object.keys(manifest.platforms).length, 3);
     assert.match(
@@ -181,8 +187,10 @@ test("release tags must agree with all embedded versions", () => {
 
 test("release validation accepts Windows CRLF checkouts and still catches mismatches", () => {
   const directory = mkdtempSync(path.join(tmpdir(), "gullbert-crlf-"));
+
   try {
     mkdirSync(path.join(directory, "src-tauri"));
+
     for (const file of [
       "package.json",
       "package-lock.json",
@@ -199,6 +207,7 @@ test("release validation accepts Windows CRLF checkouts and still catches mismat
         content.replace(/\r?\n/g, "\r\n"),
       );
     }
+
     const version = checkVersion();
     assert.equal(checkVersion(`v${version}`, directory), version);
     writeFileSync(

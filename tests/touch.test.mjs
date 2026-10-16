@@ -33,10 +33,12 @@ test("three pokes ruffle him, a poke wakes a nap, commands and hiding reset touc
   sim.action("direct_pick", point);
   assert.equal(sim.inspect().mode, "idle");
   assert.equal(sim.inspect().pose, "nap-startle");
+
   for (let n = 0; n < 2; n++) {
     hover(sim, point, 0.4);
     sim.action("direct_pick", point);
   }
+
   assert.equal(sim.inspect().touch.reaction, "ruffled");
   assert.equal(sim.inspect().pose, "bag-offended");
   sim.action("feed");
@@ -55,27 +57,31 @@ test("hover and pokes do not replace an active show, including paused play", () 
   assert.equal(sim.inspect().scene.kind, scene.kind);
   assert.equal(sim.inspect().touch.reaction, "");
 });
-test("direct cleanup removes only the clicked loose object, without targeting or canceling flight", () => {
-  const sim = bird();
-  sim.restoreMemory({ perch: { x: 20, y: 20 } });
-  dropAt(sim, { x: 200, y: 200 });
-  const second = dropAt(sim, { x: 300, y: 200 });
-  sim.action("poop", { x: 500, y: 250 });
-  const flight = sim.inspect().flight;
-  sim.action("direct_pick", { x: 200, y: 200 });
-  assert.equal(sim.inspect().tidying, false);
-  assert.deepEqual(
-    sim.inspect().splats.map((s) => s.id),
-    [second.id],
-  );
-  assert.deepEqual(sim.inspect().flight, flight);
-  const y = sim.inspect().y;
-  sim.step(0.1);
-  assert.notEqual(sim.inspect().y, y, "cleanup must not freeze the flight");
-  sim.action("direct_pick", { x: 50, y: 90 });
-  assert.deepEqual(sim.inspect().memory.perch, { x: 20, y: 20 });
-  assert.equal(sim.inspect().cleanup.session.removals, 1);
-});
+test(
+  "direct cleanup removes only the clicked loose object, without targeting or " +
+  "canceling flight",
+  () => {
+    const sim = bird();
+    sim.restoreMemory({ perch: { x: 20, y: 20 } });
+    dropAt(sim, { x: 200, y: 200 });
+    const second = dropAt(sim, { x: 300, y: 200 });
+    sim.action("poop", { x: 500, y: 250 });
+    const flight = sim.inspect().flight;
+    sim.action("direct_pick", { x: 200, y: 200 });
+    assert.equal(sim.inspect().tidying, false);
+    assert.deepEqual(
+      sim.inspect().splats.map((s) => s.id),
+      [second.id],
+    );
+    assert.deepEqual(sim.inspect().flight, flight);
+    const y = sim.inspect().y;
+    sim.step(0.1);
+    assert.notEqual(sim.inspect().y, y, "cleanup must not freeze the flight");
+    sim.action("direct_pick", { x: 50, y: 90 });
+    assert.deepEqual(sim.inspect().memory.perch, { x: 20, y: 20 });
+    assert.equal(sim.inspect().cleanup.session.removals, 1);
+  }
+);
 test("direct cleanup ignores empty space and carried/scene-owned objects", () => {
   const sim = bird();
   sim.action("direct_pick", { x: 0, y: 0 });
@@ -97,7 +103,11 @@ test("direct cleanup groups quick clicks, finishes automatically, and hide clear
   sim.action("direct_pick", { x: 200, y: 200 });
   sim.action("direct_pick", { x: 300, y: 200 });
   assert.equal(sim.inspect().cleanup.session.removals, 2);
-  for (let i = 0; i < 85; i++) sim.step(0.05);
+
+  for (let i = 0; i < 85; i++) {
+    sim.step(0.05);
+  }
+
   assert.equal(sim.inspect().cleanup.session, null);
   assert.ok(sim.inspect().cleanup.sulkUntil > sim.inspect().time);
   sim.setVisible(false);

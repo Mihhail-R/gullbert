@@ -4,7 +4,8 @@ export function readingDuration(text: string): number {
     8,
     Math.max(
       2.6,
-      1.2 + text.trim().split(/\s+/).length * 0.32 + text.length * 0.018,
+      1.2 + text.trim()
+        .split(/\s+/).length * 0.32 + text.length * 0.018,
     ),
   );
 }

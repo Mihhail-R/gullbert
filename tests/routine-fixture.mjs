@@ -63,6 +63,7 @@ export function routineFixture(Routine, random = () => 0.5) {
     action(name, point) {
       this.routine.interrupt();
       this.tidying = name === "tidy";
+
       if (name === "place_bag") {
         this.objects.placeBag(point);
       } else if (name === "cancel" || name === "tidy") {
@@ -78,7 +79,10 @@ export function routineFixture(Routine, random = () => 0.5) {
       this.objects.resize(width, height);
     },
     step(delta) {
-      if (!this.visible) return;
+      if (!this.visible) {
+        return;
+      }
+
       const dt = Math.min(delta, 0.1);
       this.time += dt;
       this.routine.update(dt);
@@ -96,15 +100,23 @@ export function routineFixture(Routine, random = () => 0.5) {
       return this.routine.gagSchedule;
     },
   };
+
   // The scoped routine seam keeps shared values live through accessors.
   for (const [key, descriptor] of Object.entries(
     Object.getOwnPropertyDescriptors(sim),
   )) {
-    if (!Object.hasOwn(descriptor, "value")) continue;
-    if (typeof descriptor.value === "function") {
-      if (key !== "random") sim[key] = descriptor.value.bind(sim);
+    if (!Object.hasOwn(descriptor, "value")) {
       continue;
     }
+
+    if (typeof descriptor.value === "function") {
+      if (key !== "random") {
+        sim[key] = descriptor.value.bind(sim);
+      }
+
+      continue;
+    }
+
     let value = descriptor.value;
     Object.defineProperty(sim, key, {
       enumerable: true,
@@ -117,8 +129,10 @@ export function routineFixture(Routine, random = () => 0.5) {
       },
     });
   }
+
   const body = new Body(sim.width, sim.height);
   body.place({ x: sim.x, y: sim.y });
+
   for (const field of ["x", "y", "facing", "motionTime", "width", "height"]) {
     Object.defineProperty(sim, field, {
       enumerable: true,
@@ -127,24 +141,41 @@ export function routineFixture(Routine, random = () => 0.5) {
         return body[field];
       },
       set(value) {
-        if (field === "x") body.place({ x: value, y: body.y });
-        if (field === "y") body.place({ x: body.x, y: value });
-        if (field === "facing") body.face(value);
+        if (field === "x") {
+          body.place({ x: value, y: body.y });
+        }
+
+        if (field === "y") {
+          body.place({ x: body.x, y: value });
+        }
+
+        if (field === "facing") {
+          body.face(value);
+        }
+
         if (field === "motionTime") {
           body.resetMotion();
           body.advanceMotion(value);
         }
-        if (field === "width") body.resize(value, body.height);
-        if (field === "height") body.resize(body.width, value);
+
+        if (field === "width") {
+          body.resize(value, body.height);
+        }
+
+        if (field === "height") {
+          body.resize(body.width, value);
+        }
       },
     });
   }
+
   const capabilities = Object.create(
     null,
     Object.getOwnPropertyDescriptors(sim),
   );
   const objects = new Props(sim.width, sim.height);
   sim.objects = objects;
+
   for (const field of [
     "bag",
     "crumb",
@@ -167,6 +198,7 @@ export function routineFixture(Routine, random = () => 0.5) {
       Object.getOwnPropertyDescriptor(sim, field),
     );
   }
+
   capabilities.objects = objects;
   capabilities.body = body;
   capabilities.belongings = new Belongings(sim.width, sim.height);
@@ -209,7 +241,10 @@ export function routineFixture(Routine, random = () => 0.5) {
     },
     remove(id) {
       const index = props.findIndex((prop) => prop.id === id);
-      if (index >= 0) props.splice(index, 1);
+
+      if (index >= 0) {
+        props.splice(index, 1);
+      }
     },
   };
   const activity = new Activity(body, objects, {
@@ -229,9 +264,13 @@ export function routineFixture(Routine, random = () => 0.5) {
         return activity.mode;
       },
       set(mode) {
-        if (mode === "idle") activity.rest(sim.time);
-        else if (mode === "walk") activity.walk(body.snapshot());
-        else activity.beginRoutine(mode);
+        if (mode === "idle") {
+          activity.rest(sim.time);
+        } else if (mode === "walk") {
+          activity.walk(body.snapshot());
+        } else {
+          activity.beginRoutine(mode);
+        }
       },
     },
     until: {
@@ -247,8 +286,11 @@ export function routineFixture(Routine, random = () => 0.5) {
         return activity.goal;
       },
       set(goal) {
-        if (goal === null) activity.stopTravel();
-        else activity.walk(goal);
+        if (goal === null) {
+          activity.stopTravel();
+        } else {
+          activity.walk(goal);
+        }
       },
     },
   });

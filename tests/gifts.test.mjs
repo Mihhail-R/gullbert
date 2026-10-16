@@ -7,50 +7,64 @@ function bird(random = () => 0.5) {
   return sim;
 }
 function advance(sim, seconds) {
-  for (let i = 0; i < seconds * 20; i++) sim.step(0.05);
-}
-test("every gift completes its finite flight, reveals distinctly and collects non-food exactly once", () => {
-  const items = [
-    "bottle_cap",
-    "bent_spoon",
-    "sock",
-    "glass_diamond",
-    "parking_ticket",
-    "chip",
-  ];
-  for (const [index, item] of items.entries()) {
-    const sim = bird(() => (index + 0.1) / items.length);
-    sim.action("bring_gift");
-    const phases = new Set();
-    const poses = new Set();
-    for (let i = 0; i < 400; i++) {
-      if (sim.inspect().scene) phases.add(sim.inspect().scene.phase);
-      poses.add(sim.inspect().pose);
-      sim.step(0.05);
-    }
-    for (const phase of [
-      "takeoff",
-      "depart",
-      "away",
-      "return",
-      "land",
-      "reveal",
-    ])
-      assert.ok(phases.has(phase), phase);
-    assert.ok(poses.has("wingUp") && poses.has("wingDown"));
-    assert.equal(sim.inspect().scene, null);
-    assert.deepEqual(
-      sim.inspect().memory.collection,
-      item === "chip" ? {} : { [item]: 1 },
-    );
-    assert.equal(sim.inspect().events.includes("munch"), item === "chip");
-    advance(sim, 30);
-    assert.deepEqual(
-      sim.inspect().memory.collection,
-      item === "chip" ? {} : { [item]: 1 },
-    );
+  for (let i = 0; i < seconds * 20; i++) {
+    sim.step(0.05);
   }
-});
+}
+test(
+  "every gift completes its finite flight, reveals distinctly and collects non-food " +
+  "exactly once",
+  () => {
+    const items = [
+      "bottle_cap",
+      "bent_spoon",
+      "sock",
+      "glass_diamond",
+      "parking_ticket",
+      "chip",
+    ];
+
+    for (const [index, item] of items.entries()) {
+      const sim = bird(() => (index + 0.1) / items.length);
+      sim.action("bring_gift");
+      const phases = new Set();
+      const poses = new Set();
+
+      for (let i = 0; i < 400; i++) {
+        if (sim.inspect().scene) {
+          phases.add(sim.inspect().scene.phase);
+        }
+
+        poses.add(sim.inspect().pose);
+        sim.step(0.05);
+      }
+
+      for (const phase of [
+        "takeoff",
+        "depart",
+        "away",
+        "return",
+        "land",
+        "reveal",
+      ]) {
+        assert.ok(phases.has(phase), phase);
+      }
+
+      assert.ok(poses.has("wingUp") && poses.has("wingDown"));
+      assert.equal(sim.inspect().scene, null);
+      assert.deepEqual(
+        sim.inspect().memory.collection,
+        item === "chip" ? {} : { [item]: 1 },
+      );
+      assert.equal(sim.inspect().events.includes("munch"), item === "chip");
+      advance(sim, 30);
+      assert.deepEqual(
+        sim.inspect().memory.collection,
+        item === "chip" ? {} : { [item]: 1 },
+      );
+    }
+  }
+);
 test("each gift phase can be replaced or cleaned without a reward, including while away", () => {
   for (const phase of [
     "takeoff",
@@ -63,8 +77,11 @@ test("each gift phase can be replaced or cleaned without a reward, including whi
     for (const action of ["summon", "nap", "clean"]) {
       const sim = bird(() => 0);
       sim.action("bring_gift");
-      for (let i = 0; sim.inspect().scene?.phase !== phase && i < 400; i++)
+
+      for (let i = 0; sim.inspect().scene?.phase !== phase && i < 400; i++) {
         sim.step(0.05);
+      }
+
       assert.equal(sim.inspect().scene?.phase, phase);
       sim.action(action);
       advance(sim, 25);
@@ -90,8 +107,11 @@ test("hidden gift trips freeze, then resume a single delivery after resizing", (
   ]) {
     const sim = bird(() => 0);
     sim.action("bring_gift");
-    for (let i = 0; sim.inspect().scene?.phase !== phase && i < 400; i++)
+
+    for (let i = 0; sim.inspect().scene?.phase !== phase && i < 400; i++) {
       sim.step(0.05);
+    }
+
     assert.equal(sim.inspect().scene?.phase, phase);
     sim.setVisible(false);
     const before = JSON.stringify([
@@ -122,23 +142,30 @@ test("hidden gift trips freeze, then resume a single delivery after resizing", (
   }
 });
 
-test("display expansion during a gift flight still delivers within the original bounded outing", () => {
-  for (const phase of ["takeoff", "depart", "away", "return"]) {
-    const sim = bird(() => 0);
-    sim.action("bring_gift");
-    for (let i = 0; sim.inspect().scene?.phase !== phase && i < 400; i++)
-      sim.step(0.05);
-    assert.equal(sim.inspect().scene?.phase, phase);
-    sim.resize(16000, 9000);
-    advance(sim, 20);
-    assert.deepEqual(sim.inspect().memory.collection, { bottle_cap: 1 });
-    assert.equal(sim.inspect().scene, null);
-    assert.equal(sim.inspect().carriedItem, null);
-    assert.ok(
-      sim.inspect().x >= 0 && sim.inspect().x <= sim.inspect().width - 96,
-    );
-    assert.ok(
-      sim.inspect().y >= 0 && sim.inspect().y <= sim.inspect().height - 96,
-    );
+test(
+  "display expansion during a gift flight still delivers within the original bounded " +
+  "outing",
+  () => {
+    for (const phase of ["takeoff", "depart", "away", "return"]) {
+      const sim = bird(() => 0);
+      sim.action("bring_gift");
+
+      for (let i = 0; sim.inspect().scene?.phase !== phase && i < 400; i++) {
+        sim.step(0.05);
+      }
+
+      assert.equal(sim.inspect().scene?.phase, phase);
+      sim.resize(16000, 9000);
+      advance(sim, 20);
+      assert.deepEqual(sim.inspect().memory.collection, { bottle_cap: 1 });
+      assert.equal(sim.inspect().scene, null);
+      assert.equal(sim.inspect().carriedItem, null);
+      assert.ok(
+        sim.inspect().x >= 0 && sim.inspect().x <= sim.inspect().width - 96,
+      );
+      assert.ok(
+        sim.inspect().y >= 0 && sim.inspect().y <= sim.inspect().height - 96,
+      );
+    }
   }
-});
+);

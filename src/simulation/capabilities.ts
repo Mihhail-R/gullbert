@@ -97,9 +97,11 @@ export function scopeCapabilities<Key extends keyof BehaviorCapabilities>(
   keys: readonly Key[],
 ): Pick<BehaviorCapabilities, Key> {
   const scope = {} as Pick<BehaviorCapabilities, Key>;
+
   for (const key of keys) {
     scope[key] = capabilities[key];
   }
+
   return Object.freeze(scope);
 }
 import type {
