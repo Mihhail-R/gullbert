@@ -52,7 +52,7 @@ export function setupNavigation(): void {
   }
 
   const date = requiredElement<HTMLTimeElement>("#journal-date");
-  const updateDate = () => {
+  function updateDate() {
     const now = new Date();
     date.dateTime = now.toISOString();
     date.textContent = now.toLocaleDateString(undefined, {
@@ -60,7 +60,8 @@ export function setupNavigation(): void {
       day: "numeric",
       month: "long",
     });
-  };
+  }
+
   updateDate();
   window.addEventListener("focus", updateDate);
   const dateTimer = window.setInterval(updateDate, 60_000);

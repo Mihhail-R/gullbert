@@ -597,3 +597,16 @@ body[data-theme] #target-banner button {
   background: var(--accent);
   border-color: var(--accent);
 }
+
+body[data-theme] {
+  background-color: var(--portrait) !important;
+  background-image: radial-gradient(
+    var(--line) 1px,
+    transparent 1px
+  ) !important;
+  background-size: 20px 20px !important;
+}
+body[data-theme] #speech::after {
+  background: var(--card);
+  border-color: var(--line);
+}

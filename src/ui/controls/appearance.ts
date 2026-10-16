@@ -19,7 +19,7 @@ export function setupAppearance(): void {
     error.hidden = false;
   }
 
-  const apply = () => {
+  function applyTheme() {
     document.body.dataset.theme = theme;
 
     for (const button of buttons) {
@@ -30,14 +30,15 @@ export function setupAppearance(): void {
     if (frame?.contentDocument?.body) {
       frame.contentDocument.body.dataset.theme = theme;
     }
-  };
-  apply();
-  frame?.addEventListener("load", apply);
+  }
+
+  applyTheme();
+  frame?.addEventListener("load", applyTheme);
 
   for (const button of buttons) {
     button.addEventListener("click", () => {
       theme = button.dataset.theme === "dark" ? "dark" : "light";
-      apply();
+      applyTheme();
 
       try {
         localStorage.setItem(appearanceKey, theme);
@@ -49,17 +50,18 @@ export function setupAppearance(): void {
     });
   }
 
-  const receive = (event: StorageEvent) => {
+  function receiveAppearanceChange(event: StorageEvent) {
     if (event.key !== appearanceKey) {
       return;
     }
 
     theme = event.newValue === "dark" ? "dark" : "light";
-    apply();
-  };
-  window.addEventListener("storage", receive);
+    applyTheme();
+  }
+
+  window.addEventListener("storage", receiveAppearanceChange);
   window.addEventListener("pagehide", () => {
-    window.removeEventListener("storage", receive);
-    frame?.removeEventListener("load", apply);
+    window.removeEventListener("storage", receiveAppearanceChange);
+    frame?.removeEventListener("load", applyTheme);
   });
 }

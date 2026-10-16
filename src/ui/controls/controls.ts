@@ -347,7 +347,9 @@ function renderMemories(episodes: readonly MemoryEpisode[]) {
   $("#today-memory-empty").hidden = episodes.length > 0;
   const recentRows = Array.from($("#memory-items").children)
     .slice(0, 3)
-    .map((row) => row.cloneNode(true));
+    .map((row) => {
+      return row.cloneNode(true)
+    });
   $("#today-memories")
     .replaceChildren(...recentRows);
 }
@@ -396,7 +398,9 @@ function renderCollection(collection: Memory["collection"]) {
   $("#today-collection-empty").hidden = entries.length > 0;
   const shelfItems = Array.from($("#collection-items").children)
     .slice(0, 3)
-    .map((row) => row.cloneNode(true));
+    .map((row) => {
+      return row.cloneNode(true)
+    });
   $("#today-collection")
     .replaceChildren(...shelfItems);
 }

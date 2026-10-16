@@ -64,7 +64,9 @@ export function roommateRenderingTests(mode) {
         event: {
           async listen(name, callback) {
             listeners.set(name, callback);
-            return () => listeners.delete(name);
+            return () => {
+              return listeners.delete(name)
+            };
           },
         },
       };
@@ -176,13 +178,15 @@ export function roommateRenderingTests(mode) {
 
   test(`${mode}: memories keep total count, reverse array order, dates and node structure`, () => {
     // Descending timestamps make reversing insertion order distinguishable from date sorting.
-    const episodes = Array.from({ length: 14 }, (_, index) => ({
-      id: index,
-      kind: "trick",
-      detail: `example ${index}`,
-      at: Date.UTC(2026, 9, 16, 12, 30 - index),
-      location: { x: 100, y: 400, width: 900, height: 600 },
-    }));
+    const episodes = Array.from({ length: 14 }, (_, index) => {
+      return {
+        id: index,
+        kind: "trick",
+        detail: `example ${index}`,
+        at: Date.UTC(2026, 9, 16, 12, 30 - index),
+        location: { x: 100, y: 400, width: 900, height: 600 },
+      }
+    });
     deliver({ mood: "offended", memory: { episodes } });
     assert.equal(element("mood").textContent, "Feeling offended.");
     assert.equal(element("memory-summary").textContent, "14 recent memories");
@@ -190,13 +194,19 @@ export function roommateRenderingTests(mode) {
     const rows = [...element("memory-items").children];
     assert.equal(rows.length, 12);
     assert.deepEqual(
-      rows.map((row) => row.firstElementChild.textContent),
-      Array.from({ length: 12 }, (_, index) => `Performed example ${13 - index}`)
+      rows.map((row) => {
+        return row.firstElementChild.textContent
+      }),
+      Array.from({ length: 12 }, (_, index) => {
+        return `Performed example ${13 - index}`
+      })
     );
 
     for (const [index, row] of rows.entries()) {
       assert.equal(row.tagName, "LI");
-      assert.deepEqual([...row.children].map((node) => node.tagName), ["STRONG", "SMALL"]);
+      assert.deepEqual([...row.children].map((node) => {
+        return node.tagName
+      }), ["STRONG", "SMALL"]);
       const context = row.lastElementChild;
       const time = context.firstElementChild;
       const date = new Date(episodes[13 - index].at);
@@ -235,7 +245,9 @@ export function roommateRenderingTests(mode) {
     for (const [index, row] of rows.entries()) {
       const [id, name, description, quantity] = expected[index];
       assert.equal(row.tagName, "LI");
-      assert.deepEqual([...row.children].map((node) => node.tagName), ["IMG", "STRONG", "SPAN"]);
+      assert.deepEqual([...row.children].map((node) => {
+        return node.tagName
+      }), ["IMG", "STRONG", "SPAN"]);
       assert.equal(row.children[0].getAttribute("src"), `assets/belongings/${id}.svg`);
       assert.equal(row.children[0].getAttribute("alt"), "");
       assert.equal(row.children[1].firstChild.textContent, name);
@@ -273,8 +285,12 @@ export function roommateRenderingTests(mode) {
     assert.equal(element("storage-error").textContent, "Disk full");
     assert.equal(element("storage-error").hidden, false);
     const updates = observer.takeRecords()
-      .map((record) => record.target.id)
-      .filter((id) => id);
+      .map((record) => {
+        return record.target.id
+      })
+      .filter((id) => {
+        return id
+      });
     assert.deepEqual([...new Set(updates)], [
       "mood",
       "lesson-come",
@@ -336,13 +352,15 @@ export function roommateRenderingTests(mode) {
   });
 
   test(`${mode}: Today shows real recent memories and keeps its shelf in sync`, () => {
-    const episodes = Array.from({ length: 5 }, (_, index) => ({
-      id: index,
-      kind: "trick",
-      detail: `example ${index}`,
-      at: Date.UTC(2026, 9, 16, 12, index),
-      location: { x: 10, y: 20, width: 900, height: 600 },
-    }));
+    const episodes = Array.from({ length: 5 }, (_, index) => {
+      return {
+        id: index,
+        kind: "trick",
+        detail: `example ${index}`,
+        at: Date.UTC(2026, 9, 16, 12, index),
+        location: { x: 10, y: 20, width: 900, height: 600 },
+      }
+    });
     deliver({ memory: {
       episodes,
       collection: { sock: 2, bottle_cap: 3 },
@@ -351,7 +369,9 @@ export function roommateRenderingTests(mode) {
     } });
     assert.deepEqual(
       [...element("today-memories")
-        .querySelectorAll("strong")].map((row) => row.textContent),
+        .querySelectorAll("strong")].map((row) => {
+        return row.textContent
+      }),
       ["Performed example 4", "Performed example 3", "Performed example 2"],
     );
     assert.equal(element("today-collection").children.length, 2);
@@ -373,9 +393,15 @@ export function roommateRenderingTests(mode) {
       .dispatchEvent(new dom.window.Event("change"));
     document.querySelector('button[data-theme="dark"]')
       .click();
-    await new Promise((resolve) => setImmediate(resolve));
-    assert.equal(commands.some((call) => call.command === "update_settings"), false);
-    assert.equal(messages.some((message) => message.data.type === "settings"), false);
+    await new Promise((resolve) => {
+      return setImmediate(resolve)
+    });
+    assert.equal(commands.some((call) => {
+      return call.command === "update_settings"
+    }), false);
+    assert.equal(messages.some((message) => {
+      return message.data.type === "settings"
+    }), false);
   });
 
   test(`${mode}: pause and wardrobe use real settings; hats use production geometry`, async () => {
@@ -383,17 +409,25 @@ export function roommateRenderingTests(mode) {
     messages.length = 0;
     element("pause-toggle")
       .click();
-    await new Promise((resolve) => setImmediate(resolve));
+    await new Promise((resolve) => {
+      return setImmediate(resolve)
+    });
     assert.equal(element("paused").checked, true);
     assert.equal(element("pause-toggle").textContent, "▷ Resume antics");
     element("hat").value = "captain";
     element("hat")
       .dispatchEvent(new dom.window.Event("change"));
-    await new Promise((resolve) => setImmediate(resolve));
+    await new Promise((resolve) => {
+      return setImmediate(resolve)
+    });
     const saved = mode === "native"
-      ? commands.filter((call) => call.command === "update_settings")
+      ? commands.filter((call) => {
+        return call.command === "update_settings"
+      })
         .at(-1).args.settings
-      : messages.filter((message) => message.data.type === "settings")
+      : messages.filter((message) => {
+        return message.data.type === "settings"
+      })
         .at(-1).data.settings;
     assert.equal(saved.paused, true);
     assert.equal(saved.hat, "captain");
@@ -454,14 +488,18 @@ export function roommateRenderingTests(mode) {
     assert.equal(element("placement-notice").hidden, false);
     element("cancel-placement")
       .click();
-    await new Promise((resolve) => setImmediate(resolve));
+    await new Promise((resolve) => {
+      return setImmediate(resolve)
+    });
     assert.equal(commands.at(-1).command, "cancel_targeting");
     listeners.get("gullbert-target")({ payload: { outcome: "abandoned", id: 1 } });
     assert.equal(element("placement-notice").hidden, true);
     failSave = true;
     element("pause-toggle")
       .click();
-    await new Promise((resolve) => setImmediate(resolve));
+    await new Promise((resolve) => {
+      return setImmediate(resolve)
+    });
     assert.equal(element("paused").checked, true, "failed save restores the previous state");
     assert.equal(element("pause-toggle").disabled, false);
     assert.match(element("error").textContent, /Could not save preferences/);
@@ -496,7 +534,9 @@ export function roommateRenderingTests(mode) {
     if (mode === "native") {
       assert.equal(messages.length, 0);
     } else {
-      assert.deepEqual(messages.map((message) => message.data), [
+      assert.deepEqual(messages.map((message) => {
+        return message.data
+      }), [
         { type: "action", action: "cancel" },
         { type: "action", action: "clean" },
         { type: "action", action: "summon" },
