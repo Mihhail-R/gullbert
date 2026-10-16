@@ -6,6 +6,8 @@ import { Gullbert } from "../web-dist/simulation/engine.js";
 import {
   TheatreRoutine,
   theatreProps,
+  theatrePose,
+  theatreOffset,
 } from "../web-dist/simulation/behaviors/theatre.js";
 
 function setup(width = 900, height = 650, random = () => 0.5) {
@@ -384,4 +386,82 @@ test("rare autonomy obeys hide, pause and mischief, with bounded recent memory",
   sim.action("cancel");
   assert.equal(sim.routine.maybeTheatre(), false);
   assert.equal(sim.rareTheatre.nextAllowed, 6200);
+});
+
+test("theatre pose selection preserves walking defaults and animation parity", () => {
+  const cases = [
+    ["bubbles", "chase", "walkLeft", "walkLeft"],
+    ["bubbles", "peck", "nibble", "nibble"],
+    ["bubbles", "startle", "nap-startle", "nap-startle"],
+    ["bubbles", "proud", "blink", "blink"],
+    ["bath", "approach", "walkLeft", "walkLeft"],
+    ["bath", "splash", "bath-wet", "bath-wet"],
+    ["bath", "shake", "bath-shake-b", "bath-shake-a"],
+    ["bath", "exit", "walkLeft", "walkLeft"],
+    ["toss", "takeoff", "crouch", "crouch"],
+    ["toss", "intercept", "wingDown", "wingUp"],
+    ["toss", "land", "wingDown", "wingDown"],
+    ["toss", "miss-flail", "wingDown", "nap-startle"],
+    ["toss", "miss", "bag-offended", "bag-offended"],
+    ["toss", "eat", "nibble", "nibble"],
+    ["toss", "retrieve", "walkLeft", "walkLeft"],
+    ["baguette", "carry", "walkLeft", "walkLeft"],
+    ["baguette", "exit", "walkLeft", "walkLeft"],
+    ["baguette", "pause", "nibble", "nibble"],
+  ];
+  for (const [kind, phase, even, odd] of cases) {
+    const view = { scene: { kind, phase }, motionTime: 0.15, time: 0 };
+    assert.equal(theatrePose(view), even, `${kind}/${phase} even`);
+    assert.equal(
+      theatrePose({ ...view, time: 0.1 }),
+      odd,
+      `${kind}/${phase} odd`,
+    );
+  }
+  assert.equal(theatrePose({ scene: null, motionTime: 0, time: 0 }), null);
+  assert.equal(
+    theatrePose({
+      scene: { kind: "baguette", phase: "carry" },
+      motionTime: 0,
+      time: 0,
+    }),
+    "nibble",
+  );
+});
+
+test("baguette offsets preserve direction, interpolation, clamping and visibility", () => {
+  for (const direction of [-1, 1]) {
+    for (const [time, entrance, departure] of [
+      [-1, 220, 0],
+      [0.4, 110, 110],
+      [2, 0, 220],
+    ]) {
+      const scene = { kind: "baguette", direction, phaseStarted: 0 };
+      assert.deepEqual(
+        theatreOffset({ scene: { ...scene, phase: "entrance" }, time }),
+        { x: -direction * entrance, opacity: 1 },
+      );
+      assert.deepEqual(
+        theatreOffset({ scene: { ...scene, phase: "departure" }, time }),
+        { x: direction * departure, opacity: 1 },
+      );
+    }
+  }
+  for (const [phase, opacity] of [
+    ["gone", 0],
+    ["pause", 1],
+    ["carry", 1],
+  ]) {
+    assert.deepEqual(
+      theatreOffset({
+        scene: { kind: "baguette", phase, phaseStarted: 0, direction: 1 },
+        time: 0.4,
+      }),
+      { x: 0, opacity },
+    );
+  }
+  assert.deepEqual(theatreOffset({ scene: null, time: 0 }), {
+    x: 0,
+    opacity: 1,
+  });
 });
