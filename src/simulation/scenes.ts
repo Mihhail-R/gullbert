@@ -80,13 +80,14 @@ export interface CapScene extends TimedScene {
 export interface LearningScene extends TimedScene {
   kind: "trick" | "habit";
   trick: Trick;
-  phase: "consider" | "perform" | "reward" | "check";
+  phase: "consider" | "perform" | "reward" | "check" | "refuse";
   phaseStarted: number;
   target: Point;
   origin: Point;
   facing: Direction;
   practiced: boolean;
   unsolicited: boolean;
+  reluctant: boolean;
 }
 interface TheatreClock extends TimedScene {
   started: number;

@@ -368,7 +368,23 @@
       "emptySpot": "checking the usual establishment.",
       "scratchExpected": "and now the head bit.",
       "scratchLearned": "good game. good head scratch.",
-      "forgotten": "what tricks? never heard of them."
+      "forgotten": "what tricks? never heard of them.",
+      "refuse": [
+        "two tricks. zero chips. explain yourself.",
+        "no. the beak is on strike.",
+        "my talents require snacks.",
+        "you may speak to my snack representative."
+      ],
+      "settled": "payment received. we are professionals again.",
+      "collectPayment": "fine. taking payment in cursor.",
+      "movingOut": "packing my imaginary bags. unpaid artist moving out.",
+      "reluctant": {
+        "spin": "fine. one turn. at my hourly rate.",
+        "come": "coming. at the speed of unpaid labour.",
+        "dead": "fine. this may take a while."
+      },
+      "reluctantReward": "there. two tricks. one very expectant gull.",
+      "invoice": "2 tricks unpaid\nCHIP DUE"
     }
   },
   "guests": {

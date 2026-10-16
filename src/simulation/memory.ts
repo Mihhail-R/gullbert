@@ -201,9 +201,20 @@ export function normalizeMemory(
     lastDiscovery = null;
   }
 
+  let trickCooldownUntilMs = null;
+
+  if (finite(source.trickCooldownUntilMs)) {
+    if (source.trickCooldownUntilMs >= 0 && source.trickCooldownUntilMs <= 8.64e15) {
+      trickCooldownUntilMs = Math.floor(source.trickCooldownUntilMs);
+    }
+  }
+
   return {
     version: 2,
     episodes,
+    unpaidTricks: Math.min(2, memoryCount(source.unpaidTricks)),
+    trickCooldownUntilMs,
+    trickRefusals: memoryCount(source.trickRefusals),
     performances: {
       come: Math.max(memoryCount(performances.come), lessons(tricks.come)),
       spin: Math.max(memoryCount(performances.spin), lessons(tricks.spin)),

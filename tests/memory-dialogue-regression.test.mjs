@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { Gullbert } from "../web-dist/simulation/engine.js";
-import { reach } from "./simulation-helpers.mjs";
+import { advance, reach } from "./simulation-helpers.mjs";
 
 function setup() {
   const sim = new Gullbert(900, 650, () => 0.5);
@@ -63,6 +63,8 @@ test("repeated tricks acknowledge previous performances, including after restart
     openings.push(sim.inspect().bubble);
     reach(sim, "reward");
     rewards.push(sim.inspect().bubble);
+    sim.action("feed");
+    advance(sim, 3);
     const saved = sim.exportMemory();
     sim = setup();
     sim.restoreMemory(saved);
