@@ -66,6 +66,7 @@ export interface BehaviorCapabilities extends RoutineCapabilities {
     | "snapshot"
     | "remember"
     | "performed"
+    | "refuseTrick"
     | "visited"
     | "collect"
     | "placePerch"
@@ -75,7 +76,7 @@ export interface BehaviorCapabilities extends RoutineCapabilities {
     | "rememberScratchAfterPlay"
     | "forgetLearning"
   >;
-  readonly moods: Pick<Mood, "set">;
+  readonly moods: Pick<Mood, "set" | "settleOffence">;
   readonly destinations: { randomPoint(): Point };
   readonly policy: {
     settings(): Readonly<Settings>;

@@ -4,8 +4,8 @@ import { Gullbert } from "../web-dist/simulation/engine.js";
 import { normalizeMemory } from "../web-dist/simulation/memory.js";
 import { advance, reach } from "./simulation-helpers.mjs";
 
-function setup() {
-  const sim = new Gullbert(900, 650, () => 0.5);
+function setup(options = {}) {
+  const sim = new Gullbert(900, 650, () => 0.5, options);
   sim.configure({ paused: true, mischief: 0 });
   return sim;
 }
@@ -343,4 +343,199 @@ test("invalid learning data is bounded and forgetting affects only learned habit
   assert.deepEqual(sim.exportMemory().learned, normalizeMemory().learned);
   assert.deepEqual(sim.exportMemory().perch, { x: 30, y: 40 });
   assert.deepEqual(sim.exportMemory().collection, { sock: 2 });
+});
+
+test("unpaid tricks survive restart until a snack is consumed", () => {
+  const sim = setup();
+  perform(sim, "spin");
+  perform(sim, "dead");
+  const restored = setup();
+  restored.restoreMemory(sim.exportMemory());
+  restored.action("trick_come");
+  assert.equal(restored.inspect().scene.phase, "refuse");
+  assert.equal(restored.exportMemory().performances.come, 0);
+  assert.equal(restored.exportMemory().trickRefusals, 1);
+  assert.equal(restored.exportMemory().episodes.at(-1).detail, "trick_refusal");
+  restored.action("feed_here", { x: 850, y: 600 });
+  restored.action("cancel");
+  assert.equal(restored.exportMemory().unpaidTricks, 2);
+  restored.action("feed");
+  advance(restored, 3);
+  assert.equal(restored.exportMemory().unpaidTricks, 0);
+  assert.equal(restored.exportMemory().trickRefusals, 0);
+  assert.equal(restored.exportMemory().learned.tricks.come, 0);
+  perform(restored);
+});
+
+test("refusals escalate by mischief, and pause suppresses physical protests", () => {
+  for (const mischief of [0, 1, 2]) {
+    const sim = setup();
+    perform(sim);
+    perform(sim);
+    sim.configure({ paused: false, mischief });
+    sim.action("trick_spin");
+    advance(sim, 2.6);
+    assert.equal(sim.inspect().scene, null);
+    sim.action("trick_spin");
+    advance(sim, 2.6);
+    assert.equal(sim.inspect().scene?.kind ?? null, mischief > 0 ? "pretend_leave" : null);
+    sim.action("trick_dead");
+    advance(sim, 2.6);
+    const expected = [null, "pretend_leave", "cursor"][mischief];
+    assert.equal(sim.inspect().scene?.kind ?? null, expected);
+    assert.equal(sim.exportMemory().performances.spin, 2);
+    assert.equal(sim.exportMemory().performances.dead, 0);
+    sim.action("cancel");
+    assert.equal(sim.inspect().scene, null);
+    sim.configure({ paused: true });
+    sim.action("trick_spin");
+    advance(sim, 3);
+    assert.equal(sim.inspect().scene, null);
+  }
+});
+
+test("interrupted tricks and volunteered performances do not incur snack debt", () => {
+  const sim = setup();
+  sim.action("trick_spin");
+  sim.action("cancel");
+  assert.equal(sim.exportMemory().unpaidTricks, 0);
+  sim.action("show_spin");
+  reach(sim, "reward");
+  assert.equal(sim.exportMemory().unpaidTricks, 0);
+  perform(sim);
+  perform(sim);
+  sim.action("forget_learning");
+  assert.equal(sim.exportMemory().unpaidTricks, 0);
+  assert.equal(sim.exportMemory().trickRefusals, 0);
+  perform(sim);
+});
+
+test("legacy and malformed snack debt normalizes safely", () => {
+  assert.equal(normalizeMemory({}).unpaidTricks, 0);
+  assert.equal(normalizeMemory({ unpaidTricks: Infinity }).unpaidTricks, 0);
+  assert.equal(normalizeMemory({ unpaidTricks: 999 }).unpaidTricks, 2);
+  assert.equal(normalizeMemory({ trickRefusals: -2 }).trickRefusals, 0);
+});
+
+test("strike cools off in real time without requests extending it", () => {
+  let nowMs = 1000;
+  const sim = setup({ now: () => nowMs });
+  perform(sim);
+  perform(sim);
+  const deadlineMs = sim.exportMemory().trickCooldownUntilMs;
+  assert.equal(deadlineMs, nowMs + 120_000);
+  nowMs = deadlineMs - 1;
+  sim.action("trick_dead");
+  assert.equal(sim.inspect().scene.phase, "refuse");
+  assert.equal(sim.exportMemory().trickCooldownUntilMs, deadlineMs);
+  nowMs = deadlineMs;
+  sim.action("trick_dead");
+  assert.equal(sim.inspect().scene.phase, "consider");
+  assert.equal(sim.exportMemory().trickRefusals, 0);
+  assert.equal(sim.exportMemory().unpaidTricks, 0);
+  assert.equal(sim.exportMemory().performances.spin, 2);
+});
+
+test("time away clears a strike and legacy debt receives a bounded cooldown", () => {
+  let nowMs = 5000;
+  const sim = setup({ now: () => nowMs });
+  perform(sim);
+  perform(sim);
+  const saved = sim.exportMemory();
+  nowMs += 120_000;
+  const restored = setup({ now: () => nowMs });
+  restored.restoreMemory(saved);
+  perform(restored);
+  assert.equal(restored.exportMemory().unpaidTricks, 1);
+
+  restored.restoreMemory({ unpaidTricks: 2, trickRefusals: 3 });
+  assert.equal(restored.exportMemory().trickCooldownUntilMs, nowMs + 120_000);
+  nowMs += 120_000;
+  assert.equal(restored.exportMemory().unpaidTricks, 0);
+  assert.equal(restored.exportMemory().trickRefusals, 0);
+});
+
+test("a snack forgives immediately without waiting for the cooldown", () => {
+  const sim = setup({ now: () => 1000 });
+  perform(sim);
+  perform(sim);
+  sim.action("trick_spin");
+  sim.action("feed");
+  advance(sim, 3);
+  assert.equal(sim.exportMemory().unpaidTricks, 0);
+  assert.equal(sim.exportMemory().trickCooldownUntilMs, null);
+  perform(sim);
+});
+
+test("the second unpaid trick is deliberately slow and still earns a real reward", () => {
+  for (const trick of ["come", "spin", "dead"]) {
+    const sim = setup();
+    perform(sim);
+    sim.action(`trick_${trick}`, { x: 850, y: 600 });
+    assert.equal(sim.inspect().scene.reluctant, true);
+    reach(sim, "perform");
+    const scene = sim.inspect().scene;
+    const durations = { come: 43.2, spin: 6, dead: 8.4 };
+    assert.ok(Math.abs(scene.until - scene.phaseStarted - durations[trick]) < 0.001);
+    advance(sim, 3);
+    assert.equal(sim.inspect().scene.phase, "perform");
+    assert.equal(sim.exportMemory().unpaidTricks, 1);
+    reach(sim, "reward");
+    assert.equal(sim.exportMemory().unpaidTricks, 2);
+    assert.match(sim.inspect().bubble, /expectant gull/);
+    assert.equal(sim.present().pose, "tilt");
+    sim.action("feed");
+    advance(sim, 3);
+    assert.equal(sim.exportMemory().learned.tricks[trick], 1);
+    sim.action(`trick_${trick}`);
+    assert.equal(sim.inspect().scene.reluctant, false);
+  }
+});
+
+test("volunteered tricks keep their normal pace even with an unpaid trick", () => {
+  const sim = setup();
+  perform(sim);
+  sim.action("show_spin");
+  assert.equal(sim.inspect().scene.reluctant, false);
+  reach(sim, "perform");
+  advance(sim, 2.6);
+  assert.equal(sim.inspect().scene.phase, "reward");
+  assert.equal(sim.exportMemory().unpaidTricks, 1);
+});
+
+test("refusal drags an invoice, pecks it, and removes it on interruption", () => {
+  for (const command of ["cancel", "feed", "forget_learning"]) {
+    const sim = setup();
+    perform(sim);
+    perform(sim);
+    sim.action("trick_spin");
+    const first = sim.present().props.find((prop) => prop.id === "snack-invoice");
+    assert.match(first.text, /2 tricks unpaid\nCHIP DUE/);
+    advance(sim, 0.5);
+    const dragged = sim.present().props.find((prop) => prop.id === "snack-invoice");
+    assert.notEqual(dragged.x, first.x);
+    advance(sim, 0.55);
+    assert.equal(sim.present().pose, "nibble");
+    assert.equal(sim.present().props[0].rotation, 0);
+    sim.action(command);
+    assert.equal(sim.present().props.some((prop) => prop.id === "snack-invoice"), false);
+    assert.equal(sim.present().rotation, 0);
+  }
+});
+
+test("invoice stays within a resized display and disappears when the debt expires", () => {
+  let nowMs = 1000;
+  const sim = setup({ now: () => nowMs });
+  perform(sim);
+  perform(sim);
+  sim.action("trick_spin");
+  sim.resize(100, 100);
+  const invoice = sim.present().props[0];
+  assert.ok(invoice.x >= 0 && invoice.y >= 0);
+  assert.ok(invoice.x + invoice.width <= 100);
+  assert.ok(invoice.y + invoice.height <= 100);
+  nowMs += 120_000;
+  sim.step(0.05);
+  assert.equal(sim.inspect().scene, null);
+  assert.equal(sim.present().props.length, 0);
 });

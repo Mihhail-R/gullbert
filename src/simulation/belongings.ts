@@ -5,6 +5,7 @@ import type { Memory, MemoryEpisode, Point, Trick } from "./model.js";
 import { observe } from "./observation.js";
 import type { ReadonlyValue } from "./presentation.js";
 
+export const TRICK_COOLDOWN_MS = 2 * 60 * 1000;
 export const GREETING_COOLDOWN_MS = 5 * 60 * 1000;
 const firstLines = dialogue.gullbert.greetings.first;
 const returnLines = dialogue.gullbert.greetings.return;
@@ -57,12 +58,54 @@ export class Belongings {
     this.#revision += 1;
   }
 
-  performed(trick: Trick, point: Point): void {
+  performed(trick: Trick, point: Point, requested = true): void {
+    this.#coolOff();
+
+    if (requested) {
+      this.#memory.unpaidTricks = Math.min(2, this.#memory.unpaidTricks + 1);
+      this.#memory.trickCooldownUntilMs = this.#now() + TRICK_COOLDOWN_MS;
+    }
+
     this.#memory.performances[trick] = memoryCount(
       this.#memory.performances[trick] + 1,
     );
     this.#revision += 1;
     this.remember("trick", trick, point);
+  }
+
+  refuseTrick(point: Point): number {
+    this.#memory.trickRefusals = memoryCount(this.#memory.trickRefusals + 1);
+    this.#revision += 1;
+    this.remember("activity", "trick_refusal", point);
+    return this.#memory.trickRefusals;
+  }
+
+  #coolOff(): void {
+    if (this.#memory.unpaidTricks === 0) {
+      return;
+    }
+
+    const nowMs = this.#now();
+
+    if (!Number.isFinite(nowMs) || nowMs < 0 || nowMs > 8.64e15) {
+      return;
+    }
+
+    // Older memories receive one bounded cooldown instead of a permanent strike.
+    if (this.#memory.trickCooldownUntilMs === null) {
+      this.#memory.trickCooldownUntilMs = nowMs + TRICK_COOLDOWN_MS;
+      this.#revision += 1;
+      return;
+    }
+
+    if (nowMs < this.#memory.trickCooldownUntilMs) {
+      return;
+    }
+
+    this.#memory.unpaidTricks = 0;
+    this.#memory.trickRefusals = 0;
+    this.#memory.trickCooldownUntilMs = null;
+    this.#revision += 1;
   }
 
   visited(species: "pigeon" | "gull", point: Point): void {
@@ -74,6 +117,8 @@ export class Belongings {
   }
 
   snapshot() {
+    this.#coolOff();
+
     if (this.#snapshot?.revision !== this.#revision) {
       this.#snapshot = observe({
         memory: this.#memory,
@@ -85,6 +130,7 @@ export class Belongings {
   }
 
   exportMemory(): Memory {
+    this.#coolOff();
     return structuredClone(this.#memory);
   }
 
@@ -165,6 +211,10 @@ export class Belongings {
       return;
     }
 
+    this.#memory.unpaidTricks = 0;
+    this.#memory.trickRefusals = 0;
+    this.#memory.trickCooldownUntilMs = null;
+    this.#revision += 1;
     this.remember("meal", "chip", location);
     const learned = this.#memory.learned;
     const spot = learned.snackSpot;
@@ -213,7 +263,14 @@ export class Belongings {
   forgetLearning(): void {
     this.#memory.learned = normalizeMemory(null).learned;
     this.#memory.performances = { come: 0, spin: 0, dead: 0 };
+    this.#memory.unpaidTricks = 0;
+    this.#memory.trickRefusals = 0;
+    this.#memory.trickCooldownUntilMs = null;
     this.#memory.episodes = this.#memory.episodes.filter((event) => {
+      if (event.detail === "trick_refusal") {
+        return false;
+      }
+
       return !["trick", "reward", "meal", "play", "scratch"].includes(
         event.kind,
       );

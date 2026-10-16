@@ -7,6 +7,9 @@ test("missing and malformed snapshots produce fresh, empty durable memories", ()
   const expected = {
     version: 2,
     episodes: [],
+    unpaidTricks: 0,
+    trickCooldownUntilMs: null,
+    trickRefusals: 0,
     performances: { come: 0, spin: 0, dead: 0 },
     visits: { pigeon: 0, gull: 0 },
     learned: {

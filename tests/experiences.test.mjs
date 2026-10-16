@@ -76,7 +76,7 @@ test(
     assert.equal(saved.episodes.length, MEMORY_LIMIT);
     assert.equal(saved.episodes[0].id, 11);
     assert.equal(saved.performances.spin, MEMORY_LIMIT + 10);
-    const restarted = new Belongings(900, 650);
+    const restarted = new Belongings(900, 650, () => 1234);
     restarted.restore(JSON.parse(JSON.stringify(saved)));
     assert.deepEqual(restarted.snapshot().memory, saved);
     restarted.performed("spin", { x: 100, y: 200 });
