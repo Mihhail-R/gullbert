@@ -47,7 +47,7 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run check
-      - name: Check code readability
+      - name: Lint
         if: hashFiles('eslint.config.mjs') != ''
         run: npm run lint
       - run: npm run format:check
