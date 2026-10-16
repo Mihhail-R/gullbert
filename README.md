@@ -57,7 +57,7 @@ Use the control room to feed, play, or start a routine. **Poop here…**, **Leav
 
 ### Tricks and little rituals
 
-Open **Tricks & rituals** in the control room, or **Tricks** in the tray. Ask for **Come here…**, **Spin**, or **Play dead**, then wait for “performance complete. chip please.” Use **Reward with a chip**, **Offer a chip**, or **Leave a chip here…** within 20 seconds. He learns when he reaches that chip; early rewards, cancelled performances, or food replaced before he arrives do not count. Three rewarded performances make a trick familiar; six complete his training. A familiar recall is faster, and a practiced dramatic death stops the novice's hopeful peek.
+Open **Tricks & rituals** in the control room, or **Tricks** in the tray. Ask for **Come here…**, **Spin**, or **Play dead**, then wait for him to finish and ask for a chip. Use **Reward with a chip**, **Offer a chip**, or **Leave a chip here…** within 20 seconds. He learns when he reaches that chip; early rewards, cancelled performances, or food replaced before he arrives do not count. Three rewarded performances make a trick familiar; six complete his training. A familiar recall is faster, and a practiced dramatic death stops the novice's hopeful peek.
 
 Once he knows spin or play dead, he may occasionally perform it unsolicited and request payment. These performances are infrequent, stop with **Pause autonomous antics**, and do not occur in **Polite-ish**. Explicit training works while paused. **Stop routine**, hiding, a replacement activity, or pausing cancels a performance without removing earned lessons.
 
@@ -65,7 +65,9 @@ Feed individual chips in roughly the same area three times to establish a snack 
 
 Scratch his head within 18 seconds of completing a three-exchange cap game or a chip toss. After three games followed by scratches, he presents his head and expects the familiar after-play ritual. Each game counts once. There is no penalty for skipping a reward or being away.
 
-The control room shows progress. Earned tricks and rituals survive restarts and cleanup; reward windows and unfinished activities do not. **Forget tricks & rituals** clears this learning while keeping treasures, hats, and the favourite spot.
+The control room shows completed performances separately from rewarded lessons. Gullbert remembers doing a trick even without a reward, and varies his lines using that history. Earned tricks and rituals survive restarts and cleanup; reward windows and unfinished activities do not. **Forget tricks & rituals** clears lessons, performance counts, and related recent memories while keeping visitors, treasures, hats, and the favourite spot.
+
+Open **His memory** to see his most recent experiences, with the local date, time, and position on the desktop. He keeps the latest 200 experiences, plus lasting trick totals, visitor counts, and learned habits. Guest conversations take turns with reading time and a pause before each reply; returning visitors keep their dialogue rotation across restarts.
 
 **Bottle-cap football.** Choose **Play → Play with a cap** in the control room or tray. Click the cap to flick it away; Gullbert chases it and pecks it back toward your pointer. After three exchanges, he takes the cap and declares “i win.” No collected treasure is needed. **Stop routine** ends the game. A running desktop app also accepts `--play-cap` from a second invocation of its executable.
 
@@ -163,7 +165,7 @@ The macOS deployment target is 11.0; local vision requires 14.0 or newer. Linux 
 
 ## Local data
 
-Preferences live in `settings.json`; remembered belongings live in `roommate.json`, both in Tauri's application configuration directory. The playground uses separate browser local storage. OS permissions can be revoked in system settings.
+Preferences live in `settings.json`; memories live in `memory.sqlite3`, both in Tauri's application configuration directory. The desktop app keeps an in-memory copy and saves experiences and learned state together in SQLite. Existing `roommate.json` memories are imported automatically on the first load and that file is retained as a recovery copy. Unreadable memory is reported instead of overwritten, and failed saves retry while the app is visible. The playground uses separate browser local storage with the same memory format. This memory is entirely local: it records Gullbert's own activities and desktop coordinates, not screen contents or application text. OS permissions can be revoked in system settings.
 
 ## Development
 

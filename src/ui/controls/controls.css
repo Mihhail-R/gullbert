@@ -251,6 +251,25 @@ kbd {
   font-size: 10px;
   color: #687169;
 }
+#memory-items {
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+}
+#memory-items li {
+  padding: 10px 0;
+  border-bottom: 1px solid #dadcd2;
+}
+#memory-items strong,
+#memory-items small {
+  display: block;
+}
+#memory-items small {
+  margin-top: 4px;
+  color: #687169;
+  font-size: 10px;
+  line-height: 1.5;
+}
 .preferences {
   border-top: 1px solid #dadcd2;
   margin-top: 8px;

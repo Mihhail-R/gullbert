@@ -1,27 +1,88 @@
 import { dialogue } from "./dialogue.js";
-import { normalizeMemory } from "./memory.js";
+import { MEMORY_LIMIT, memoryCount, normalizeMemory } from "./memory.js";
 import { ITEMS, isCollectible, type Collectible } from "./items.js";
-import type { Memory, Point, Trick } from "./model.js";
+import type { Memory, MemoryEpisode, Point, Trick } from "./model.js";
+import { observe } from "./observation.js";
+import type { ReadonlyValue } from "./presentation.js";
 
 export const GREETING_COOLDOWN_MS = 5 * 60 * 1000;
 const firstLines = dialogue.gullbert.greetings.first;
 const returnLines = dialogue.gullbert.greetings.return;
 
-/** The sole writer of durable belongings and greeting history. */
+/** The sole writer of durable memory, with a cached immutable view for animation. */
 export class Belongings {
   #memory: Memory;
   #revision = 0;
   #width: number;
   #height: number;
+  #now: () => number;
+  #snapshot: ReadonlyValue<{ memory: Memory; revision: number }> | null = null;
 
-  constructor(width: number, height: number) {
+  constructor(width: number, height: number, now = Date.now) {
     this.#width = width;
     this.#height = height;
+    this.#now = now;
     this.#memory = normalizeMemory(null, width, height);
   }
 
+  remember(kind: MemoryEpisode["kind"], detail: string, point: Point): void {
+    const at = this.#now();
+    if (
+      !Number.isFinite(at) ||
+      at < 0 ||
+      at > 8.64e15 ||
+      !Number.isFinite(point.x) ||
+      !Number.isFinite(point.y)
+    ) {
+      return;
+    }
+    const episodes = this.#memory.episodes;
+    episodes.push({
+      id: (episodes.at(-1)?.id ?? 0) + 1,
+      at: Math.floor(at),
+      kind,
+      detail,
+      location: {
+        x: Math.min(this.#width, Math.max(0, point.x)),
+        y: Math.min(this.#height, Math.max(0, point.y)),
+        width: this.#width,
+        height: this.#height,
+      },
+    });
+    if (episodes.length > MEMORY_LIMIT) {
+      episodes.shift();
+    }
+    this.#revision += 1;
+  }
+
+  performed(trick: Trick, point: Point): void {
+    this.#memory.performances[trick] = memoryCount(
+      this.#memory.performances[trick] + 1,
+    );
+    this.#revision += 1;
+    this.remember("trick", trick, point);
+  }
+
+  visited(species: "pigeon" | "gull", point: Point): void {
+    this.#memory.visits[species] = memoryCount(
+      this.#memory.visits[species] + 1,
+    );
+    this.#revision += 1;
+    this.remember("visit", species, point);
+  }
+
   snapshot() {
-    return { memory: structuredClone(this.#memory), revision: this.#revision };
+    if (this.#snapshot?.revision !== this.#revision) {
+      this.#snapshot = observe({
+        memory: this.#memory,
+        revision: this.#revision,
+      });
+    }
+    return this.#snapshot;
+  }
+
+  exportMemory(): Memory {
+    return structuredClone(this.#memory);
   }
 
   restore(data: unknown): void {
@@ -45,6 +106,9 @@ export class Belongings {
       this.#width,
       this.#height,
     ).perch;
+    if (this.#memory.perch) {
+      this.remember("perch", "favourite spot", this.#memory.perch);
+    }
     this.#revision += 1;
   }
 
@@ -55,20 +119,26 @@ export class Belongings {
     }
   }
 
-  collect(item: Collectible): void {
+  collect(item: Collectible, point?: Point): void {
     this.#memory.collection[item] = Math.min(
       999,
       (this.#memory.collection[item] ?? 0) + 1,
     );
     this.#memory.greetings.lastDiscovery = item;
+    if (point) {
+      this.remember("gift", item, point);
+    }
     this.#revision += 1;
   }
 
-  rewardTrick(trick: Trick): number {
+  rewardTrick(trick: Trick, point?: Point): number {
     const learned = this.#memory.learned;
     if (learned.tricks[trick] < 6) {
       learned.tricks[trick] += 1;
       this.#revision += 1;
+    }
+    if (point) {
+      this.remember("reward", trick, point);
     }
     return learned.tricks[trick];
   }
@@ -82,6 +152,7 @@ export class Belongings {
     if (!location) {
       return;
     }
+    this.remember("meal", "chip", location);
     const learned = this.#memory.learned;
     const spot = learned.snackSpot;
     const previous = JSON.stringify(learned);
@@ -123,6 +194,12 @@ export class Belongings {
 
   forgetLearning(): void {
     this.#memory.learned = normalizeMemory(null).learned;
+    this.#memory.performances = { come: 0, spin: 0, dead: 0 };
+    this.#memory.episodes = this.#memory.episodes.filter((event) => {
+      return !["trick", "reward", "meal", "play", "scratch"].includes(
+        event.kind,
+      );
+    });
     this.#revision += 1;
   }
 

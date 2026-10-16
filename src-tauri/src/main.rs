@@ -2,6 +2,7 @@
 
 mod actions;
 mod caret;
+mod memory_store;
 mod native_input;
 mod roommate;
 mod shortcuts;

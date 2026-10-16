@@ -98,8 +98,8 @@ export class Gullbert {
     this.#visible = true;
     this.#body = new Body(width, height);
     this.#objects = new Props(width, height);
-    this.#belongings = new Belongings(width, height);
     this.#wallNow = options.now ?? Date.now;
+    this.#belongings = new Belongings(width, height, this.#wallNow);
     this.#moods = new Mood(
       () => {
         return this.#random();
@@ -318,7 +318,7 @@ export class Gullbert {
     return true;
   }
   exportMemory(): Memory {
-    return this.#belongings.snapshot().memory;
+    return this.#belongings.exportMemory();
   }
   restoreMemory(data: unknown) {
     this.#learning.cancelAssociations();
@@ -1022,6 +1022,16 @@ export class Gullbert {
         scene.phase === "victory" &&
         scene.rounds >= 3) ||
       (scene?.kind === "toss" && scene.phase === "eat");
+    if (
+      scene &&
+      !["trick", "habit", "guest", "gift", "typing"].includes(scene.kind)
+    ) {
+      if (played) {
+        this.#belongings.remember("play", scene.kind, this.#body);
+      } else {
+        this.#belongings.remember("activity", scene.kind, this.#body);
+      }
+    }
     this.#objects.releaseBag();
     this.#registry.complete();
     if (played) {

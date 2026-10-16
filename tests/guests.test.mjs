@@ -17,7 +17,7 @@ function advance(sim, seconds) {
   for (let i = 0; i < Math.ceil(seconds * 20); i++) sim.step(0.05);
 }
 function until(sim, phase) {
-  for (let i = 0; i < 600 && sim.inspect().scene?.phase !== phase; i++)
+  for (let i = 0; i < 1800 && sim.inspect().scene?.phase !== phase; i++)
     sim.step(0.05);
   assert.equal(sim.inspect().scene?.phase, phase);
 }
@@ -32,7 +32,7 @@ function drainFixtureBag(sim) {
   for (let serving = 0; serving < 3; serving++) sim.objects.consumeBag(id);
 }
 function untilFixture(sim, phase) {
-  for (let i = 0; i < 600 && sim.scene?.phase !== phase; i++) sim.step(0.05);
+  for (let i = 0; i < 1800 && sim.scene?.phase !== phase; i++) sim.step(0.05);
   assert.equal(sim.scene?.phase, phase);
 }
 function assertFixtureGone(sim) {
@@ -52,7 +52,7 @@ test("pigeon inspects the existing usable bag, faces off, judges and leaves", ()
   assert.equal(sim.present().props.length, 1);
   const phases = new Set();
   const guestLines = new Set();
-  for (let i = 0; i < 600; i++) {
+  for (let i = 0; i < 1800; i++) {
     phases.add(sim.inspect().scene?.phase);
     if (sim.present().guestSpeech)
       guestLines.add(sim.present().guestSpeech.text);
@@ -85,9 +85,11 @@ test("absent, empty, and vanished bags produce judgment without creating snacks"
     if (state === "emptied") drainFixtureBag(sim);
     untilFixture(sim, "faceoff");
     assert.equal(sim.scene.hasSnack, false);
+    assert.equal(guestSpeech(sim), null);
+    for (let tick = 0; tick < 200 && !guestSpeech(sim); tick++) sim.step(0.05);
     assert.equal(guestSpeech(sim).text, "clearly.");
     assert.equal(guestProps(sim).length, 1);
-    advance(sim, 25);
+    advance(sim, 60);
     assertFixtureGone(sim);
   }
 });
@@ -105,7 +107,7 @@ test("gull argument alternates visual reactions over one chip and ignores five",
   let sawGuestSquawk = false;
   let sawSnatchedChip = false;
   let sawContact = false;
-  for (let i = 0; i < 600; i++) {
+  for (let i = 0; i < 1800; i++) {
     const phase = sim.inspect().scene?.phase;
     phases.add(phase);
     const props = sim.present().props;
@@ -254,7 +256,7 @@ test("explicit visits work paused and a new pause does not strand an active gues
     until(sim, command === "invite_pigeon" ? "faceoff" : "posture");
     sim.configure({ paused: false, sound: false, mischief: 1 });
     sim.configure({ paused: true, sound: false, mischief: 0 });
-    advance(sim, 25);
+    advance(sim, 60);
     assertGone(sim);
   }
 });

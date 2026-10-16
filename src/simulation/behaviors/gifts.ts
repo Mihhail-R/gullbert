@@ -159,7 +159,7 @@ export class GiftRoutine implements SceneOwner {
     sim.lifecycle.rest(delay);
   }
   #collect(item: Collectible) {
-    this.#environment.belongings.collect(item);
+    this.#environment.belongings.collect(item, this.#environment.body);
   }
   #startGift(name: string) {
     const sim = this.#environment;

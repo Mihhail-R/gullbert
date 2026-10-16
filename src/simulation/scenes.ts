@@ -164,6 +164,8 @@ export interface GuestScene extends TheatreClock {
   hasSnack: boolean;
   chipTaken: boolean;
   guestText: string;
+  guestStarts: number;
+  guestUntil: number;
   departureOrigin: Point;
 }
 export interface DepartureScene extends TheatreClock {

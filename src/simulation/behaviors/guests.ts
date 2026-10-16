@@ -1,4 +1,5 @@
 import { dialogue } from "../dialogue.js";
+import { readingDuration } from "../speech.js";
 import { observe } from "../observation.js";
 import type { ReadonlyValue } from "../presentation.js";
 import { scopeCapabilities } from "../capabilities.js";
@@ -10,7 +11,8 @@ import type { SimulationView, BehaviorCapabilities } from "../capabilities.js";
 import type { SceneOwner } from "../routine.js";
 import type { Scene, GuestScene as OwnedScene } from "../scenes.js";
 
-const VISIT_LIMIT = 30;
+const VISIT_LIMIT = 90;
+const TURN_PAUSE = 0.4;
 
 function lerp(from: number, to: number, amount: number) {
   return from + (to - from) * amount;
@@ -142,7 +144,8 @@ export function guestSpeech(
     !sim.visible ||
     scene?.kind !== "guest" ||
     !scene.guestText ||
-    sim.time > scene.until
+    sim.time < scene.guestStarts ||
+    sim.time > scene.guestUntil
   ) {
     return null;
   }
@@ -166,6 +169,7 @@ type Environment = Pick<
   | "policy"
   | "events"
   | "commands"
+  | "belongings"
 >;
 interface GuestExchange {
   readonly gullbert: string;
@@ -173,7 +177,6 @@ interface GuestExchange {
 }
 
 export class GuestRoutine implements SceneOwner {
-  #visits = { pigeon: 0, gull: 0 };
   #dialogueIndex = 0;
 
   #exchange(
@@ -202,6 +205,7 @@ export class GuestRoutine implements SceneOwner {
       "policy",
       "events",
       "commands",
+      "belongings",
     ]);
   }
   get scene(): ReadonlyValue<OwnedScene> | null {
@@ -286,12 +290,30 @@ export class GuestRoutine implements SceneOwner {
     }
     scene.phase = phase;
     scene.phaseStarted = sim.clock.now;
-    scene.until = sim.clock.now + duration;
+    let mainDuration = 0;
+    if (mainText) {
+      mainDuration = readingDuration(mainText);
+    }
+    let guestDelay = 0;
+    if (mainText && guestText) {
+      guestDelay = mainDuration + TURN_PAUSE;
+    }
+    let guestDuration = 0;
+    if (guestText) {
+      guestDuration = readingDuration(guestText);
+    }
+    scene.guestStarts = sim.clock.now + guestDelay;
+    scene.guestUntil = scene.guestStarts + guestDuration;
+    scene.until = Math.max(
+      sim.clock.now + duration,
+      sim.clock.now + mainDuration,
+      scene.guestUntil,
+    );
     scene.guestText = guestText;
     sim.speech.clear();
     sim.speech.forget();
     if (mainText) {
-      sim.speech.say(mainText, duration);
+      sim.speech.say(mainText, mainDuration);
     }
     sim.body.resetMotion();
   }
@@ -365,12 +387,14 @@ export class GuestRoutine implements SceneOwner {
       phaseStarted: sim.clock.now,
       until: sim.clock.now,
       guestText: "",
+      guestStarts: sim.clock.now,
+      guestUntil: sim.clock.now,
       departureOrigin: guestTarget,
     };
     sim.activity.beginRoutine("guest");
     sim.activity.stopTravel();
     this.#cooldown();
-    this.#dialogueIndex = this.#visits[species]++;
+    this.#dialogueIndex = sim.belongings.snapshot().memory.visits[species];
     if (species === "pigeon") {
       this.#exchange("arrival", 2.6, dialogue.guests.pigeon.arrival);
     } else {
@@ -397,6 +421,8 @@ export class GuestRoutine implements SceneOwner {
     scene.departureOrigin = { x: scene.guest.x, y: scene.guest.y - 35 };
     scene.guest.facing = 1;
     this.#exchange("departure", 2.4, lines);
+    // Finish the farewell while both birds are still readable, then walk out.
+    scene.until += 2.4;
   }
   #finish() {
     const sim = this.#environment;
@@ -433,6 +459,7 @@ export class GuestRoutine implements SceneOwner {
         dt,
       );
       if (sim.clock.now >= scene.until) {
+        sim.belongings.visited(scene.species, mainTarget);
         sim.body.place({ x: mainTarget.x, y: sim.body.y });
         sim.body.place({ x: sim.body.x, y: mainTarget.y });
         guest.x = guestTarget.x;
@@ -444,7 +471,7 @@ export class GuestRoutine implements SceneOwner {
         }
       }
     } else if (scene.phase === "departure") {
-      const progress = clamp((sim.clock.now - scene.phaseStarted) / 2.4, 0, 1);
+      const progress = clamp((sim.clock.now - (scene.until - 2.4)) / 2.4, 0, 1);
       guest.x = lerp(scene.departureOrigin.x, sim.body.width + 100, progress);
       guest.y = guestTarget.y;
       if (sim.clock.now >= scene.until) {

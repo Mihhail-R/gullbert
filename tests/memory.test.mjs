@@ -5,7 +5,10 @@ import { Gullbert } from "../web-dist/simulation/engine.js";
 
 test("missing and malformed snapshots produce fresh, empty durable memories", () => {
   const expected = {
-    version: 1,
+    version: 2,
+    episodes: [],
+    performances: { come: 0, spin: 0, dead: 0 },
+    visits: { pigeon: 0, gull: 0 },
     learned: {
       tricks: { come: 0, spin: 0, dead: 0 },
       snackSpot: null,
@@ -61,7 +64,7 @@ test("only finite supported treasure counts and bounded greeting data survive", 
     scene: { kind: "gift" },
     settings: { paused: true },
   });
-  assert.equal(memory.version, 1);
+  assert.equal(memory.version, 2);
   assert.deepEqual(memory.collection, { bottle_cap: 3, bent_spoon: 999 });
   assert.equal(memory.greetings.seen, false);
   assert.equal(memory.greetings.lastAt, 0);

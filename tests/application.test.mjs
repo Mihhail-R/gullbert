@@ -264,6 +264,36 @@ test("disposal drains queued memory snapshots without publishing late write resu
   assert.equal(h.activeListeners, 0);
 });
 
+test("failed memory writes retry the latest snapshot after backoff without requiring another memory", async () => {
+  let fail = true;
+  let attempts = 0;
+  const h = harness({
+    save() {
+      attempts++;
+      if (fail) throw new Error("disk unavailable");
+    },
+  });
+  await h.app.start();
+  await settle();
+  assert.equal(attempts, 1);
+  assert.match(
+    h.published.filter((message) => message.type === "roommate").at(-1).error,
+    /retrying/,
+  );
+  h.displayFrame(4900);
+  await settle();
+  assert.equal(attempts, 1);
+  fail = false;
+  h.displayFrame(200);
+  await settle();
+  assert.equal(attempts, 2);
+  assert.equal(
+    h.published.filter((message) => message.type === "roommate").at(-1).error,
+    "",
+  );
+  await h.app.dispose();
+});
+
 test("a stale targeting deadline cannot finish a newer targeting session", async () => {
   const h = harness();
   await h.app.start();

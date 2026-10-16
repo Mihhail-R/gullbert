@@ -134,7 +134,7 @@
           "reveal": "a sleeping bag. probably."
         },
         "glass_diamond": {
-          "name": "Glass \u2018diamond\u2019",
+          "name": "Glass ‘diamond’",
           "description": "Priceless. According to me.",
           "reveal": "a completely real diamond."
         },
@@ -309,19 +309,59 @@
     },
     "learning": {
       "consider": {
-        "come": "you mean over there?",
-        "spin": "a full bird rotation?",
-        "dead": "this is extremely dramatic."
+        "come": [
+          "you mean over there?",
+          "back to this spot? coming.",
+          "another meeting? on my way."
+        ],
+        "spin": [
+          "a full bird rotation?",
+          "another lap. i remember.",
+          "yes, yes. the turning trick."
+        ],
+        "dead": [
+          "this is extremely dramatic.",
+          "another tragic ending?",
+          "i survived the last rehearsal."
+        ]
       },
       "perform": {
-        "come": "fine. coming.",
-        "spin": "observe the technique.",
-        "dead": "alas. a tragic gull."
+        "come": [
+          "fine. coming.",
+          "i know the drill. coming.",
+          "reporting for chip duty."
+        ],
+        "spin": [
+          "observe the technique.",
+          "one well-practiced bird rotation.",
+          "this routine pays in chips."
+        ],
+        "dead": [
+          "alas. a tragic gull.",
+          "my finest dramatic work.",
+          "a veteran of several tragic endings."
+        ]
       },
-      "reward": "performance complete. chip please.",
-      "learned": "oh. trick first. chip second.",
-      "reinforced": "a fair business arrangement.",
-      "mastered": "professionally trained nuisance.",
+      "reward": [
+        "performance complete. chip please.",
+        "done again. chip please.",
+        "another performance. chip please."
+      ],
+      "learned": [
+        "oh. trick first. chip second.",
+        "i remember now. this trick earns a chip.",
+        "three paid performances. we have a deal."
+      ],
+      "reinforced": [
+        "a fair business arrangement.",
+        "trick, then chip. noted.",
+        "this is becoming a routine."
+      ],
+      "mastered": [
+        "professionally trained nuisance.",
+        "a seasoned professional. paid in chips.",
+        "still got it. still hungry."
+      ],
       "unpaid": "i will invoice you.",
       "showoff": "i know this one. watch.",
       "checkSpot": "this is where the chips happen.",
@@ -467,11 +507,11 @@
       ],
       "snatch": [
         {
-          "gullbert": "wait\u2014",
+          "gullbert": "wait—",
           "visitor": "yoink."
         },
         {
-          "gullbert": "objection\u2014",
+          "gullbert": "objection—",
           "visitor": "overruled."
         }
       ],

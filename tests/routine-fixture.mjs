@@ -1,3 +1,4 @@
+import { Belongings } from "../web-dist/simulation/belongings.js";
 import { Activity } from "../web-dist/simulation/activity.js";
 import { Props } from "../web-dist/simulation/props.js";
 import { Body } from "../web-dist/simulation/body.js";
@@ -168,6 +169,7 @@ export function routineFixture(Routine, random = () => 0.5) {
   }
   capabilities.objects = objects;
   capabilities.body = body;
+  capabilities.belongings = new Belongings(sim.width, sim.height);
   capabilities.random = () => sim.random();
   capabilities.clock = {
     get now() {

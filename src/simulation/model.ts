@@ -41,7 +41,10 @@ export interface LearnedHabits {
   scratchesAfterPlay: number;
 }
 export interface Memory {
-  version: 1;
+  version: 2;
+  episodes: MemoryEpisode[];
+  performances: Record<Trick, number>;
+  visits: Record<"pigeon" | "gull", number>;
   learned: LearnedHabits;
   perch: Point | null;
   collection: Partial<Record<Collectible, number>>;
@@ -51,6 +54,22 @@ export interface Memory {
     lastLine: string;
     lastDiscovery: Collectible | null;
   };
+}
+export interface MemoryEpisode {
+  id: number;
+  at: number;
+  kind:
+    | "trick"
+    | "reward"
+    | "meal"
+    | "play"
+    | "scratch"
+    | "gift"
+    | "perch"
+    | "visit"
+    | "activity";
+  detail: string;
+  location: Point & { width: number; height: number };
 }
 export interface Bag extends Point {
   id: number;

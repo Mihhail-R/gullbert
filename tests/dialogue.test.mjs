@@ -133,6 +133,10 @@ test("repeat guest visits rotate paired dialogue independently for each species"
       const alternatives = dialogue.guests[species][beat];
       const expected = alternatives[visit % alternatives.length];
       assert.equal(sim.inspect().bubble, expected.gullbert);
+      assert.equal(sim.present().guestSpeech, null);
+      for (let tick = 0; tick < 200 && !sim.present().guestSpeech; tick++)
+        sim.step(0.05);
+      assert.equal(sim.inspect().bubble, "");
       assert.equal(sim.present().guestSpeech.text, expected.visitor);
       sim.action("cancel");
       assert.equal(sim.present().guestSpeech, null);

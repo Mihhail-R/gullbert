@@ -51,6 +51,7 @@ export class PetApplication {
   #savedRevision = -1;
   #statusKey = "";
   #storageError = "";
+  #nextMemoryRetry = 0;
   #chewingToken: object | null = null;
   #cursorLeaseScene: CursorLeaseScene | null = null;
   #reactionLease: { token: object; id: number } | null = null;
@@ -211,6 +212,9 @@ export class PetApplication {
     if (this.#shutdown) {
       return this.#shutdown;
     }
+    // Retry the latest local snapshot once at shutdown even during retry backoff.
+    this.#nextMemoryRetry = 0;
+    this.#remember();
     this.#lifecycle = "disposed";
     this.#generation++;
     this.#targetGeneration++;
@@ -481,9 +485,12 @@ export class PetApplication {
     }
     if (error) {
       this.#storageError =
-        "Could not save Gullbert's belongings. They remain available for this session.";
+        "Could not save Gullbert's memories. They remain available for this session; retrying shortly.";
+      this.#savedRevision = -1;
+      this.#nextMemoryRetry = this.#dependencies.clock.now() + 5000;
     } else {
       this.#storageError = "";
+      this.#nextMemoryRetry = 0;
     }
     this.#publishRoommate(true);
   }
@@ -521,6 +528,7 @@ export class PetApplication {
     if (
       !this.#running() ||
       !this.#initialized ||
+      this.#dependencies.clock.now() < this.#nextMemoryRetry ||
       this.#savedRevision === revision
     ) {
       return;
