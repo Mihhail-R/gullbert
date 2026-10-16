@@ -27,13 +27,10 @@ export class Belongings {
 
   remember(kind: MemoryEpisode["kind"], detail: string, point: Point): void {
     const at = this.#now();
-    if (
-      !Number.isFinite(at) ||
-      at < 0 ||
-      at > 8.64e15 ||
-      !Number.isFinite(point.x) ||
-      !Number.isFinite(point.y)
-    ) {
+    if (!Number.isFinite(at) || at < 0 || at > 8.64e15) {
+      return;
+    }
+    if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) {
       return;
     }
     const episodes = this.#memory.episodes;

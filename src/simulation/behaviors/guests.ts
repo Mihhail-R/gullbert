@@ -140,9 +140,10 @@ export function guestSpeech(
   sim: Pick<SimulationView, "scene" | "visible" | "time">,
 ) {
   const scene = sim.scene;
+  if (!sim.visible || scene?.kind !== "guest") {
+    return null;
+  }
   if (
-    !sim.visible ||
-    scene?.kind !== "guest" ||
     !scene.guestText ||
     sim.time < scene.guestStarts ||
     sim.time > scene.guestUntil

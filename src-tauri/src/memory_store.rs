@@ -70,34 +70,35 @@ fn validate(memory: &Value) -> Result<Vec<Episode>, String> {
     let mut ids = HashSet::new();
     for event in &episodes {
         let p = &event.location;
-        if event.id <= 0
-            || event.id > 9_007_199_254_740_991
-            || !ids.insert(event.id)
-            || event.at < 0
-            || event.at > 8_640_000_000_000_000
-            || event.detail.is_empty()
-            || event.detail.chars().count() > 80
-            || !matches!(
-                event.kind.as_str(),
-                "trick"
-                    | "reward"
-                    | "meal"
-                    | "play"
-                    | "scratch"
-                    | "gift"
-                    | "perch"
-                    | "visit"
-                    | "activity"
-            )
-            || ![p.x, p.y, p.width, p.height].iter().all(|n| n.is_finite())
-            || p.width <= 0.0
-            || p.height <= 0.0
-            || p.x < 0.0
-            || p.y < 0.0
-            || p.x > p.width
-            || p.y > p.height
-        {
-            return Err("Invalid memory experience".into());
+        if event.id <= 0 || event.id > 9_007_199_254_740_991 {
+            return Err("Invalid memory experience ID".into());
+        }
+        let unique = ids.insert(event.id);
+        if !unique {
+            return Err("Duplicate memory experience ID".into());
+        }
+        if event.at < 0 || event.at > 8_640_000_000_000_000 {
+            return Err("Invalid memory experience timestamp".into());
+        }
+        if event.detail.is_empty() || event.detail.chars().count() > 80 {
+            return Err("Invalid memory experience detail".into());
+        }
+        match event.kind.as_str() {
+            "trick" | "reward" | "meal" | "play" | "scratch" | "gift" | "perch" | "visit"
+            | "activity" => {}
+            _ => return Err("Invalid memory experience kind".into()),
+        }
+        if ![p.x, p.y, p.width, p.height].iter().all(|n| n.is_finite()) {
+            return Err("Invalid memory experience coordinates".into());
+        }
+        if p.width <= 0.0 || p.height <= 0.0 {
+            return Err("Invalid memory experience display size".into());
+        }
+        if p.x < 0.0 || p.x > p.width {
+            return Err("Memory experience x is outside the display".into());
+        }
+        if p.y < 0.0 || p.y > p.height {
+            return Err("Memory experience y is outside the display".into());
         }
     }
     Ok(episodes)

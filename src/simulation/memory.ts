@@ -85,21 +85,29 @@ export function normalizeMemory(
       if (
         !finite(event.id) ||
         !Number.isSafeInteger(event.id) ||
-        event.id < 1 ||
-        ids.has(event.id) ||
-        !finite(event.at) ||
-        event.at < 0 ||
-        event.at > 8.64e15 ||
-        !episodeKinds.has(event.kind as MemoryEpisode["kind"]) ||
-        typeof event.detail !== "string" ||
-        !event.detail.trim() ||
-        !finite(location.x) ||
-        !finite(location.y) ||
-        !finite(location.width) ||
-        !finite(location.height) ||
-        location.width <= 0 ||
-        location.height <= 0
+        event.id < 1
       ) {
+        continue;
+      }
+      if (ids.has(event.id)) {
+        continue;
+      }
+      if (!finite(event.at) || event.at < 0 || event.at > 8.64e15) {
+        continue;
+      }
+      if (!episodeKinds.has(event.kind as MemoryEpisode["kind"])) {
+        continue;
+      }
+      if (typeof event.detail !== "string" || !event.detail.trim()) {
+        continue;
+      }
+      if (!finite(location.x) || !finite(location.y)) {
+        continue;
+      }
+      if (!finite(location.width) || location.width <= 0) {
+        continue;
+      }
+      if (!finite(location.height) || location.height <= 0) {
         continue;
       }
       ids.add(event.id);
