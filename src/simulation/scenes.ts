@@ -206,19 +206,22 @@ export interface PostcardScene extends TheatreClock {
 }
 export type GagScene =
   DepartureScene | EggScene | MunicipalScene | ApologyScene | PostcardScene;
+export const gagKinds = [
+  "pretend_leave",
+  "cursor_egg",
+  "municipal_gull",
+  "apology",
+  "postcards",
+] as const satisfies readonly GagScene["kind"][];
+
+export function isGagKind(kind: string): kind is GagScene["kind"] {
+  return gagKinds.some((gagKind) => gagKind === kind);
+}
+
 export function isGag(
   scene: ReadonlyValue<Scene> | null,
 ): scene is ReadonlyValue<GagScene> {
-  return (
-    scene !== null &&
-    [
-      "pretend_leave",
-      "cursor_egg",
-      "municipal_gull",
-      "apology",
-      "postcards",
-    ].includes(scene.kind)
-  );
+  return scene !== null && isGagKind(scene.kind);
 }
 export type TheatreScene = BubblesScene | BathScene | TossScene | BaguetteScene;
 export interface RelocationScene extends TimedScene {
