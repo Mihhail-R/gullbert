@@ -118,13 +118,11 @@ function paintedBeakTouchesChip(sim, prop) {
             16) /
           prop.height;
         if (
-          chipRuns.some(
-            ([cx, cy, cw, ch]) =>
-              localX >= cx &&
-              localX < cx + cw &&
-              localY >= cy &&
-              localY < cy + ch,
-          )
+          chipRuns.some(([cx, cy, cw, ch]) => {
+            const withinWidth = localX >= cx && localX < cx + cw;
+            const withinHeight = localY >= cy && localY < cy + ch;
+            return withinWidth && withinHeight;
+          })
         )
           return true;
       }

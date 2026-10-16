@@ -1,6 +1,6 @@
 import { scopeCapabilities } from "../capabilities.js";
 import type { BehaviorCapabilities } from "../capabilities.js";
-import { beakOffsetX, clamp } from "../geometry.js";
+import { isPointOnScreen, beakOffsetX, clamp } from "../geometry.js";
 import { dialogue } from "../dialogue.js";
 import { capHitRect } from "../interaction.js";
 import type { Point, PointerSample } from "../model.js";
@@ -85,11 +85,15 @@ export class CapRoutine implements SceneOwner {
 
   pointerSample(point: PointerSample | null): void {
     const scene = this.#scene;
+    if (!scene || !point || point.inside === false) {
+      return;
+    }
     if (
-      !scene ||
-      !point ||
-      point.inside === false ||
-      !this.#validPoint(point)
+      !isPointOnScreen(
+        point,
+        this.#environment.body.width,
+        this.#environment.body.height,
+      )
     ) {
       return;
     }
@@ -100,7 +104,17 @@ export class CapRoutine implements SceneOwner {
   flick(point: Point): boolean {
     const scene = this.#scene;
     const rect = capHitRect(scene);
-    if (!scene || !rect || !this.#validPoint(point) || !contains(rect, point)) {
+    if (!scene || !rect) {
+      return false;
+    }
+    if (
+      !isPointOnScreen(
+        point,
+        this.#environment.body.width,
+        this.#environment.body.height,
+      ) ||
+      !contains(rect, point)
+    ) {
       return false;
     }
     const sim = this.#environment;
@@ -162,64 +176,87 @@ export class CapRoutine implements SceneOwner {
       this.#finish(dialogue.gullbert.cap.abandoned);
       return "complete";
     }
-    if (scene.phase === "drop") {
-      this.#slideCap(220, dt);
-      if (sim.clock.now >= scene.until) {
-        scene.cap = { ...scene.target };
-        this.#phase("ready", READY_SECONDS);
-      }
-    } else if (scene.phase === "ready") {
-      if (sim.clock.now >= scene.until) {
-        this.#phase("collect", 7);
-        sim.speech.say(dialogue.gullbert.cap.forfeit, 1.5);
-      }
-    } else if (scene.phase === "chase") {
-      const stopped = this.#slideCap(CAP_SPEED, dt);
-      const arrived = this.#approachCap(dt);
-      if (stopped && arrived) {
-        this.#phase("peck", 0.3);
-      } else if (sim.clock.now >= scene.until) {
-        this.#phase("collect", 7);
-      }
-    } else if (scene.phase === "peck" && sim.clock.now >= scene.until) {
-      scene.rounds += 1;
-      scene.target = this.#onScreen(scene.pointer ?? scene.cap);
-      this.#phase("return", 6);
-      if (scene.rounds >= 3) {
-        sim.speech.say(dialogue.gullbert.cap.lastReturn, 1.4);
-      } else {
-        sim.speech.say(dialogue.gullbert.cap.yourMove, 1.4);
-      }
-    } else if (scene.phase === "return") {
-      if (this.#slideCap(CAP_SPEED, dt) || sim.clock.now >= scene.until) {
-        scene.cap = { ...scene.target };
-        if (scene.rounds >= 3) {
-          this.#phase("collect", 7);
-        } else {
+    switch (scene.phase) {
+      case "drop": {
+        this.#slideCap(220, dt);
+        if (sim.clock.now >= scene.until) {
+          scene.cap = { ...scene.target };
           this.#phase("ready", READY_SECONDS);
         }
+
+        break;
       }
-    } else if (scene.phase === "collect") {
-      if (this.#approachCap(dt)) {
-        scene.carrying = true;
-        let direction = 1;
-        if (sim.body.x + 48 > sim.body.width / 2) {
-          direction = -1;
+      case "ready": {
+        if (sim.clock.now >= scene.until) {
+          this.#phase("collect", 7);
+          sim.speech.say(dialogue.gullbert.cap.forfeit, 1.5);
         }
-        scene.target = sim.body.safePoint({
-          x: sim.body.x + direction * 150,
-          y: sim.body.y,
-        });
-        this.#phase("victory", 1.5);
-        sim.speech.say(dialogue.gullbert.cap.victory, 3);
-      } else if (sim.clock.now >= scene.until) {
-        this.#finish(dialogue.gullbert.cap.keepingTrophy);
+
+        break;
       }
-    } else if (scene.phase === "victory") {
-      sim.body.moveToward(scene.target, 180, dt);
-      scene.cap = this.#mouth();
-      if (sim.clock.now >= scene.until) {
-        this.#finish();
+      case "chase": {
+        const stopped = this.#slideCap(CAP_SPEED, dt);
+        const arrived = this.#approachCap(dt);
+        if (stopped && arrived) {
+          this.#phase("peck", 0.3);
+        } else if (sim.clock.now >= scene.until) {
+          this.#phase("collect", 7);
+        }
+
+        break;
+      }
+      case "peck": {
+        if (sim.clock.now >= scene.until) {
+          scene.rounds += 1;
+          scene.target = this.#onScreen(scene.pointer ?? scene.cap);
+          this.#phase("return", 6);
+          if (scene.rounds >= 3) {
+            sim.speech.say(dialogue.gullbert.cap.lastReturn, 1.4);
+          } else {
+            sim.speech.say(dialogue.gullbert.cap.yourMove, 1.4);
+          }
+        }
+        break;
+      }
+      case "return": {
+        if (this.#slideCap(CAP_SPEED, dt) || sim.clock.now >= scene.until) {
+          scene.cap = { ...scene.target };
+          if (scene.rounds >= 3) {
+            this.#phase("collect", 7);
+          } else {
+            this.#phase("ready", READY_SECONDS);
+          }
+        }
+
+        break;
+      }
+      case "collect": {
+        if (this.#approachCap(dt)) {
+          scene.carrying = true;
+          let direction = 1;
+          if (sim.body.x + 48 > sim.body.width / 2) {
+            direction = -1;
+          }
+          scene.target = sim.body.safePoint({
+            x: sim.body.x + direction * 150,
+            y: sim.body.y,
+          });
+          this.#phase("victory", 1.5);
+          sim.speech.say(dialogue.gullbert.cap.victory, 3);
+        } else if (sim.clock.now >= scene.until) {
+          this.#finish(dialogue.gullbert.cap.keepingTrophy);
+        }
+
+        break;
+      }
+      case "victory": {
+        sim.body.moveToward(scene.target, 180, dt);
+        scene.cap = this.#mouth();
+        if (sim.clock.now >= scene.until) {
+          this.#finish();
+        }
+
+        break;
       }
     }
     if (!this.#scene) {
@@ -283,18 +320,6 @@ export class CapRoutine implements SceneOwner {
         },
       ],
     };
-  }
-
-  #validPoint(point: Point): boolean {
-    const body = this.#environment.body;
-    return (
-      Number.isFinite(point.x) &&
-      Number.isFinite(point.y) &&
-      point.x >= 0 &&
-      point.y >= 0 &&
-      point.x <= body.width &&
-      point.y <= body.height
-    );
   }
 
   #onScreen(point: Point): Point {

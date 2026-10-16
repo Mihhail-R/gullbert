@@ -29,9 +29,13 @@ pub(super) fn access() -> i32 {
     if *SUPPORTED.get_or_init(|| unsafe {
         let mut version: OSVERSIONINFOW = zeroed();
         version.dwOSVersionInfoSize = size_of::<OSVERSIONINFOW>() as u32;
-        RtlGetVersion(&mut version) == 0
-            && (version.dwMajorVersion > 10
-                || (version.dwMajorVersion == 10 && version.dwBuildNumber >= 19041))
+        if RtlGetVersion(&mut version) != 0 {
+            return false;
+        }
+        match version.dwMajorVersion {
+            10 => version.dwBuildNumber >= 19041,
+            major => major > 10,
+        }
     }) {
         3
     } else {

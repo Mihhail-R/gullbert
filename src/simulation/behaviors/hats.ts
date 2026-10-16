@@ -3,16 +3,15 @@ import type { Hat, Settings } from "../model.js";
 import type { SimulationView } from "../capabilities.js";
 /** Hats are presentation only: selection never owns or interrupts a scene. */
 export function normalizeHat(value: unknown): Hat {
-  if (
-    value === "captain" ||
-    value === "cone" ||
-    value === "beanie" ||
-    value === "paper-crown" ||
-    value === "fried-egg"
-  ) {
-    return value;
-  } else {
-    return "none";
+  switch (value) {
+    case "captain":
+    case "cone":
+    case "beanie":
+    case "paper-crown":
+    case "fried-egg":
+      return value;
+    default:
+      return "none";
   }
 }
 
@@ -33,13 +32,26 @@ export function hatPlacement(
   }
   const pose = sim.pose ?? "idle";
   const scene = sim.scene;
+  if (sim.bag?.attached) {
+    return null;
+  }
+  switch (scene?.kind) {
+    case "gift":
+      if (scene.carrying) {
+        return null;
+      }
+      break;
+    case "baguette":
+      return null;
+    case "bath":
+      if (["splash", "shake"].includes(scene.phase)) {
+        return null;
+      }
+      break;
+  }
   if (
-    sim.bag?.attached ||
-    (scene?.kind === "gift" && scene.carrying) ||
-    scene?.kind === "baguette" ||
     ["bag-trapped", "bag-panic", "bag-shake", "theft-grip"].includes(pose) ||
-    pose.startsWith("bath-") ||
-    (scene?.kind === "bath" && ["splash", "shake"].includes(scene.phase))
+    pose.startsWith("bath-")
   ) {
     return null;
   }

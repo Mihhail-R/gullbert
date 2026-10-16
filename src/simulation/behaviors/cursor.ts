@@ -2,7 +2,7 @@ import { dialogue } from "../dialogue.js";
 import { observe } from "../observation.js";
 import type { ReadonlyValue } from "../presentation.js";
 import { scopeCapabilities } from "../capabilities.js";
-import { beakOffsetX } from "../geometry.js";
+import { isPointOnScreen, beakOffsetX } from "../geometry.js";
 import type { Point, PointerSample } from "../model.js";
 import type { Pose } from "../poses.js";
 import type { SimulationView, BehaviorCapabilities } from "../capabilities.js";
@@ -158,12 +158,7 @@ export class CursorRoutine implements SceneOwner {
     if (
       !point ||
       point.inside === false ||
-      !Number.isFinite(point.x) ||
-      !Number.isFinite(point.y) ||
-      point.x < 0 ||
-      point.y < 0 ||
-      point.x > sim.body.width ||
-      point.y > sim.body.height
+      !isPointOnScreen(point, sim.body.width, sim.body.height)
     ) {
       sim.lifecycle.complete();
       sim.lifecycle.rest();
@@ -245,84 +240,107 @@ export class CursorRoutine implements SceneOwner {
       }
       return true;
     }
-    if (scene.phase === "stare") {
-      if (scene.pointer.x >= sim.body.x + 48) {
-        sim.body.face(1 as -1 | 1);
-      } else {
-        sim.body.face(-1 as -1 | 1);
-      }
-      if (sim.clock.now >= scene.until) {
-        scene.phase = "stalk";
-      }
-    } else if (scene.phase === "stalk") {
-      let facing;
-      if (scene.pointer.x >= sim.body.x + 48) {
-        facing = 1;
-      } else {
-        facing = -1;
-      }
-      const target = {
-        x: scene.pointer.x - beakOffsetX(facing),
-        y: scene.pointer.y - 48,
-      };
-      sim.body.moveToward(target, 210, dt);
-      sim.body.face(facing as -1 | 1);
-      const beak = { x: sim.body.x + beakOffsetX(facing), y: sim.body.y + 48 };
-      if (Math.hypot(beak.x - scene.pointer.x, beak.y - scene.pointer.y) < 27) {
-        scene.phase = "peck";
-        scene.until = sim.clock.now + 0.38;
-        if (scene.retaliation) {
-          sim.speech.say(dialogue.gullbert.cursor.gotYou, 0.65);
+    switch (scene.phase) {
+      case "stare": {
+        if (scene.pointer.x >= sim.body.x + 48) {
+          sim.body.face(1 as -1 | 1);
         } else {
-          sim.speech.say(dialogue.gullbert.cursor.nom, 0.65);
+          sim.body.face(-1 as -1 | 1);
         }
+        if (sim.clock.now >= scene.until) {
+          scene.phase = "stalk";
+        }
+
+        break;
       }
-    } else if (scene.phase === "peck" && sim.clock.now >= scene.until) {
-      const beak = cursorBeak(sim.body);
-      if (
-        Math.hypot(beak.x - scene.pointer.x, beak.y - scene.pointer.y) >= 27
-      ) {
-        scene.phase = "stalk";
-        if (scene.retaliation) {
-          sim.speech.say(dialogue.gullbert.cursor.comeBackHere, 1);
+      case "stalk": {
+        let facing;
+        if (scene.pointer.x >= sim.body.x + 48) {
+          facing = 1;
         } else {
-          sim.speech.say(dialogue.gullbert.cursor.holdStillLunch, 1);
+          facing = -1;
         }
-        return true;
-      }
-      if (scene.takeover && scene.deadline - sim.clock.now > 1.3) {
-        scene.phase = "chew";
-        scene.caughtAt = sim.clock.now;
-        scene.until = sim.clock.now + 1.2;
-        sim.speech.say(dialogue.gullbert.cursor.mineEscToEscape, 1.2);
-        sim.events.emit("munch");
-        return true;
-      }
-      this.releaseCursor();
-      sim.body.moveToward(
-        { x: sim.body.x - sim.body.facing * 14, y: sim.body.y },
-        140,
-        0.1,
-      );
-      sim.speech.say(dialogue.gullbert.cursor.notAChip, 2);
-      sim.events.emit("munch");
-    } else if (scene.phase === "chew") {
-      if (sim.clock.now >= scene.until) {
-        this.releaseCursor();
-      } else {
-        const facing = sim.body.facing;
-        sim.body.moveToward(
-          { x: sim.body.x - facing * 30, y: sim.body.y },
-          30,
-          dt,
-        );
+        const target = {
+          x: scene.pointer.x - beakOffsetX(facing),
+          y: scene.pointer.y - 48,
+        };
+        sim.body.moveToward(target, 210, dt);
         sim.body.face(facing as -1 | 1);
+        const beak = {
+          x: sim.body.x + beakOffsetX(facing),
+          y: sim.body.y + 48,
+        };
+        if (
+          Math.hypot(beak.x - scene.pointer.x, beak.y - scene.pointer.y) < 27
+        ) {
+          scene.phase = "peck";
+          scene.until = sim.clock.now + 0.38;
+          if (scene.retaliation) {
+            sim.speech.say(dialogue.gullbert.cursor.gotYou, 0.65);
+          } else {
+            sim.speech.say(dialogue.gullbert.cursor.nom, 0.65);
+          }
+        }
+
+        break;
       }
-    } else if (scene.phase === "recoil" && sim.clock.now >= scene.until) {
-      if (scene.retaliation) {
-        this.#finish(dialogue.gullbert.cursor.considerUsEven);
-      } else {
-        this.#finish(dialogue.gullbert.cursor.notAChip);
+      case "peck": {
+        if (sim.clock.now >= scene.until) {
+          const beak = cursorBeak(sim.body);
+          if (
+            Math.hypot(beak.x - scene.pointer.x, beak.y - scene.pointer.y) >= 27
+          ) {
+            scene.phase = "stalk";
+            if (scene.retaliation) {
+              sim.speech.say(dialogue.gullbert.cursor.comeBackHere, 1);
+            } else {
+              sim.speech.say(dialogue.gullbert.cursor.holdStillLunch, 1);
+            }
+            return true;
+          }
+          if (scene.takeover && scene.deadline - sim.clock.now > 1.3) {
+            scene.phase = "chew";
+            scene.caughtAt = sim.clock.now;
+            scene.until = sim.clock.now + 1.2;
+            sim.speech.say(dialogue.gullbert.cursor.mineEscToEscape, 1.2);
+            sim.events.emit("munch");
+            return true;
+          }
+          this.releaseCursor();
+          sim.body.moveToward(
+            { x: sim.body.x - sim.body.facing * 14, y: sim.body.y },
+            140,
+            0.1,
+          );
+          sim.speech.say(dialogue.gullbert.cursor.notAChip, 2);
+          sim.events.emit("munch");
+        }
+        break;
+      }
+      case "chew": {
+        if (sim.clock.now >= scene.until) {
+          this.releaseCursor();
+        } else {
+          const facing = sim.body.facing;
+          sim.body.moveToward(
+            { x: sim.body.x - facing * 30, y: sim.body.y },
+            30,
+            dt,
+          );
+          sim.body.face(facing as -1 | 1);
+        }
+
+        break;
+      }
+      case "recoil": {
+        if (sim.clock.now >= scene.until) {
+          if (scene.retaliation) {
+            this.#finish(dialogue.gullbert.cursor.considerUsEven);
+          } else {
+            this.#finish(dialogue.gullbert.cursor.notAChip);
+          }
+        }
+        break;
       }
     }
     return true;

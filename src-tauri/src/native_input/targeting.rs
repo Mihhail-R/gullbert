@@ -3,14 +3,16 @@ use serde::Serialize;
 use std::time::Duration;
 
 pub fn valid_point(x: f64, y: f64, size: (u32, u32), scale: f64) -> bool {
-    x.is_finite()
-        && y.is_finite()
-        && scale.is_finite()
-        && scale > 0.0
-        && x >= 0.0
-        && y >= 0.0
-        && x < f64::from(size.0) / scale
-        && y < f64::from(size.1) / scale
+    if !x.is_finite() || !y.is_finite() {
+        return false;
+    }
+    if !scale.is_finite() || scale <= 0.0 {
+        return false;
+    }
+    if x < 0.0 || x >= f64::from(size.0) / scale {
+        return false;
+    }
+    y >= 0.0 && y < f64::from(size.1) / scale
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

@@ -47,9 +47,13 @@ void *gsp_select(int pid) {
         pid_t owner = 0;
         if (AXUIElementGetPid(window, &owner) != kAXErrorSuccess || owner != pid) return NULL;
         if (AXUIElementSetMessagingTimeout(window, 0.1) != kAXErrorSuccess) return NULL;
-        if (![attribute(window, kAXSubroleAttribute) isEqual:(__bridge NSString *)kAXStandardWindowSubrole]
-            || !is_false(window, kAXMinimizedAttribute) || !is_false(window, CFSTR("AXFullScreen"))
-            || !is_false(window, kAXModalAttribute)) return NULL;
+        if (![attribute(window, kAXSubroleAttribute) isEqual:(__bridge NSString *)kAXStandardWindowSubrole]) {
+            return NULL;
+        }
+        if (!is_false(window, kAXMinimizedAttribute) || !is_false(window, CFSTR("AXFullScreen"))
+            || !is_false(window, kAXModalAttribute)) {
+            return NULL;
+        }
         id children = attribute(window, kAXChildrenAttribute);
         if (![children isKindOfClass:NSArray.class] || [children count] > 64) return NULL;
         for (id child in children) {
@@ -70,8 +74,11 @@ void gsp_release(void *window) { CFRelease(window); }
 int gsp_frame(void *window, GSPFrame *frame) {
     @autoreleasepool {
         id p = attribute(window, kAXPositionAttribute), s = attribute(window, kAXSizeAttribute);
-        if (!p || !s || CFGetTypeID((__bridge CFTypeRef)p) != AXValueGetTypeID()
-            || CFGetTypeID((__bridge CFTypeRef)s) != AXValueGetTypeID()) return -1;
+        if (!p || !s) { return -1; }
+        if (CFGetTypeID((__bridge CFTypeRef)p) != AXValueGetTypeID()
+            || CFGetTypeID((__bridge CFTypeRef)s) != AXValueGetTypeID()) {
+            return -1;
+        }
         CGPoint point; CGSize size;
         if (!AXValueGetValue((__bridge AXValueRef)p, kAXValueCGPointType, &point)
             || !AXValueGetValue((__bridge AXValueRef)s, kAXValueCGSizeType, &size)) return -1;

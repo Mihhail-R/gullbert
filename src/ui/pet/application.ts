@@ -594,13 +594,10 @@ export class PetApplication {
     const sim = this.#dependencies.simulation;
     const encounter = sim.cursorEncounter();
     let caughtPointer = null;
-    if (
-      !this.#dependencies.native &&
-      this.#visible &&
-      !this.#targeting &&
-      encounter?.phase === "chew"
-    ) {
-      caughtPointer = encounter.beak;
+    if (!this.#dependencies.native && this.#visible && !this.#targeting) {
+      if (encounter?.phase === "chew") {
+        caughtPointer = encounter.beak;
+      }
     }
     let grabbable = false;
     let interactiveHover = false;
@@ -761,12 +758,10 @@ export class PetApplication {
       return;
     }
     const sim = this.#dependencies.simulation;
-    if (
-      !this.#drag.active &&
-      !sim.cursorEncounter() &&
-      !(this.#pickupReaction && sim.currentReaction(this.#pickupReaction))
-    ) {
-      return;
+    if (!this.#drag.active && !sim.cursorEncounter()) {
+      if (!this.#pickupReaction || !sim.currentReaction(this.#pickupReaction)) {
+        return;
+      }
     }
     this.#cancelDrag();
     sim.action("cancel");
@@ -877,14 +872,15 @@ export class PetApplication {
       });
     } else {
       const size = this.#dependencies.browser.size();
-      if (
-        !Number.isFinite(point.x) ||
-        !Number.isFinite(point.y) ||
-        point.x < 0 ||
-        point.y < 0 ||
-        point.x >= size.width ||
-        point.y >= size.height
-      ) {
+      if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+        this.#targetNotice({ outcome: "abandoned", id });
+        return;
+      }
+      if (point.x < 0 || point.y < 0) {
+        this.#targetNotice({ outcome: "abandoned", id });
+        return;
+      }
+      if (point.x >= size.width || point.y >= size.height) {
         this.#targetNotice({ outcome: "abandoned", id });
         return;
       }
@@ -1036,12 +1032,8 @@ export class PetApplication {
       return;
     }
     this.#syncBite();
-    if (
-      this.#visible &&
-      !this.#targeting &&
-      !this.#drag.active &&
-      this.#dependencies.simulation.status().watchTyping
-    ) {
+    const canObserve = this.#visible && !this.#targeting && !this.#drag.active;
+    if (canObserve && this.#dependencies.simulation.status().watchTyping) {
       this.#caret.start();
     } else {
       this.#caret.stop();

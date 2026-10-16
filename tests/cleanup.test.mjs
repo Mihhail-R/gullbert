@@ -525,17 +525,10 @@ test("preserved chips clamp on resize, survive hide, and clear on bulk or replac
       ids,
     );
     sim.resize(100, 100);
-    assert.ok(
-      sim
-        .inspect()
-        .looseChips.every(
-          (chip) =>
-            chip.x >= 0 &&
-            chip.y >= 0 &&
-            chip.x + chip.width <= 100 &&
-            chip.y + chip.height <= 100,
-        ),
-    );
+    for (const chip of sim.inspect().looseChips) {
+      assert.ok(chip.x >= 0 && chip.x + chip.width <= 100);
+      assert.ok(chip.y >= 0 && chip.y + chip.height <= 100);
+    }
     assert.deepEqual(
       sim.inspect().looseChips.map((chip) => chip.id),
       ids,

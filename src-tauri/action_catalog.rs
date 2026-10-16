@@ -66,7 +66,10 @@ pub fn generate(source: &str) -> Result<String, String> {
                 let preparation = string("preparation")?;
                 if !identifier(purpose)
                     || !matches!(preparation, "cancel" | "prepare_chip" | "tidy")
-                    || (purpose == "tidy") != (preparation == "tidy")
+                {
+                    return Err(error());
+                }
+                if (purpose == "tidy") != (preparation == "tidy")
                     || (purpose == "feed_here") != (preparation == "prepare_chip")
                 {
                     return Err(error());
@@ -116,13 +119,16 @@ pub fn generate(source: &str) -> Result<String, String> {
             .ok_or_else(error)?;
         for flag in flags {
             let flag = flag.as_str().ok_or_else(error)?;
-            if !flag.starts_with("--")
-                || flag.len() < 3
-                || !flag[2..]
-                    .bytes()
-                    .all(|c| c.is_ascii_lowercase() || c == b'-')
-                || !aliases.insert(flag)
+            if !flag.starts_with("--") || flag.len() < 3 {
+                return Err(format!("Invalid or duplicate launcher alias: {flag}"));
+            }
+            if !flag[2..]
+                .bytes()
+                .all(|c| c.is_ascii_lowercase() || c == b'-')
             {
+                return Err(format!("Invalid or duplicate launcher alias: {flag}"));
+            }
+            if !aliases.insert(flag) {
                 return Err(format!("Invalid or duplicate launcher alias: {flag}"));
             }
             launchers.push_str(&format!("{cfg}Some({flag:?}) => Action::{variant},\n"));

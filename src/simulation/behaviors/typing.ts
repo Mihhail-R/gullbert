@@ -62,21 +62,26 @@ export class TypingRoutine implements SceneOwner {
       this.#identity = Object.freeze({});
     }
   }
-  sample(sample: CaretSample | null): void {
-    const env = this.#env;
+  #validCaret(sample: CaretSample): boolean {
+    const body = this.#env.body;
+    if (!Number.isFinite(sample.x) || !Number.isFinite(sample.y)) {
+      return false;
+    }
     if (
-      !sample ||
-      !this.enabled() ||
-      !Number.isFinite(sample.x) ||
-      !Number.isFinite(sample.y) ||
       !Number.isFinite(sample.height) ||
       sample.height <= 0 ||
-      sample.height > 160 ||
-      sample.x < 0 ||
-      sample.y < 0 ||
-      sample.x >= env.body.width ||
-      sample.y >= env.body.height
+      sample.height > 160
     ) {
+      return false;
+    }
+    if (sample.x < 0 || sample.x >= body.width) {
+      return false;
+    }
+    return sample.y >= 0 && sample.y < body.height;
+  }
+  sample(sample: CaretSample | null): void {
+    const env = this.#env;
+    if (!sample || !this.enabled() || !this.#validCaret(sample)) {
       this.#caret = null;
       this.#activeAt = -Infinity;
       return;
@@ -104,11 +109,14 @@ export class TypingRoutine implements SceneOwner {
       Math.hypot(
         point.x - (this.#env.body.x + 48),
         point.y - (this.#env.body.y + 48),
-      ) < 120 &&
-      (!this.#pointer ||
-        Math.hypot(point.x - this.#pointer.x, point.y - this.#pointer.y) > 3)
+      ) < 120
     ) {
-      this.#pointerMovedAt = this.#env.clock.now;
+      if (
+        !this.#pointer ||
+        Math.hypot(point.x - this.#pointer.x, point.y - this.#pointer.y) > 3
+      ) {
+        this.#pointerMovedAt = this.#env.clock.now;
+      }
     }
     this.#pointer = point;
     this.#pointerAt = this.#env.clock.now;
@@ -123,12 +131,13 @@ export class TypingRoutine implements SceneOwner {
   }
   maybeStart(): boolean {
     const env = this.#env;
+    if (!this.enabled() || this.#scene || !this.#fresh()) {
+      return false;
+    }
+    if (env.clock.now < this.#nextAt || env.clock.now - this.#activeAt > 5) {
+      return false;
+    }
     if (
-      !this.enabled() ||
-      this.#scene ||
-      !this.#fresh() ||
-      env.clock.now < this.#nextAt ||
-      env.clock.now - this.#activeAt > 5 ||
       env.policy.tidying() ||
       env.clock.now < env.policy.cleanup().suppressUntil
     ) {
@@ -214,24 +223,26 @@ export class TypingRoutine implements SceneOwner {
       return this.#finish();
     }
     const sourcePhase =
-      scene.phase === "approach" ||
-      scene.phase === "watch" ||
-      scene.phase === "pounce" ||
+      ["approach", "watch", "pounce"].includes(scene.phase) ||
       (scene.phase === "innocent" && !scene.carrying);
-    if (
-      sourcePhase &&
-      !scene.visual &&
-      (!this.#fresh() || this.#caret?.context !== scene.source)
-    ) {
-      return this.#finish();
+    if (sourcePhase && !scene.visual) {
+      if (!this.#fresh() || this.#caret?.context !== scene.source) {
+        return this.#finish();
+      }
     }
     const pointer = this.#pointer;
-    const nearby =
+    let nearby = false;
+    if (
       pointer &&
       pointer.inside !== false &&
-      env.clock.now - this.#pointerAt < 0.6 &&
-      Math.hypot(pointer.x - (env.body.x + 48), pointer.y - (env.body.y + 48)) <
-        120;
+      env.clock.now - this.#pointerAt < 0.6
+    ) {
+      nearby =
+        Math.hypot(
+          pointer.x - (env.body.x + 48),
+          pointer.y - (env.body.y + 48),
+        ) < 120;
+    }
     if (
       nearby &&
       (scene.phase === "innocent" || env.clock.now - this.#pointerMovedAt < 0.6)
@@ -253,58 +264,76 @@ export class TypingRoutine implements SceneOwner {
       env.speech.say(dialogue.gullbert.typing.pause, 0.8);
       return "running";
     }
-    if (scene.phase === "approach") {
-      if (!scene.visual) {
-        scene.target = this.#target();
-      }
-      if (env.body.moveToward(scene.target, 240, dt)) {
-        env.body.face(1);
-        scene.phase = "watch";
-        scene.until = env.clock.now + 1.4;
-      }
-    } else if (scene.phase === "watch") {
-      let target = scene.target;
-      if (!scene.visual) {
-        target = this.#target();
-      }
-      if (
-        Math.hypot(target.x - scene.target.x, target.y - scene.target.y) > 35
-      ) {
-        scene.phase = "approach";
-      } else if (env.clock.now >= scene.until) {
-        scene.phase = "pounce";
-        scene.until = env.clock.now + 0.45;
-      }
-    } else if (scene.phase === "pounce" && env.clock.now >= scene.until) {
-      if (!scene.steal) {
-        env.speech.say(dialogue.gullbert.typing.itWasHereASecondAgo);
-        return this.#finish();
-      }
-      scene.carrying = true;
-      this.#catches++;
-      scene.phase = "carry";
-      env.events.emit("pop");
-      env.speech.say(dialogue.gullbert.typing.youWerentUsingThis);
-    } else if (scene.phase === "carry") {
-      if (env.body.moveToward(this.#nestPoint(), 230, dt)) {
-        scene.phase = "deposit";
-        scene.until = env.clock.now + 1;
-      }
-    } else if (scene.phase === "deposit" && env.clock.now >= scene.until) {
-      if (scene.buildNest) {
-        let twig = scene.glyph;
-        if (/[a-z0-9]/i.test(twig)) {
-          twig = [";", ",", ")", ":"][this.#nest.length % 4];
+    switch (scene.phase) {
+      case "approach": {
+        if (!scene.visual) {
+          scene.target = this.#target();
         }
-        this.#nest.push(twig);
-        this.#nest = this.#nest.slice(-12);
-        env.speech.say(dialogue.gullbert.typing.structuralPunctuation);
-      } else {
-        env.speech.say(dialogue.gullbert.typing.oDelicious);
-        env.events.emit("munch");
+        if (env.body.moveToward(scene.target, 240, dt)) {
+          env.body.face(1);
+          scene.phase = "watch";
+          scene.until = env.clock.now + 1.4;
+        }
+
+        break;
       }
-      scene.carrying = false;
-      return this.#finish();
+      case "watch": {
+        let target = scene.target;
+        if (!scene.visual) {
+          target = this.#target();
+        }
+        if (
+          Math.hypot(target.x - scene.target.x, target.y - scene.target.y) > 35
+        ) {
+          scene.phase = "approach";
+        } else if (env.clock.now >= scene.until) {
+          scene.phase = "pounce";
+          scene.until = env.clock.now + 0.45;
+        }
+
+        break;
+      }
+      case "pounce": {
+        if (env.clock.now >= scene.until) {
+          if (!scene.steal) {
+            env.speech.say(dialogue.gullbert.typing.itWasHereASecondAgo);
+            return this.#finish();
+          }
+          scene.carrying = true;
+          this.#catches++;
+          scene.phase = "carry";
+          env.events.emit("pop");
+          env.speech.say(dialogue.gullbert.typing.youWerentUsingThis);
+        }
+        break;
+      }
+      case "carry": {
+        if (env.body.moveToward(this.#nestPoint(), 230, dt)) {
+          scene.phase = "deposit";
+          scene.until = env.clock.now + 1;
+        }
+
+        break;
+      }
+      case "deposit": {
+        if (env.clock.now >= scene.until) {
+          if (scene.buildNest) {
+            let twig = scene.glyph;
+            if (/[a-z0-9]/i.test(twig)) {
+              twig = [";", ",", ")", ":"][this.#nest.length % 4];
+            }
+            this.#nest.push(twig);
+            this.#nest = this.#nest.slice(-12);
+            env.speech.say(dialogue.gullbert.typing.structuralPunctuation);
+          } else {
+            env.speech.say(dialogue.gullbert.typing.oDelicious);
+            env.events.emit("munch");
+          }
+          scene.carrying = false;
+          return this.#finish();
+        }
+        break;
+      }
     }
     return "running";
   }

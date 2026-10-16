@@ -150,9 +150,11 @@ export class LearningRoutine implements SceneOwner {
     if (
       !sim.policy.visible() ||
       sim.policy.settings().paused ||
-      sim.policy.tidying() ||
-      sim.clock.now < this.#nextHabit
+      sim.policy.tidying()
     ) {
+      return false;
+    }
+    if (sim.clock.now < this.#nextHabit) {
       return false;
     }
     const learned = sim.belongings.snapshot().memory.learned;

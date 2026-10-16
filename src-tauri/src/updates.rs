@@ -74,10 +74,13 @@ fn newest<'a>(
         .iter()
         .filter_map(|release| {
             let version = Version::parse(release.tag_name.strip_prefix('v')?).ok()?;
-            if release.draft
-                || (!beta && (release.prerelease || !version.pre.is_empty()))
-                || version <= *current
-            {
+            if release.draft {
+                return None;
+            }
+            if !beta && (release.prerelease || !version.pre.is_empty()) {
+                return None;
+            }
+            if version <= *current {
                 return None;
             }
             Some((release, version))

@@ -80,13 +80,14 @@ impl Input {
         if self.targeting.is_active() {
             return;
         }
-        let capture = effects.visible()
-            && !self.cursor.holding()
-            && (self.pickup.active(effects.now())
+        let mut capture = false;
+        if effects.visible() && !self.cursor.holding() {
+            capture = self.pickup.active(effects.now())
                 || self.interaction.hit(
                     point.filter(|p| p.inside).map(|p| (p.x, p.y)),
                     effects.now(),
-                ));
+                );
+        }
         if capture == self.interaction.capturing || !effects.window_exists() {
             return;
         }
@@ -147,23 +148,24 @@ impl Input {
         let valid = self.pickup.finish(id, effects.now());
         self.reconcile(effects, None);
         let (paused, mischief) = effects.settings();
-        if valid
-            && retaliate
-            && !paused
-            && mischief > 0
-            && effects.visible()
-            && !self.targeting.is_active()
-        {
-            let duration = Duration::from_secs(10);
-            let id = self
-                .cursor
-                .arm_reaction(effects.now(), duration, tug && mischief == 2);
-            effects.schedule(Deadline::Cursor(id), duration);
-            Some(id)
-        } else {
+        if !valid || !retaliate {
             self.cancel_cursor(effects);
-            None
+            return None;
         }
+        if paused || mischief == 0 {
+            self.cancel_cursor(effects);
+            return None;
+        }
+        if !effects.visible() || self.targeting.is_active() {
+            self.cancel_cursor(effects);
+            return None;
+        }
+        let duration = Duration::from_secs(10);
+        let id = self
+            .cursor
+            .arm_reaction(effects.now(), duration, tug && mischief == 2);
+        effects.schedule(Deadline::Cursor(id), duration);
+        Some(id)
     }
 
     fn cancel_cursor(&mut self, effects: &impl Effects) {

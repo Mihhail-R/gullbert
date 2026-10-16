@@ -171,12 +171,13 @@ pub(crate) async fn read(app: &tauri::AppHandle) -> Option<DesktopCaret> {
 }
 
 fn sample(raw: RawResult) -> Option<DesktopCaret> {
-    if raw.status != 4
-        || !raw.x.is_finite()
-        || !raw.y.is_finite()
-        || !raw.height.is_finite()
-        || raw.height <= 0.0
-    {
+    if raw.status != 4 {
+        return None;
+    }
+    if !raw.x.is_finite() || !raw.y.is_finite() {
+        return None;
+    }
+    if !raw.height.is_finite() || raw.height <= 0.0 {
         return None;
     }
     let glyph = char::from_u32(raw.glyph)

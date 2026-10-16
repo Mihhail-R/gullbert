@@ -2,7 +2,7 @@ import { dialogue } from "../dialogue.js";
 import { observe } from "../observation.js";
 import type { ReadonlyValue } from "../presentation.js";
 import { scopeCapabilities } from "../capabilities.js";
-import { beakOffsetX, SIZE, clamp } from "../geometry.js";
+import { isPointOnScreen, beakOffsetX, SIZE, clamp } from "../geometry.js";
 import { isGag, type GagScene } from "../scenes.js";
 import type { Point, PointerSample, SceneProp } from "../model.js";
 import type { Pose } from "../poses.js";
@@ -422,10 +422,14 @@ export class GagRoutine implements SceneOwner {
     if (
       !sim.policy.visible() ||
       sim.policy.settings().paused ||
-      sim.policy.settings().mischief <= 0 ||
-      sim.policy.tidying() ||
-      this.#scene ||
-      sim.activity.mode !== "idle" ||
+      sim.policy.settings().mischief <= 0
+    ) {
+      return false;
+    }
+    if (sim.policy.tidying() || this.#scene || sim.activity.mode !== "idle") {
+      return false;
+    }
+    if (
       sim.clock.now < this.#gagSchedule.at ||
       sim.clock.now < sim.policy.cleanup().suppressUntil
     ) {
@@ -491,12 +495,7 @@ export class GagRoutine implements SceneOwner {
     if (
       !point ||
       point.inside === false ||
-      !Number.isFinite(point.x) ||
-      !Number.isFinite(point.y) ||
-      point.x < 0 ||
-      point.y < 0 ||
-      point.x > sim.body.width ||
-      point.y > sim.body.height
+      !isPointOnScreen(point, sim.body.width, sim.body.height)
     ) {
       this.#finish(dialogue.gullbert.gags.theEggHasOtherCommitments);
       return;

@@ -159,7 +159,10 @@ test("gull argument alternates visual reactions over one chip and ignores five",
     "departure",
   ])
     assert.ok(phases.has(phase), phase);
-  assert.ok(sawMainSquawk && sawGuestSquawk && sawSnatchedChip && sawContact);
+  assert.ok(sawMainSquawk, "Gullbert squawked");
+  assert.ok(sawGuestSquawk, "The guest squawked");
+  assert.ok(sawSnatchedChip, "The chip was snatched");
+  assert.ok(sawContact, "The birds made contact");
   assertGone(sim);
   assert.equal(sim.inspect().bubble, "");
 });

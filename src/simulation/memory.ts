@@ -144,8 +144,10 @@ export function normalizeMemory(
   const candidate = point(learned.snackCandidate);
   const candidateMeals = lessons(object(learned.snackCandidate).meals);
   let snackCandidate = null;
-  if (candidate && candidateMeals > 0 && snackSpot && snackSpot.meals >= 3) {
-    snackCandidate = { ...candidate, meals: Math.min(2, candidateMeals) };
+  if (candidate && candidateMeals > 0) {
+    if (snackSpot && snackSpot.meals >= 3) {
+      snackCandidate = { ...candidate, meals: Math.min(2, candidateMeals) };
+    }
   }
   let lastAt;
   if (finite(greetings.lastAt)) {

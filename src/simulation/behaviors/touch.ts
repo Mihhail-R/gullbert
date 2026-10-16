@@ -11,12 +11,9 @@ export function contains(
   rect: Readonly<HitRect>,
   point: Readonly<Point>,
 ): boolean {
-  return (
-    point.x >= rect.x &&
-    point.x <= rect.x + rect.width &&
-    point.y >= rect.y &&
-    point.y <= rect.y + rect.height
-  );
+  const withinWidth = point.x >= rect.x && point.x <= rect.x + rect.width;
+  const withinHeight = point.y >= rect.y && point.y <= rect.y + rect.height;
+  return withinWidth && withinHeight;
 }
 
 interface TouchState {
@@ -58,16 +55,15 @@ export function canTouch(sim: {
   readonly time: number;
   readonly mode: string;
 }): boolean {
-  return (
-    sim.visible &&
-    !sim.pickup.held &&
-    !sim.scene &&
-    !sim.flight &&
-    !sim.tidying &&
-    sim.cleanup.reactionUntil <= sim.time &&
-    sim.cleanup.sulkUntil <= sim.time &&
-    ["idle", "walk", "nap"].includes(sim.mode)
-  );
+  if (!sim.visible || sim.pickup.held) {
+    return false;
+  }
+  if (sim.scene || sim.flight || sim.tidying) {
+    return false;
+  }
+  const settled =
+    sim.cleanup.reactionUntil <= sim.time && sim.cleanup.sulkUntil <= sim.time;
+  return settled && ["idle", "walk", "nap"].includes(sim.mode);
 }
 
 export function gullRect(sim: Readonly<Point>): HitRect {
@@ -133,15 +129,11 @@ export class Touch {
   }
 
   pointer(point: PointerSample | null): void {
-    if (
-      point &&
-      point.inside !== false &&
-      Number.isFinite(point.x) &&
-      Number.isFinite(point.y)
-    ) {
-      this.#state.point = { ...point };
-    } else {
-      this.#state.point = null;
+    this.#state.point = null;
+    if (point && point.inside !== false) {
+      if (Number.isFinite(point.x) && Number.isFinite(point.y)) {
+        this.#state.point = { ...point };
+      }
     }
     this.#state.sampledAt = this.#context.clock.now;
   }

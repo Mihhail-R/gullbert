@@ -229,61 +229,82 @@ export class GiftRoutine implements SceneOwner {
       this.#finish();
       return true;
     }
-    if (scene.phase === "takeoff") {
-      const progress = Math.min(1, 1 - (scene.until - sim.clock.now) / 0.45);
-      sim.body.place({
-        x: sim.body.x,
-        y: origin.y + (airborneY - origin.y) * progress,
-      });
-      if (sim.clock.now >= scene.until) {
-        scene.phase = "depart";
-      }
-    } else if (scene.phase === "depart") {
-      let departureX;
-      if (scene.side < 0) {
-        departureX = -96;
-      } else {
-        departureX = sim.body.width;
-      }
-      if (this.#flyTo({ x: departureX, y: airborneY }, speed, dt)) {
-        scene.phase = "away";
-        scene.until = sim.clock.now + 2.2;
-        sim.speech.clear();
-      }
-    } else if (scene.phase === "away" && sim.clock.now >= scene.until) {
-      scene.phase = "return";
-      scene.carrying = true;
-      if (scene.side < 0) {
-        sim.body.place({ x: -96, y: sim.body.y });
-      } else {
-        sim.body.place({ x: sim.body.width, y: sim.body.y });
-      }
-      sim.body.place({ x: sim.body.x, y: airborneY });
-      sim.speech.say(dialogue.gullbert.gifts.beholdMyImpeccableTaste, 2);
-    } else if (scene.phase === "return") {
-      if (this.#flyTo({ x: origin.x, y: airborneY }, speed, dt)) {
-        scene.phase = "land";
-        scene.until = sim.clock.now + 0.65;
-      }
-    } else if (scene.phase === "land") {
-      const progress = Math.min(1, 1 - (scene.until - sim.clock.now) / 0.65);
-      sim.body.place({
-        x: sim.body.x,
-        y: airborneY + (origin.y - airborneY) * progress,
-      });
-      if (sim.clock.now >= scene.until) {
-        scene.phase = "reveal";
-        scene.until = sim.clock.now + 1.8;
-        sim.speech.say(ITEMS[scene.item].reveal, 3);
-        if (scene.item === "chip") {
-          sim.events.emit("munch");
+    switch (scene.phase) {
+      case "takeoff": {
+        const progress = Math.min(1, 1 - (scene.until - sim.clock.now) / 0.45);
+        sim.body.place({
+          x: sim.body.x,
+          y: origin.y + (airborneY - origin.y) * progress,
+        });
+        if (sim.clock.now >= scene.until) {
+          scene.phase = "depart";
         }
+
+        break;
       }
-    } else if (scene.phase === "reveal" && sim.clock.now >= scene.until) {
-      if (scene.item !== "chip") {
-        this.#collect(scene.item);
+      case "depart": {
+        let departureX;
+        if (scene.side < 0) {
+          departureX = -96;
+        } else {
+          departureX = sim.body.width;
+        }
+        if (this.#flyTo({ x: departureX, y: airborneY }, speed, dt)) {
+          scene.phase = "away";
+          scene.until = sim.clock.now + 2.2;
+          sim.speech.clear();
+        }
+
+        break;
       }
-      this.#finish();
+      case "away": {
+        if (sim.clock.now >= scene.until) {
+          scene.phase = "return";
+          scene.carrying = true;
+          if (scene.side < 0) {
+            sim.body.place({ x: -96, y: sim.body.y });
+          } else {
+            sim.body.place({ x: sim.body.width, y: sim.body.y });
+          }
+          sim.body.place({ x: sim.body.x, y: airborneY });
+          sim.speech.say(dialogue.gullbert.gifts.beholdMyImpeccableTaste, 2);
+        }
+        break;
+      }
+      case "return": {
+        if (this.#flyTo({ x: origin.x, y: airborneY }, speed, dt)) {
+          scene.phase = "land";
+          scene.until = sim.clock.now + 0.65;
+        }
+
+        break;
+      }
+      case "land": {
+        const progress = Math.min(1, 1 - (scene.until - sim.clock.now) / 0.65);
+        sim.body.place({
+          x: sim.body.x,
+          y: airborneY + (origin.y - airborneY) * progress,
+        });
+        if (sim.clock.now >= scene.until) {
+          scene.phase = "reveal";
+          scene.until = sim.clock.now + 1.8;
+          sim.speech.say(ITEMS[scene.item].reveal, 3);
+          if (scene.item === "chip") {
+            sim.events.emit("munch");
+          }
+        }
+
+        break;
+      }
+      case "reveal": {
+        if (sim.clock.now >= scene.until) {
+          if (scene.item !== "chip") {
+            this.#collect(scene.item);
+          }
+          this.#finish();
+        }
+        break;
+      }
     }
     return true;
   }

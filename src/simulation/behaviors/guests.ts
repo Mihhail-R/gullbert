@@ -509,14 +509,12 @@ export class GuestRoutine implements SceneOwner {
         guest.y = lerp(snatchTarget.y, guestTarget.y, progress);
       }
       // Missing or emptied bags turn the same visit into judgmental looks.
-      if (
-        scene.species === "pigeon" &&
-        scene.hasSnack &&
-        (scene.bagId !== sim.objects.snapshot().bag?.id ||
-          !((sim.objects.snapshot().bag?.servings ?? 0) > 0))
-      ) {
-        scene.hasSnack = false;
-        this.#exchange("inspect", 1.5, dialogue.guests.pigeon.snackRemoved);
+      if (scene.species === "pigeon" && scene.hasSnack) {
+        const bag = sim.objects.snapshot().bag;
+        if (scene.bagId !== bag?.id || !((bag?.servings ?? 0) > 0)) {
+          scene.hasSnack = false;
+          this.#exchange("inspect", 1.5, dialogue.guests.pigeon.snackRemoved);
+        }
       }
       if (sim.clock.now >= scene.until) {
         if (scene.species === "pigeon") {
@@ -571,29 +569,48 @@ export class GuestRoutine implements SceneOwner {
     if (scene?.kind !== "guest") {
       return;
     }
-    if (scene.phase === "stare") {
-      this.#exchange("posture", 1.8, dialogue.guests.seagull.posture);
-    } else if (scene.phase === "posture") {
-      this.#exchange(
-        "squawk-main",
-        1.4,
-        dialogue.guests.seagull.gullbertSquawk,
-      );
-      sim.events.emit("squawk");
-    } else if (scene.phase === "squawk-main") {
-      this.#exchange(
-        "squawk-guest",
-        1.4,
-        dialogue.guests.seagull.visitorSquawk,
-      );
-      sim.events.emit("squawk");
-    } else if (scene.phase === "squawk-guest") {
-      this.#exchange("snatch", 0.8, dialogue.guests.seagull.snatch);
-    } else if (scene.phase === "snatch") {
-      scene.chipTaken = true;
-      this.#exchange("reaction", 2, dialogue.guests.seagull.reaction);
-    } else if (scene.phase === "reaction") {
-      this.#depart(dialogue.guests.seagull.departure);
+    switch (scene.phase) {
+      case "stare": {
+        this.#exchange("posture", 1.8, dialogue.guests.seagull.posture);
+
+        break;
+      }
+      case "posture": {
+        this.#exchange(
+          "squawk-main",
+          1.4,
+          dialogue.guests.seagull.gullbertSquawk,
+        );
+        sim.events.emit("squawk");
+
+        break;
+      }
+      case "squawk-main": {
+        this.#exchange(
+          "squawk-guest",
+          1.4,
+          dialogue.guests.seagull.visitorSquawk,
+        );
+        sim.events.emit("squawk");
+
+        break;
+      }
+      case "squawk-guest": {
+        this.#exchange("snatch", 0.8, dialogue.guests.seagull.snatch);
+
+        break;
+      }
+      case "snatch": {
+        scene.chipTaken = true;
+        this.#exchange("reaction", 2, dialogue.guests.seagull.reaction);
+
+        break;
+      }
+      case "reaction": {
+        this.#depart(dialogue.guests.seagull.departure);
+
+        break;
+      }
     }
   }
   maybeGuest() {
@@ -604,11 +621,14 @@ export class GuestRoutine implements SceneOwner {
     if (
       !sim.policy.visible() ||
       sim.policy.settings().paused ||
-      sim.policy.settings().mischief <= 0 ||
-      this.#scene ||
-      sim.activity.mode !== "idle" ||
-      sim.clock.now < this.#nextGuest
+      sim.policy.settings().mischief <= 0
     ) {
+      return false;
+    }
+    if (this.#scene || sim.activity.mode !== "idle") {
+      return false;
+    }
+    if (sim.clock.now < this.#nextGuest) {
       return false;
     }
     if (sim.random() < 0.65) {
