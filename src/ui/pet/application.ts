@@ -7,7 +7,7 @@ import type {
 } from "../../platform/bridge.js";
 import { createPickupDrag } from "../../platform/pickup-drag.js";
 import { createCursorBiteBridge } from "../../platform/cursor-bite.js";
-import { createMemoryWriter } from "../../platform/roommate-store.js";
+import { MemoryPersistence } from "../../platform/roommate-store.js";
 import { CaretTracker } from "../../platform/caret.js";
 import { createPointerTracker } from "../../platform/pointer.js";
 import { contains } from "../../simulation/behaviors/touch.js";
@@ -48,15 +48,13 @@ export class PetApplication {
   #frame: number | undefined;
   #renderFrame: number | undefined;
   #initialized = false;
-  #savedRevision = -1;
   #statusKey = "";
   #storageError = "";
-  #memoryRetryTimer: ReturnType<typeof setTimeout> | undefined;
   #chewingToken: object | null = null;
   #cursorLeaseScene: CursorLeaseScene | null = null;
   #reactionLease: { token: object; id: number } | null = null;
   #pickupReaction: object | null = null;
-  readonly #memoryWriter: ReturnType<typeof createMemoryWriter>;
+  readonly #persistence: MemoryPersistence;
   readonly #drag: ReturnType<typeof createPickupDrag>;
   readonly #bite: ReturnType<typeof createCursorBiteBridge>;
   readonly #caret: CaretTracker;
@@ -66,14 +64,14 @@ export class PetApplication {
 
   constructor(dependencies: ApplicationDependencies) {
     this.#dependencies = dependencies;
-    this.#memoryWriter = createMemoryWriter(
-      (memory) => {
-        return this.#dependencies.storage.save(memory);
-      },
-      (error) => {
-        this.#storageResult(error);
-      },
-    );
+    this.#persistence = new MemoryPersistence({
+      storage: dependencies.storage,
+      clock: dependencies.clock,
+      restore: (memory) => dependencies.simulation.restoreMemory(memory),
+      revision: () => dependencies.simulation.status().memoryRevision,
+      snapshot: () => dependencies.simulation.exportMemory(),
+      result: (error) => this.#storageResult(error),
+    });
     this.#drag = createPickupDrag({
       acquire: (rect) => {
         const native = this.#dependencies.native;
@@ -212,14 +210,8 @@ export class PetApplication {
     if (this.#shutdown) {
       return this.#shutdown;
     }
-    // Retry the latest local snapshot once at shutdown even during retry backoff.
-    this.#dependencies.clock.cancel(this.#memoryRetryTimer);
-    this.#memoryRetryTimer = undefined;
-    this.#remember();
+    this.#shutdown = this.#persistence.dispose();
     this.#lifecycle = "disposed";
-    // A synchronous failure of the final save may have scheduled another retry.
-    this.#dependencies.clock.cancel(this.#memoryRetryTimer);
-    this.#memoryRetryTimer = undefined;
     this.#generation++;
     this.#targetGeneration++;
     this.#cancelTick();
@@ -248,7 +240,6 @@ export class PetApplication {
     }
     this.#dependencies.audio.dispose();
     this.#dependencies.view.dispose();
-    this.#shutdown = this.#memoryWriter.flush();
     return this.#shutdown;
   }
 
@@ -272,19 +263,17 @@ export class PetApplication {
         if (!this.#current(generation)) {
           return;
         }
-        const memory = await this.#dependencies.storage.load();
+        await this.#persistence.restore();
         if (!this.#current(generation)) {
           return;
         }
-        this.#dependencies.simulation.restoreMemory(memory);
         this.#dependencies.simulation.configure(state.settings);
         this.#visible = state.visible;
       } else {
-        const memory = await this.#dependencies.storage.load();
+        await this.#persistence.restore();
         if (!this.#current(generation)) {
           return;
         }
-        this.#dependencies.simulation.restoreMemory(memory);
       }
       this.#initialized = true;
       this.#resizeSimulation();
@@ -315,7 +304,9 @@ export class PetApplication {
     this.#lifecycle = "running";
     this.#dependencies.simulation.setVisible(this.#visible);
     this.#dependencies.simulation.greet();
-    this.#remember();
+    if (this.#initialized) {
+      this.#persistence.start();
+    }
     this.#publishRoommate(true);
     if (!native) {
       this.#dependencies.browser.publish({ type: "ready" });
@@ -487,16 +478,9 @@ export class PetApplication {
     if (!this.#running()) {
       return;
     }
-    this.#dependencies.clock.cancel(this.#memoryRetryTimer);
-    this.#memoryRetryTimer = undefined;
     if (error) {
       this.#storageError =
         "Could not save Gullbert's memories. They remain available for this session; retrying shortly.";
-      this.#savedRevision = -1;
-      this.#memoryRetryTimer = this.#dependencies.clock.schedule(() => {
-        this.#memoryRetryTimer = undefined;
-        this.#remember();
-      }, 5000);
     } else {
       this.#storageError = "";
     }
@@ -535,15 +519,7 @@ export class PetApplication {
     if (!this.#running() || !this.#initialized) {
       return;
     }
-    const revision = this.#dependencies.simulation.status().memoryRevision;
-    if (
-      this.#memoryRetryTimer !== undefined ||
-      this.#savedRevision === revision
-    ) {
-      return;
-    }
-    this.#savedRevision = revision;
-    void this.#memoryWriter.save(this.#dependencies.simulation.exportMemory());
+    this.#persistence.remember();
   }
 
   #requestRender(): void {

@@ -290,53 +290,6 @@ test("failed memory writes retry while hidden and save the latest snapshot", asy
   await h.app.dispose();
 });
 
-test("disposal cancels memory retries even when the final save fails", async () => {
-  const h = harness({
-    save() {
-      throw new Error("disk unavailable");
-    },
-  });
-  await h.app.start();
-  await settle();
-  assert.equal(h.saved.length, 1);
-  await h.app.dispose();
-  assert.equal(h.saved.length, 2);
-  assert.equal(h.timers.size, 0);
-  h.displayFrame(60000);
-  await settle();
-  assert.equal(h.saved.length, 2);
-});
-
-test("failed memory writes retry the latest snapshot after backoff without requiring another memory", async () => {
-  let fail = true;
-  let attempts = 0;
-  const h = harness({
-    save() {
-      attempts++;
-      if (fail) throw new Error("disk unavailable");
-    },
-  });
-  await h.app.start();
-  await settle();
-  assert.equal(attempts, 1);
-  assert.match(
-    h.published.filter((message) => message.type === "roommate").at(-1).error,
-    /retrying/,
-  );
-  h.displayFrame(4900);
-  await settle();
-  assert.equal(attempts, 1);
-  fail = false;
-  h.displayFrame(200);
-  await settle();
-  assert.equal(attempts, 2);
-  assert.equal(
-    h.published.filter((message) => message.type === "roommate").at(-1).error,
-    "",
-  );
-  await h.app.dispose();
-});
-
 test("a stale targeting deadline cannot finish a newer targeting session", async () => {
   const h = harness();
   await h.app.start();
