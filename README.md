@@ -12,7 +12,7 @@ This is an early preview. Apple Silicon macOS has had local testing; Windows and
 
 On Mac, download the `.dmg` for Apple Silicon (`aarch64`) or Intel (`x86_64`), open it, and drag Gullbert into Applications. Quit an older running Gullbert using its menu before replacing it, then launch the copy in Applications. Opening an app inside Downloads or the disk image does not install it. On Windows, download and run the `setup.exe`.
 
-In the control room or tray, open **App updates**, choose **Check for updates**, then **Install and restart**. The app shows the available version, release notes, progress, and errors. Checks and downloads contact GitHub only on request; update signatures are verified before installation. Preferences and belongings remain in their existing data directory. Mac copies launched from a mounted disk image or macOS App Translocation must be moved to Applications and relaunched before updating.
+In **Settings** in the control room, or in the tray, open **App updates**, choose **Check for updates**, then **Install and restart**. The app shows the available version, release notes, progress, and errors. Checks and downloads contact GitHub only on request; update signatures are verified before installation. Preferences and belongings remain in their existing data directory. Mac copies launched from a mounted disk image or macOS App Translocation must be moved to Applications and relaunched before updating.
 
 **Include beta releases** defaults on in a beta build and off in a stable build. Stable checks exclude prereleases; beta checks consider both stable and beta releases and select the highest newer version among the most recent 100 published releases. There are no downgrades. Channel selection lasts for the current app session. An error or failed install can be retried by checking again.
 
@@ -36,6 +36,10 @@ Everything happens locally. There are no hunger chores, streaks, or penalties fo
 
 ## Controls
 
+The control room has four homes: **Today** for recent memories and shared activities, **Play & learn** for snacks, games, training and tidying, **His world** for memories, treasures, hats and favourite places, and **Settings** for behaviour, screen access and updates. Choose **Light** or **Dark** in Settings; appearance is saved locally for the control room and browser playground, independently of his learned memories. The window is resizable, with compact navigation at narrower widths.
+
+Ordinary bird routines, petty crimes and surprise scenes happen naturally in the installed app. Their demonstration buttons live in the website playground below the control-room preview. The tray and existing keyboard shortcuts remain available. **Reset scene** in the playground stops the routine, clears loose mess and summons him; it keeps his memories and collection.
+
 The control room and menu bar / system tray expose the main actions. Closing the control room leaves Gullbert running; choose **Quit** to exit. Nothing is added to startup. **Summon Gullbert** moves him to the display containing your cursor; he occupies one display at a time.
 
 | Action                                | Shortcut               |
@@ -51,13 +55,13 @@ On Mac, Alt means **Option** and Ctrl means **Control**. If another app owns a s
 
 ### Play, placement, and tidying
 
-Use the control room to feed, play, or start a routine. **Poop here…**, **Leave a chip here…**, **Come here…**, **Place chip bag…**, **Favourite spot…**, and **Chip toss…** temporarily capture a click to choose a target. Escape or **Never mind** cancels; a 12-second failsafe restores click-through. The underlying app does not receive that placement click. Gullbert does not detect cars; choose the target yourself.
+Use the control room to feed, play, or train. **Leave a chip here…**, **Come here…**, **Place chip bag…**, **Favourite spot…**, and **Chip toss…** temporarily capture a click to choose a target. Escape or **Never mind** cancels; a 12-second failsafe restores click-through. The underlying app does not receive that placement click. Gullbert does not detect cars; choose the target yourself.
 
 **Chips where you want them.** **Offer a chip** now feeds Gullbert where he is. **Leave a chip here…** places one at a chosen spot; on desktop, **Ctrl + Alt + F** drops one at your pointer without opening the control room. Spots near display edges are adjusted so he can reach them. One offered chip is active at a time.
 
 ### Tricks and little rituals
 
-Open **Tricks & rituals** in the control room, or **Tricks** in the tray. Ask for **Come here…**, **Spin**, or **Play dead**, then wait for him to finish and ask for a chip. Use **Reward with a chip**, **Offer a chip**, or **Leave a chip here…** within 20 seconds. He learns when he reaches that chip; early rewards, cancelled performances, or food replaced before he arrives do not count. Three rewarded performances make a trick familiar; six complete his training. A familiar recall is faster, and a practiced dramatic death stops the novice's hopeful peek.
+Open **Play & learn** in the control room, or **Tricks** in the tray. Ask for **Come here…**, **Spin**, or **Play dead**, then wait for him to finish and ask for a chip. Use **Reward with a chip**, **Offer a chip**, or **Leave a chip here…** within 20 seconds. He learns when he reaches that chip; early rewards, cancelled performances, or food replaced before he arrives do not count. Three rewarded performances make a trick familiar; six complete his training. A familiar recall is faster, and a practiced dramatic death stops the novice's hopeful peek.
 
 Once he knows spin or play dead, he may occasionally perform it unsolicited and request payment. These performances are infrequent, stop with **Pause autonomous antics**, and do not occur in **Polite-ish**. Explicit training works while paused. **Stop routine**, hiding, a replacement activity, or pausing cancels a performance without removing earned lessons.
 
@@ -67,9 +71,9 @@ Scratch his head within 18 seconds of completing a three-exchange cap game or a 
 
 The control room shows completed performances separately from rewarded lessons. Gullbert remembers doing a trick even without a reward, and varies his lines using that history. Earned tricks and rituals survive restarts and cleanup; reward windows and unfinished activities do not. **Forget tricks & rituals** clears lessons, performance counts, and related recent memories while keeping visitors, treasures, hats, and the favourite spot.
 
-Open **His memory** to see his most recent experiences, with the local date, time, and position on the desktop. He keeps the latest 200 experiences, plus lasting trick totals, visitor counts, and learned habits. Guest conversations take turns with reading time and a pause before each reply; returning visitors keep their dialogue rotation across restarts.
+Open **His world → Memories** to see his most recent experiences, with the local date, time, and position on the desktop. He keeps the latest 200 experiences, plus lasting trick totals, visitor counts, and learned habits. Guest conversations take turns with reading time and a pause before each reply; returning visitors keep their dialogue rotation across restarts.
 
-**Bottle-cap football.** Choose **Play → Play with a cap** in the control room or tray. Click the cap to flick it away; Gullbert chases it and pecks it back toward your pointer. After three exchanges, he takes the cap and declares “i win.” No collected treasure is needed. **Stop routine** ends the game. A running desktop app also accepts `--play-cap` from a second invocation of its executable.
+**Bottle-cap football.** Choose **Play & learn → Cap football** in the control room, or **Play with a cap** in the tray. Click the cap to flick it away; Gullbert chases it and pecks it back toward your pointer. After three exchanges, he takes the cap and declares “i win.” No collected treasure is needed. **Stop routine** ends the game. A running desktop app also accepts `--play-cap` from a second invocation of its executable.
 
 Hover over his head for a scratch, click to poke, or hold and drag to pick him up. Click loose splats, chips, bags, rubbish, and discarded cones to remove them. Other desktop areas pass clicks through. **Focused tidy mode…** captures repeated cleanup clicks until **Done**, Escape, or its 30-second timeout. Remembered belongings survive cleanup, and direct clicks leave objects used in active scenes alone. **Clean the evidence** removes all loose mess and the punctuation nest.
 
@@ -89,13 +93,13 @@ Each caper lasts at most 22 seconds. Pausing, hiding, **Stop routine**, a new co
 
 ### Caret mode
 
-On macOS, choose **Preferences → Caret fishing → Enable access**, then allow Gullbert under **System Settings → Privacy & Security → Accessibility**. On Windows, Gullbert uses the standard system caret without a separate permission prompt.
+On macOS, choose **Settings → Screen & typing access → Enable access**, then allow Gullbert under **System Settings → Privacy & Security → Accessibility**. On Windows, Gullbert uses the standard system caret without a separate permission prompt.
 
 Some apps, including some web-based editors, do not expose usable caret geometry. Enabling permission alone does not guarantee detection. This mode reads the focused field's identity, caret geometry, and position marker; it does not capture screenshots, read document text, or monitor keystrokes. Arrow keys or scrolling can also attract him by moving the caret. The stolen glyphs are decorative.
 
 ### Local vision (macOS 14+ and Windows 10 version 2004+)
 
-Turn on **Preferences → Local vision** to use screen text instead of the caret. On macOS, grant screen-recording permission when prompted, or use **Allow screen access** to request it again. Restart if macOS requests it. Vision does not need Accessibility access, but it replaces caret sensing while enabled; turn it off to return to caret mode.
+Turn on **Settings → Local vision** to use screen text instead of the caret. On macOS, grant screen-recording permission when prompted, or use **Allow screen access** to request it again. Restart if macOS requests it. Vision does not need Accessibility access, but it replaces caret sensing while enabled; turn it off to return to caret mode.
 
 On Windows, no screen permission prompt or separate OCR installation is needed. The existing NSIS installer includes the OCR engine and models; first use works offline.
 

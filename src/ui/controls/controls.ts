@@ -1,3 +1,6 @@
+import { setupAppearance } from "./appearance.js";
+import { setupNavigation } from "./navigation.js";
+import { portraitPresentation } from "../../simulation/presentation.js";
 import { memoryDescription, memoryLocation } from "./memory-view.js";
 import type { ActionName } from "../../actions/catalog.js";
 import { setupUpdates } from "./updates.js";
@@ -27,6 +30,12 @@ let saving = false;
 const preferencesKey = "gullbert.preferences.v1";
 const $ = requiredElement;
 const frame = $<HTMLIFrameElement>("iframe");
+const settingInputs = document.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
+  "#paused, #vision, #sound, #mischief, #hat",
+);
+setupAppearance();
+setupNavigation();
+
 function error(message: string) {
   $("#error").textContent = message;
   $("#error").hidden = !message;
@@ -39,7 +48,7 @@ function render() {
   $<HTMLSelectElement>("#hat").value = normalizeHat(settings.hat);
 
   if (!visible) {
-    $("#status").textContent = "Off causing problems elsewhere";
+    $("#status").textContent = "Away for a little while.";
   } else if (settings.paused) {
     $("#status").textContent = "Loitering. Judging. Waiting.";
   } else {
@@ -51,11 +60,11 @@ function render() {
   if (visible) {
     visibilityButton.dataset.action = "hide";
     visibilityButton.textContent = "Send him away";
-    $("#status-dot").style.background = "#637b60";
+    $("#status-dot").style.background = "var(--amber)";
   } else {
     visibilityButton.dataset.action = "show";
     visibilityButton.textContent = "Return / resume";
-    $("#status-dot").style.background = "#b2b7ac";
+    $("#status-dot").style.background = "var(--muted)";
   }
 
   let pausedLabel;
@@ -74,6 +83,9 @@ function render() {
     soundLabel = "Sound off";
   }
 
+  $("#pause-toggle").textContent = settings.paused ? "▷ Resume antics" : "Ⅱ Pause antics";
+  $("#mischief-label").textContent = ["Polite-ish", "Menace", "Public enemy"][settings.mischief];
+  renderPortraits();
   $("#preferences-summary").textContent = [
     ["Polite-ish", "Menace", "Public enemy"][settings.mischief],
     pausedLabel,
@@ -83,23 +95,23 @@ function render() {
     .join(" · ");
 }
 
-// Keep one category open, including on older webviews without details[name].
-const sections =
-  document.querySelectorAll<HTMLDetailsElement>(".control-section");
+function renderPortraits() {
+  const portrait = portraitPresentation(settings);
 
-for (const section of sections) {
-  section.querySelector("summary")
-    ?.addEventListener("click", () => {
-      if (section.open) {
-        return;
-      }
+  for (const bird of document.querySelectorAll<HTMLElement>(".portrait-bird")) {
+    bird.style.backgroundPositionX = `${-portrait.frame * 96}px`;
+    const hat = $<HTMLImageElement>(".portrait-hat", bird);
+    const placement = portrait.hatPlacement;
+    hat.hidden = !placement;
 
-      for (const other of sections) {
-        if (other !== section) {
-          other.open = false;
-        }
-      }
-    });
+    if (placement) {
+      hat.src = `assets/theatre/${placement.asset}.svg`;
+      hat.style.left = `${placement.x}px`;
+      hat.style.top = `${placement.y}px`;
+      hat.style.width = `${placement.width}px`;
+      hat.style.height = `${placement.height}px`;
+    }
+  }
 }
 
 function post(data: PreviewMessage) {
@@ -113,6 +125,7 @@ async function act(action: string) {
       await invoke("act", { action: action as ActionName });
     } else {
       post({ type: "action", action });
+      frame.scrollIntoView?.({ block: "center" });
     }
   } catch (e) {
     error(String(e));
@@ -120,6 +133,10 @@ async function act(action: string) {
 }
 
 for (const button of document.querySelectorAll<HTMLElement>("[data-action]")) {
+  if (native && button.closest("#demo")) {
+    continue;
+  }
+
   button.addEventListener("click", () => {
     return act(button.dataset.action ?? "");
   });
@@ -131,6 +148,7 @@ async function save() {
   }
 
   saving = true;
+  $<HTMLButtonElement>("#pause-toggle").disabled = true;
   const next = {
     paused: $<HTMLInputElement>("#paused").checked,
     vision: $<HTMLInputElement>("#vision").checked,
@@ -140,9 +158,7 @@ async function save() {
   };
   const enablingVision = next.vision && !settings.vision;
 
-  for (const el of document.querySelectorAll<
-    HTMLInputElement | HTMLSelectElement
-  >("select,input")) {
+  for (const el of settingInputs) {
     el.disabled = true;
   }
 
@@ -164,10 +180,9 @@ async function save() {
     error(`Could not save preferences: ${e}`);
   } finally {
     saving = false;
+    $<HTMLButtonElement>("#pause-toggle").disabled = false;
 
-    for (const el of document.querySelectorAll<
-      HTMLInputElement | HTMLSelectElement
-    >("select,input")) {
+    for (const el of settingInputs) {
       el.disabled = false;
     }
 
@@ -176,11 +191,29 @@ async function save() {
   }
 }
 
-for (const el of document.querySelectorAll<
-  HTMLInputElement | HTMLSelectElement
->("select,input")) {
+for (const el of settingInputs) {
   el.addEventListener("change", save);
 }
+
+$("#pause-toggle")
+  .addEventListener("click", () => {
+    $<HTMLInputElement>("#paused").checked = !settings.paused;
+    void save();
+  });
+
+async function cancelPlacement() {
+  try {
+    if (native) {
+      await invoke("cancel_targeting", {});
+    } else {
+      post({ type: "escape" });
+    }
+  } catch (cause) {
+    error(String(cause));
+  }
+}
+$("#cancel-placement")
+  .addEventListener("click", cancelPlacement);
 
 function roommate(data: RoommateStatus) {
   if (data.mood) {
@@ -259,6 +292,16 @@ function roommate(data: RoommateStatus) {
   renderMemories(memory?.episodes ?? []);
   renderCollection(memory?.collection ?? {});
 
+  const perch = memory?.perch;
+  $("#perch-summary").textContent = perch
+    ? `Remembered · ${Math.round(perch.x)}, ${Math.round(perch.y)} on his desktop`
+    : "Not chosen yet";
+  const pigeonVisits = memory?.visits?.pigeon ?? 0;
+  const gullVisits = memory?.visits?.gull ?? 0;
+  $("#visitor-summary").textContent = pigeonVisits + gullVisits > 0
+    ? `Visits remembered · Pigeon: ${pigeonVisits} · Other gull: ${gullVisits}`
+    : "No familiar visitors yet.";
+
   const storageError = $("#storage-error");
   storageError.textContent = data.error ?? "";
   storageError.hidden = !data.error;
@@ -301,6 +344,12 @@ function renderMemories(episodes: readonly MemoryEpisode[]) {
           return listItem;
         }),
     );
+  $("#today-memory-empty").hidden = episodes.length > 0;
+  const recentRows = Array.from($("#memory-items").children)
+    .slice(0, 3)
+    .map((row) => row.cloneNode(true));
+  $("#today-memories")
+    .replaceChildren(...recentRows);
 }
 
 function renderCollection(collection: Memory["collection"]) {
@@ -344,9 +393,34 @@ function renderCollection(collection: Memory["collection"]) {
         return listItem;
       }),
     );
+  $("#today-collection-empty").hidden = entries.length > 0;
+  const shelfItems = Array.from($("#collection-items").children)
+    .slice(0, 3)
+    .map((row) => row.cloneNode(true));
+  $("#today-collection")
+    .replaceChildren(...shelfItems);
 }
 
 if (native) {
+  let targetId: number | null = null;
+  await native.event.listen("gullbert-target", ({ payload }) => {
+    if (payload.outcome === "started") {
+      targetId = payload.id;
+      $("#placement-notice").hidden = false;
+      $("#placement-status").textContent = payload.purpose === "tidy"
+        ? "Click loose mess on your desktop. Escape finishes tidying."
+        : "Choose a spot on your desktop. Escape cancels.";
+      $("#cancel-placement").textContent = payload.purpose === "tidy" ? "Done" : "Never mind";
+      return;
+    }
+
+    if (payload.id !== targetId) {
+      return;
+    }
+
+    targetId = null;
+    $("#placement-notice").hidden = true;
+  });
   await native.event.listen("gullbert-roommate", (e) => {
     return roommate(e.payload);
   });
@@ -367,7 +441,7 @@ if (native) {
 
     if (s.shortcut_errors.length) {
       error(
-        "A shortcut is already in use. All actions are still available here and in the tray.",
+        "A shortcut is already in use. You can still use the tray and control room.",
       );
     }
   } catch (e) {
@@ -376,6 +450,12 @@ if (native) {
 } else {
   document.body.classList.add("preview");
   $("#demo").hidden = false;
+  $("#reset-preview")
+    .addEventListener("click", () => {
+      post({ type: "action", action: "cancel" });
+      post({ type: "action", action: "clean" });
+      post({ type: "action", action: "summon" });
+    });
 
   try {
     const saved = JSON.parse(localStorage.getItem(preferencesKey) ?? "null");
@@ -434,14 +514,7 @@ document.addEventListener("keydown", (event) => {
     return;
   }
 
-  if (native) {
-    invoke("cancel_targeting", {})
-      .catch((e) => {
-        return error(String(e));
-      });
-  } else {
-    post({ type: "escape" });
-  }
+  void cancelPlacement();
 });
 
 async function caretAccess(prompt = false): Promise<void> {

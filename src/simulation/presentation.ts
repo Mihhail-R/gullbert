@@ -1,6 +1,6 @@
 import type { SimulationView } from "./capabilities.js";
 import type { RoutinePresentation } from "./routine.js";
-import type { Point } from "./model.js";
+import type { Point, Settings } from "./model.js";
 import { interactionRects } from "./interaction.js";
 import {
   cleanupObjects,
@@ -100,4 +100,12 @@ export function projectPresentation(
     hatPlacement: hatPlacement({ ...sim, pose }),
   };
   return structuredClone(view);
+}
+
+/** A resting portrait uses the same sprite identity and hat geometry as the live bird. */
+export function portraitPresentation(settings: Settings) {
+  return {
+    frame: POSES.idle,
+    hatPlacement: hatPlacement({ settings, pose: "idle", facing: 1, scene: null, bag: null }),
+  };
 }

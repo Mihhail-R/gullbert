@@ -7,392 +7,458 @@
     <link rel="stylesheet" href="ui/controls/controls.css" />
   </head>
   <body>
-    <main class="panel">
-      <header>
-        <div class="eyebrow">
-          <span class="dot"></span> YOUR LOCAL NUISANCE
-          <span class="version">v__APP_VERSION__</span>
+    <div class="room">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-bird" aria-hidden="true"></div>
+          <div>Gullbert<small>A little life together.</small></div>
         </div>
-        <div class="intro">
-          <div>
-            <h1>Gullbert.</h1>
-            <p>No job. No rent. Absolutely your problem.</p>
-          </div>
-          <div class="portrait" aria-label="A suspicious pixel seagull"></div>
+        <p class="eyebrow">Make yourself at home</p>
+        <nav aria-label="Main navigation">
+          <button data-page="today" aria-current="page">
+            <span aria-hidden="true">⌂</span>Today</button
+          ><button data-page="play">
+            <span aria-hidden="true">◇</span>Play &amp; learn</button
+          ><button data-page="world">
+            <span aria-hidden="true">▤</span>His world</button
+          ><button data-page="settings">
+            <span aria-hidden="true">☷</span>Settings
+          </button>
+        </nav>
+        <div class="sidebar-bottom">
+          <span class="sketch" aria-hidden="true">⌁</span>
+          <p>Small bird.<br />Considerable<br />personality.</p>
+          <small>● &nbsp; Happily offline</small
+          ><small class="version">v__APP_VERSION__</small>
         </div>
-        <div class="status">
-          <span id="status-dot"></span><span id="status">Settling in…</span
-          ><span id="mood">Contentedly gull.</span>
-        </div>
-      </header>
-      <section class="quick-actions" aria-label="Quick actions">
-        <button class="primary" data-action="summon">
-          <span>↗</span> Summon Gullbert <kbd>⌃ ⌥ G</kbd>
-        </button>
-        <button data-action="feed">Offer a chip</button>
-      </section>
-      <div
-        class="sections"
-        role="region"
-        aria-label="Activities and preferences"
-        tabindex="0"
-      >
-        <details class="control-section" id="snacks" name="control-room">
-          <summary>
-            <span>Snacks</span><small>Chips, bags &amp; snack hunts</small>
-          </summary>
-          <div class="section-content">
-            <button data-action="feed_here">Leave a chip here…</button>
-            <div class="pair">
-              <button data-action="feed"><span>▰</span> Offer a chip</button
-              ><button data-action="place_bag">
-                <span>▤</span> Place chip bag…
-              </button>
+      </aside>
+      <div class="room-main">
+        <main id="pages">
+          <section data-destination="today" aria-label="Today">
+            <div class="life-heading">
+              <p class="eyebrow">The everyday journal</p>
+              <time id="journal-date"></time>
             </div>
-            <div class="pair">
-              <button data-action="search_snack">
-                <span>⌕</span> Find a snack</button
-              ><button data-action="chip_toss">Chip toss…</button>
+            <div class="life-intro">
+              <div class="life-welcome">
+                <h1 tabindex="-1">
+                  A little life,<br /><em>right beside yours.</em>
+                </h1>
+                <p>
+                  A few shared chips. A growing collection of rubbish.<br />A
+                  very good bad bird.
+                </p>
+                <div class="presence">
+                  <i id="status-dot"></i
+                  ><span id="status" role="status">Settling in…</span
+                  ><span id="mischief-label" class="tag">Menace</span>
+                </div>
+                <div class="essentials">
+                  <button class="primary" data-action="summon">
+                    ↗ &nbsp; Summon Gullbert</button
+                  ><button class="" data-action="feed">Offer a chip</button>
+                </div>
+              </div>
+              <figure class="life-portrait">
+                <span class="portrait-number">FIG. 01 / YOUR ROOMMATE</span>
+                <div
+                  class="portrait-bird"
+                  role="img"
+                  aria-label="Gullbert the pixel seagull"
+                >
+                  <img class="portrait-hat" alt="" hidden="" />
+                </div>
+                <figcaption>“this is my desktop now.”</figcaption>
+                <small id="mood">Contentedly gull.</small>
+              </figure>
             </div>
-            <p class="hint">
-              Offer a chip feeds him where he is. Leave one in a chosen spot, or
-              press Ctrl + Alt + F at your pointer in the desktop app. Repeated
-              meals teach him where to check.
-            </p>
-          </div>
-        </details>
-        <details class="control-section" id="learning" name="control-room">
-          <summary>
-            <span>Tricks &amp; rituals</span
-            ><small id="learning-summary">Getting to know you</small>
-          </summary>
-          <div class="section-content">
-            <p class="hint">
-              Ask for a trick, wait for him to finish and ask for a chip, then
-              reward him within 20 seconds. Three rewarded performances make it
-              familiar. Six make him insufferable.
-            </p>
-            <div class="trick-row">
-              <button data-action="trick_come">Come here…</button
-              ><span id="lesson-come">New trick</span>
+            <div class="life-columns">
+              <section class="life-memories">
+                <div class="subheading">
+                  <h2>Little things, lately</h2>
+                  <button
+                    class="text-link"
+                    data-page="world"
+                    data-world="memories"
+                  >
+                    His memory book ↗
+                  </button>
+                </div>
+                <p id="today-memory-empty" class="hint">
+                  A little life starts here. Share a chip or play a game
+                  together.
+                </p>
+                <ol id="today-memories" class="memory-list"></ol>
+              </section>
+              <section>
+                <h2>
+                  A little time together
+                  <span class="star" aria-hidden="true">✧</span>
+                </h2>
+                <div class="action-list">
+                  <button data-action="play_cap">
+                    <span>◉</span
+                    ><span
+                      ><strong>Cap football</strong
+                      ><small>Three exchanges. He wins.</small></span
+                    ><span>↗</span></button
+                  ><button data-action="chip_toss">
+                    <span>⌁</span
+                    ><span
+                      ><strong>A little chip toss</strong
+                      ><small>A game with excellent snacks.</small></span
+                    ><span>↗</span></button
+                  ><button data-page="play">
+                    <span>✧</span
+                    ><span
+                      ><strong>Teach him a trick</strong
+                      ><small>Paid exclusively in chips.</small></span
+                    ><span>→</span>
+                  </button>
+                </div>
+                <p class="life-aside">
+                  No chores. No streaks. Just whenever you feel like it.
+                </p>
+              </section>
             </div>
-            <div class="trick-row">
-              <button data-action="trick_spin">Spin</button
-              ><span id="lesson-spin">New trick</span>
-            </div>
-            <div class="trick-row">
-              <button data-action="trick_dead">Play dead</button
-              ><span id="lesson-dead">New trick</span>
-            </div>
-            <div class="pair">
-              <button class="primary" data-action="feed">
-                Reward with a chip</button
-              ><button data-action="feed_here">Leave a chip here…</button>
-            </div>
-            <div class="ritual-notes" aria-live="polite">
-              <p id="snack-ritual">
-                Feed him in the same spot a few times. He’ll remember.
+            <section class="life-collection">
+              <div>
+                <p class="eyebrow">Things he definitely found</p>
+                <h2>Of questionable value.</h2>
+                <button
+                  class="text-link"
+                  data-page="world"
+                  data-world="treasures"
+                >
+                  Open his collection ↗
+                </button>
+              </div>
+              <p id="today-collection-empty" class="hint">
+                Nothing collected yet. A promising lack of taste.
               </p>
-              <p id="scratch-ritual">
-                Scratch his head after cap football or a chip toss to start a
-                ritual.
+              <ul id="today-collection" class="treasure-shelf"></ul>
+            </section>
+          </section>
+          <section
+            data-destination="play"
+            aria-label="Play and learn"
+            hidden=""
+          >
+            <p class="eyebrow">Time together</p>
+            <h1 tabindex="-1">Play, learn, repeat.</h1>
+            <p class="page-intro">
+              No chores. No streaks. Just a bird who accepts bribes.
+            </p>
+            <div class="content-columns">
+              <section class="surface-card">
+                <h2>Snacks &amp; games</h2>
+                <button data-action="feed_here">Leave a chip here…</button>
+                <div class="pair">
+                  <button data-action="feed"><span>▰</span> Offer a chip</button
+                  ><button data-action="place_bag">
+                    <span>▤</span> Place chip bag…
+                  </button>
+                </div>
+                <div class="pair"></div>
+                <p class="hint">
+                  Offer a chip feeds him where he is. Leave one in a chosen
+                  spot, or press Ctrl + Alt + F at your pointer in the desktop
+                  app. Repeated meals teach him where to check.
+                </p>
+                <div class="button-grid">
+                  <button class="" data-action="chip_toss">Chip toss…</button
+                  ><button class="" data-action="play_cap">Cap football</button
+                  ><button class="" data-action="blow_bubbles">
+                    Blow bubbles</button
+                  ><button class="" data-action="bath_time">Bath time</button
+                  ><button class="" data-action="invite_pigeon">
+                    Invite pigeon
+                  </button>
+                </div>
+                <p class="hint">
+                  Hover over his head to scratch. Click to poke; hold and drag
+                  to pick him up.
+                </p>
+                <p class="hint">
+                  Placement opens a desktop target. Escape cancels.
+                </p>
+              </section>
+              <section id="learning" class="surface-card">
+                <h2>A surprisingly teachable nuisance</h2>
+                <p id="learning-summary" class="tag">Getting to know you</p>
+                <p class="hint">
+                  Ask for a trick, wait for him to finish and ask for a chip,
+                  then reward him within 20 seconds. Three rewarded performances
+                  make it familiar. Six make him insufferable.
+                </p>
+                <div class="trick-row">
+                  <button data-action="trick_come">Come here…</button
+                  ><span id="lesson-come">New trick</span>
+                </div>
+                <div class="trick-row">
+                  <button data-action="trick_spin">Spin</button
+                  ><span id="lesson-spin">New trick</span>
+                </div>
+                <div class="trick-row">
+                  <button data-action="trick_dead">Play dead</button
+                  ><span id="lesson-dead">New trick</span>
+                </div>
+                <div class="pair">
+                  <button class="primary" data-action="feed">
+                    Reward with a chip</button
+                  ><button data-action="feed_here">Leave a chip here…</button>
+                </div>
+
+                <p class="hint">
+                  He remembers every completed performance. Chip rewards teach
+                  him the routine. His lessons stay between visits.
+                </p>
+              </section>
+            </div>
+            <div class="tidy-line">
+              <button class="" data-action="clean">Clean the evidence</button
+              ><button class="" data-action="tidy">Focused tidy mode…</button>
+            </div>
+          </section>
+          <section data-destination="world" aria-label="His world" hidden="">
+            <p class="eyebrow">A life of his own</p>
+            <h1 tabindex="-1">His little world.</h1>
+            <p class="page-intro">
+              Things he remembers. Things he absolutely found legally.
+            </p>
+            <nav class="subnav" aria-label="His world">
+              <button data-world="memories" aria-current="page">Memories</button
+              ><button data-world="treasures">Treasures</button
+              ><button data-world="wardrobe">Wardrobe</button
+              ><button data-world="rituals">Rituals &amp; places</button>
+            </nav>
+            <section data-world-panel="memories" class="surface-card">
+              <h2 id="memory-summary">A fresh start</h2>
+              <p class="hint">
+                What he did, when, and where on the desktop. Kept on this device
+                between visits. His latest 200 experiences stay in memory;
+                learned habits and totals stay longer.
               </p>
-            </div>
-            <p class="hint">
-              He remembers every completed performance. Chip rewards teach him
-              the routine. His lessons stay between visits.
-            </p>
-            <button class="subtle" data-action="forget_learning">
-              Forget tricks &amp; rituals
-            </button>
-          </div>
-        </details>
-        <details class="control-section" id="routines" name="control-room">
-          <summary>
-            <span>Bird routines</span
-            ><small>A moment of almost good behaviour</small>
-          </summary>
-          <div class="section-content">
-            <div class="pair">
-              <button data-action="squawk"><span>♪</span> Have a word</button
-              ><button data-action="nap"><span>☾</span> Take a nap</button>
-            </div>
-            <div class="pair">
-              <button data-action="preen"><span>❧</span> Preen feathers</button
-              ><button data-action="tilt"><span>?</span> Tilt his head</button>
-            </div>
-            <div class="pair">
-              <button data-action="stretch">
-                <span>↔</span> Stretch wings
-              </button>
-            </div>
-          </div>
-        </details>
-        <details
-          class="control-section"
-          id="mischief-actions"
-          name="control-room"
-        >
-          <summary>
-            <span>Mischief</span
-            ><small>Petty crime &amp; pointer trouble</small>
-          </summary>
-          <div class="section-content">
-            <div class="pair">
-              <button data-action="nibble_cursor">
-                <span>↖</span> Nibble cursor</button
-              ><button data-action="eat_cursor">
-                <span>↖</span> Eat cursor
-              </button>
-            </div>
-            <div class="pair">
-              <button data-action="bag_caper"><span>!</span> Bag caper</button
-              ><button data-action="steal_bag"><span>↪</span> Steal bag</button>
-            </div>
-            <div class="pair">
-              <button data-action="caught"><span>☝</span> Caught you!</button
-              ><button data-action="poop"><span>✳</span> Leave a gift</button>
-            </div>
-            <div class="pair">
-              <button data-action="target"><span>⌖</span> Poop here…</button>
-            </div>
-            <p class="hint">
-              Eat cursor lets him catch and tug your pointer for one second. Esc
-              releases it. In the playground, move into the desktop; the catch
-              is visual only.
-            </p>
-            <p class="hint">
-              Point anywhere. Press Ctrl + Alt + P. A gift awaits.
-            </p>
-          </div>
-        </details>
-        <details class="control-section" id="play" name="control-room">
-          <summary>
-            <span>Play</span><small>A very competitive little bird</small>
-          </summary>
-          <div class="section-content">
-            <div class="pair">
-              <button data-action="play_cap">Play with a cap</button>
-            </div>
-            <p class="hint">
-              Click the cap to flick it away. He chases it and pecks it back
-              toward your pointer. Three exchanges, then he declares victory.
-            </p>
-          </div>
-        </details>
-        <details class="control-section" id="theatre" name="control-room">
-          <summary>
-            <span>Theatre</span><small>One little spectacle at a time</small>
-          </summary>
-          <div class="section-content">
-            <div class="pair">
-              <button data-action="blow_bubbles">Blow bubbles</button
-              ><button data-action="bath_time">Bath time</button>
-            </div>
-            <div class="pair">
-              <button data-action="invite_pigeon">Invite pigeon</button
-              ><button data-action="gull_argument">Gull argument</button>
-            </div>
-            <div class="pair">
-              <button data-action="baguette_parade">Baguette parade</button
-              ><button data-action="pretend_leave">Pretend to leave</button>
-            </div>
-            <div class="pair">
-              <button data-action="cursor_egg">Cursor egg</button
-              ><button data-action="municipal_gull">Municipal gull</button>
-            </div>
-            <div class="pair">
-              <button data-action="apology">The apology</button>
-              <button data-action="postcards">Poop postcards</button>
-            </div>
-            <p class="hint">
-              For cursor egg, leave your pointer still in his patch. Stop
-              routine ends the show.
-            </p>
-          </div>
-        </details>
-        <details class="control-section" id="belongings" name="control-room">
-          <summary>
-            <span>Gifts &amp; favourite spot</span
-            ><small
-              ><span id="belongings-summary">No treasures yet</span></small
+              <p id="memory-empty" class="hint">
+                Try a trick, share a chip, or invite a visitor. His memories
+                will appear here.
+              </p>
+              <ol id="memory-items" aria-live="polite"></ol>
+              <p class="hint">Showing his 12 most recent experiences.</p>
+              <p id="visitor-summary" class="hint">No familiar visitors yet.</p>
+            </section>
+            <section
+              data-world-panel="treasures"
+              class="surface-card"
+              hidden=""
             >
-          </summary>
-          <div class="section-content">
-            <div class="pair">
-              <button data-action="bring_gift">Bring me something</button>
-            </div>
-            <div class="pair">
-              <button data-action="place_perch">Favourite spot…</button
-              ><button data-action="perch">Perch</button>
-            </div>
-            <div class="pair small-actions">
-              <button data-action="clear_perch">Clear favourite spot</button>
-            </div>
-            <p class="hint">
-              Ask him to bring something back for your collection.
-            </p>
-            <details id="collection">
-              <summary>
+              <h2>
                 Questionable treasures <span id="collection-count">0</span>
-              </summary>
+              </h2>
               <p id="collection-empty">
                 Nothing yet. A promising lack of taste.
               </p>
               <ul id="collection-items"></ul>
-            </details>
-          </div>
-        </details>
-        <details class="control-section" id="memories" name="control-room">
-          <summary>
-            <span>His memory</span
-            ><small id="memory-summary">A fresh start</small>
-          </summary>
-          <div class="section-content">
-            <p class="hint">
-              What he did, when, and where on the desktop. Kept on this device
-              between visits. His latest 200 experiences stay in memory; learned
-              habits and totals stay longer.
-            </p>
-            <p id="memory-empty" class="hint">
-              Try a trick, share a chip, or invite a visitor. His memories will
-              appear here.
-            </p>
-            <ol id="memory-items" aria-live="polite"></ol>
-            <p class="hint">Showing his 12 most recent experiences.</p>
-          </div>
-        </details>
-        <details class="control-section" id="tidying" name="control-room">
-          <summary>
-            <span>Tidying</span
-            ><small>A slightly more respectable desktop</small>
-          </summary>
-          <div class="section-content">
-            <div class="pair">
-              <button data-action="tidy">Focused tidy mode…</button
-              ><button data-action="clean">Clean the evidence</button>
-            </div>
-            <p class="hint">
-              Click loose mess to tidy it, or use focused tidy mode. Your
-              treasures and favourite spot stay put.
-            </p>
-          </div>
-        </details>
-        <details class="control-section" id="preferences" name="control-room">
-          <summary>
-            <span>Preferences</span
-            ><small
-              ><span id="preferences-summary">Menace · Sound off</span></small
-            >
-          </summary>
-          <div class="section-content">
-            <div class="setting">
-              <div>
-                <label for="hat">Tiny wardrobe</label
-                ><small>Enormous responsibility. Saved locally.</small>
+              <p id="belongings-summary" class="hint">No treasures yet</p>
+              <p class="hint">
+                His collection stays between visits and survives tidying.
+              </p>
+              <button class="primary" data-action="bring_gift">
+                Bring me something
+              </button>
+            </section>
+            <section data-world-panel="wardrobe" class="surface-card" hidden="">
+              <div class="wardrobe-preview">
+                <div
+                  class="portrait-bird"
+                  role="img"
+                  aria-label="Gullbert the pixel seagull"
+                >
+                  <img class="portrait-hat" alt="" hidden="" />
+                </div>
               </div>
-              <select id="hat">
-                <option value="none">None</option>
-                <option value="captain">Captain</option>
-                <option value="beanie">Fisherman’s beanie</option>
-                <option value="paper-crown">Paper crown</option>
-                <option value="fried-egg">Fried egg</option>
-                <option value="cone">Traffic cone</option>
-              </select>
-            </div>
-            <section class="preferences" aria-label="Preferences">
               <div class="setting">
                 <div>
-                  <label for="mischief">Mischief level</label
-                  ><small>How bold he gets with your cursor and typing.</small>
+                  <label for="hat">Tiny wardrobe</label
+                  ><small>Enormous responsibility. Saved locally.</small>
                 </div>
-                <select id="mischief">
-                  <option value="0">Polite-ish</option>
-                  <option value="1" selected>Menace</option>
-                  <option value="2">Public enemy</option>
+                <select id="hat">
+                  <option value="none">None</option>
+                  <option value="captain">Captain</option>
+                  <option value="beanie">Fisherman’s beanie</option>
+                  <option value="paper-crown">Paper crown</option>
+                  <option value="fried-egg">Fried egg</option>
+                  <option value="cone">Traffic cone</option>
                 </select>
               </div>
+            </section>
+            <section data-world-panel="rituals" class="surface-card" hidden="">
+              <h2>He’s getting to know you.</h2>
+              <div class="ritual-notes" aria-live="polite">
+                <p id="snack-ritual">
+                  Feed him in the same spot a few times. He’ll remember.
+                </p>
+                <p id="scratch-ritual">
+                  Scratch his head after cap football or a chip toss to start a
+                  ritual.
+                </p>
+              </div>
               <div class="setting">
                 <div>
-                  <span>Caret fishing</span
-                  ><small id="caret-status">Checking caret access…</small>
+                  <strong>Favourite spot</strong
+                  ><small id="perch-summary">Not chosen yet</small>
                 </div>
-                <button id="caret-access" type="button" hidden>
-                  Enable access
+                <button class="" data-action="place_perch">Choose spot…</button>
+              </div>
+              <div class="button-grid">
+                <button class="" data-action="clear_perch">
+                  Clear favourite spot</button
+                ><button class="" data-action="forget_learning">
+                  Forget tricks &amp; rituals
                 </button>
               </div>
-              <div class="setting" id="vision-setting">
-                <div>
-                  <label for="vision">Local vision</label
-                  ><small
-                    >Nibble visible words near the mouse. Processed on this
-                    device; nothing saved or sent.</small
-                  >
-                </div>
-                <input id="vision" type="checkbox" role="switch" />
-              </div>
-              <p id="vision-status" role="status" hidden></p>
-              <button id="vision-access" type="button" hidden>
-                Allow screen access
-              </button>
-              <div class="setting">
-                <label for="paused">Pause autonomous antics</label
-                ><input id="paused" type="checkbox" role="switch" />
-              </div>
-              <div class="setting">
-                <label for="sound">Tiny sound effects</label
-                ><input id="sound" type="checkbox" role="switch" />
-              </div>
+              <p class="hint">
+                Forgetting lessons keeps his visitors, treasures, hat and
+                favourite spot.
+              </p>
             </section>
-          </div>
-        </details>
-        <details
-          id="updates"
-          class="control-section"
-          name="control-room"
-          hidden
-        >
-          <summary>App updates</summary>
-          <section class="update-content">
-            <p id="update-status" role="status">
-              Check for a newer Gullbert release.
-            </p>
-            <label
-              ><input id="update-beta" type="checkbox" /> Include beta
-              releases</label
-            >
-            <p>Connects to GitHub only when you check or install.</p>
-            <progress id="update-progress" hidden></progress>
-            <button id="update-check" type="button">Check for updates</button>
-            <button id="update-install" type="button" hidden>
-              Install and restart
-            </button>
-            <pre id="update-notes" hidden></pre>
           </section>
-        </details>
-      </div>
-      <div class="bottom-bar">
-        <div class="footer-actions">
-          <button data-action="cancel">Stop routine</button>
-          <button id="visibility-toggle" data-action="hide">
-            Send him away
-          </button>
-        </div>
-        <footer>
-          <span>He lives in your menu bar / system tray.</span
-          ><button data-action="quit">Quit</button>
+          <section data-destination="settings" aria-label="Settings" hidden="">
+            <p class="eyebrow">Living with a gull</p>
+            <h1 tabindex="-1">A few ground rules.</h1>
+            <div class="setting appearance">
+              <h2>Make yourself comfortable</h2>
+              <div class="theme-control" role="group" aria-label="Appearance">
+                <button data-theme="light" aria-pressed="true">Light</button
+                ><button data-theme="dark" aria-pressed="false">Dark</button>
+              </div>
+            </div>
+            <p id="theme-error" role="alert" hidden=""></p>
+            <p id="preferences-summary" class="hint">Menace · Sound off</p>
+            <section class="content-columns">
+              <section class="surface-card">
+                <h2>His behaviour</h2>
+                <div class="setting">
+                  <div>
+                    <label for="mischief">Mischief level</label
+                    ><small
+                      >How bold he gets with your cursor and typing.</small
+                    >
+                  </div>
+                  <select id="mischief">
+                    <option value="0">Polite-ish</option>
+                    <option value="1" selected="">Menace</option>
+                    <option value="2">Public enemy</option>
+                  </select>
+                </div>
+                <div class="setting">
+                  <label for="paused">Pause autonomous antics</label
+                  ><input id="paused" type="checkbox" role="switch" />
+                </div>
+                <div class="setting">
+                  <label for="sound">Tiny sound effects</label
+                  ><input id="sound" type="checkbox" role="switch" />
+                </div>
+              </section>
+              <section class="surface-card">
+                <h2>Screen &amp; typing access</h2>
+
+                <div class="setting">
+                  <div>
+                    <span>Caret fishing</span
+                    ><small id="caret-status">Checking caret access…</small>
+                  </div>
+                  <button id="caret-access" type="button" hidden="">
+                    Enable access
+                  </button>
+                </div>
+                <div class="setting" id="vision-setting">
+                  <div>
+                    <label for="vision">Local vision</label
+                    ><small
+                      >Nibble visible words near the mouse. Processed on this
+                      device; nothing saved or sent.</small
+                    >
+                  </div>
+                  <input id="vision" type="checkbox" role="switch" />
+                </div>
+                <p id="vision-status" role="status" hidden=""></p>
+                <button id="vision-access" type="button" hidden="">
+                  Allow screen access
+                </button>
+              </section>
+            </section>
+            <details class="settings-detail">
+              <summary>Keyboard shortcuts</summary>
+              <div class="shortcut-list">
+                <div><span>Summon Gullbert</span><kbd>Ctrl + Alt + G</kbd></div>
+                <div>
+                  <span>Hide Gullbert</span><kbd>Ctrl + Alt + Shift + G</kbd>
+                </div>
+                <div>
+                  <span>Clean / cancel targeting</span><kbd>Ctrl + Alt + X</kbd>
+                </div>
+                <div><span>Poop at pointer</span><kbd>Ctrl + Alt + P</kbd></div>
+                <div><span>Chip at pointer</span><kbd>Ctrl + Alt + F</kbd></div>
+                <div><span>Cancel / release cursor</span><kbd>Escape</kbd></div>
+              </div>
+              <p class="hint">On Mac, Alt is Option and Ctrl is Control.</p>
+            </details>
+            <details
+              id="updates"
+              class="control-section"
+              name="control-room"
+              hidden=""
+            >
+              <summary>App updates</summary>
+              <section class="update-content">
+                <p id="update-status" role="status">
+                  Check for a newer Gullbert release.
+                </p>
+                <label
+                  ><input id="update-beta" type="checkbox" /> Include beta
+                  releases</label
+                >
+                <p>Connects to GitHub only when you check or install.</p>
+                <progress id="update-progress" hidden=""></progress>
+                <button id="update-check" type="button">
+                  Check for updates
+                </button>
+                <button id="update-install" type="button" hidden="">
+                  Install and restart
+                </button>
+                <pre id="update-notes" hidden=""></pre>
+              </section>
+            </details>
+            <p class="privacy-note">
+              A local little life. No account, no analytics, no hunger chores.
+              Closing this window leaves him on your desktop.
+            </p>
+          </section>
+        </main>
+        <footer class="session-controls">
+          <button id="pause-toggle">Ⅱ Pause antics</button
+          ><button class="" data-action="cancel">Stop routine</button
+          ><button id="visibility-toggle" data-action="hide">
+            Send him away</button
+          ><button class="quit" data-action="quit">Quit</button>
         </footer>
-        <p id="error" role="alert" hidden></p>
-        <p id="storage-error" role="alert" hidden></p>
+        <div class="notices">
+          <p id="error" role="alert" hidden=""></p>
+          <p id="storage-error" role="alert" hidden=""></p>
+          <div id="placement-notice" role="status" hidden="">
+            <span id="placement-status"></span
+            ><button id="cancel-placement">Never mind</button>
+          </div>
+        </div>
       </div>
-    </main>
-    <aside id="demo" hidden>
-      <div class="desktop-note">
-        <span>THE TEST DESKTOP</span>
-        <h2>A perfectly peaceful<br />place. For now.</h2>
-        <p>Browser preview. The installed app roams over your real desktop.</p>
-      </div>
-      <div class="preview-downloads">
+    </div>
+    <aside id="demo" hidden="">
+      <header class="website-header">
+        <div>
+          <strong>Gullbert.</strong
+          ><span>A little nuisance for your desktop.</span>
+        </div>
         <a
           class="download-link"
           href="https://github.com/Mihhail-R/gullbert/releases"
@@ -400,11 +466,96 @@
           rel="noopener noreferrer"
           >Download for macOS or Windows ↗</a
         >
+      </header>
+      <div class="preview-title">
+        <p class="eyebrow">The browser playground</p>
+        <h2>Meet your next distraction.</h2>
         <p>
-          Early preview · Unsigned builds. See release notes before installing.
+          Try the things he does. The installed app lets them happen in their
+          own time.
         </p>
       </div>
-      <iframe title="Gullbert's preview playground"></iframe>
+      <div class="playground-layout">
+        <div class="playground">
+          <span class="playground-label">THE TEST DESKTOP</span
+          ><iframe title="Gullbert's preview playground"></iframe>
+        </div>
+        <section class="preview-controls">
+          <p class="eyebrow">Give him a cue</p>
+          <h2>A preview of the chaos</h2>
+          <details open="">
+            <summary>Everyday bird</summary>
+            <div class="button-grid">
+              <button class="" data-action="squawk">Have a word</button
+              ><button class="" data-action="nap">Take a nap</button
+              ><button class="" data-action="preen">Preen feathers</button
+              ><button class="" data-action="tilt">Tilt his head</button
+              ><button class="" data-action="stretch">Stretch wings</button
+              ><button class="" data-action="search_snack">Find a snack</button
+              ><button class="" data-action="perch">Perch</button>
+            </div>
+          </details>
+          <details>
+            <summary>Petty crime</summary>
+            <div class="button-grid">
+              <button class="" data-action="nibble_cursor">Nibble cursor</button
+              ><button class="" data-action="eat_cursor">Eat cursor</button
+              ><button class="" data-action="bag_caper">Bag caper</button
+              ><button class="" data-action="steal_bag">Steal bag</button
+              ><button class="" data-action="caught">Caught you!</button
+              ><button class="" data-action="poop">Leave a gift</button
+              ><button class="" data-action="target">Poop here…</button>
+            </div>
+          </details>
+          <details>
+            <summary>Little spectacles</summary>
+            <div class="button-grid">
+              <button class="" data-action="gull_argument">Gull argument</button
+              ><button class="" data-action="baguette_parade">
+                Baguette parade</button
+              ><button class="" data-action="pretend_leave">
+                Pretend to leave</button
+              ><button class="" data-action="cursor_egg">Cursor egg</button
+              ><button class="" data-action="municipal_gull">
+                Municipal gull</button
+              ><button class="" data-action="apology">The apology</button
+              ><button class="" data-action="postcards">Poop postcards</button>
+            </div>
+          </details>
+          <details>
+            <summary>Play &amp; company</summary>
+            <div class="button-grid">
+              <button class="" data-action="blow_bubbles">Blow bubbles</button
+              ><button class="" data-action="bath_time">Bath time</button
+              ><button class="" data-action="chip_toss">Chip toss…</button
+              ><button class="" data-action="play_cap">Cap football</button
+              ><button class="" data-action="invite_pigeon">
+                Invite pigeon
+              </button>
+            </div>
+          </details>
+          <details>
+            <summary>Typing mischief</summary>
+            <p class="hint">
+              Type in the playground. Choose Menace for caret fishing or Public
+              enemy for a punctuation nest. Your text stays intact. Local vision
+              requires the installed app.
+            </p>
+          </details>
+          <p class="hint">
+            Pointer catches are pretend here. Escape cancels placement and
+            releases the pointer.
+          </p>
+          <button id="reset-preview">Reset scene</button>
+          <p class="hint">
+            Clears loose mess and brings him back. His memories and collection
+            stay.
+          </p>
+        </section>
+      </div>
+      <p class="hint">
+        Early preview · Unsigned builds. See release notes before installing.
+      </p>
     </aside>
     <script type="module" src="ui/controls/controls.js"></script>
   </body>

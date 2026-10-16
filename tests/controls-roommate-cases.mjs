@@ -8,12 +8,16 @@ export function roommateRenderingTests(mode) {
   let dom;
   let document;
   const listeners = new Map();
+  const commands = [];
+  const messages = [];
+  let failSave = false;
   const settings = { paused: false, sound: false, mischief: 1, hat: "none" };
 
   before(async () => {
     const html = await readFile(new URL("../web-dist/index.html", import.meta.url), "utf8");
     dom = new JSDOM(html, { url: "https://gullbert.test/" });
     document = dom.window.document;
+    dom.window.localStorage.setItem("gullbert.appearance.v1", "dark");
     Object.assign(globalThis, {
       window: dom.window,
       document,
@@ -24,8 +28,19 @@ export function roommateRenderingTests(mode) {
     if (mode === "native") {
       dom.window.__TAURI__ = {
         core: {
-          async invoke(command) {
+          async invoke(command, args) {
+            commands.push({ command, args });
+
             switch (command) {
+              case "update_settings":
+                if (failSave) {
+                  throw new Error("Disk full");
+                }
+
+                return;
+
+              case "act":
+              case "cancel_targeting":
               case "request_roommate":
                 return;
 
@@ -56,6 +71,13 @@ export function roommateRenderingTests(mode) {
     }
 
     await import("../web-dist/ui/controls/controls.js");
+    const frame = document.querySelector("iframe");
+    frame.contentDocument.open();
+    frame.contentDocument.write("<!doctype html><html><body></body></html>");
+    frame.contentDocument.close();
+    frame.contentWindow.postMessage = (data, origin) => {
+      messages.push({ data, origin });
+    };
   });
 
   after(() => {
@@ -264,10 +286,16 @@ export function roommateRenderingTests(mode) {
       "memory-summary",
       "memory-empty",
       "memory-items",
+      "today-memory-empty",
+      "today-memories",
       "collection-count",
       "belongings-summary",
       "collection-empty",
       "collection-items",
+      "today-collection-empty",
+      "today-collection",
+      "perch-summary",
+      "visitor-summary",
       "storage-error",
     ]);
     assert.deepEqual(updates.slice(-2), ["storage-error", "storage-error"]);
@@ -279,5 +307,222 @@ export function roommateRenderingTests(mode) {
     deliver({});
     assert.equal(element("storage-error").textContent, "");
     assert.equal(element("storage-error").hidden, true);
+  });
+
+  test(`${mode}: navigation, home links and appearance preserve the live page`, () => {
+    assert.equal(document.body.dataset.theme, "dark", "restores saved appearance");
+    document.querySelector('.sidebar [data-page="play"]')
+      .click();
+    assert.equal(document.querySelector('[data-destination="today"]').hidden, true);
+    assert.equal(document.querySelector('[data-destination="play"]').hidden, false);
+    assert.equal(document.activeElement.textContent, "Play, learn, repeat.");
+
+    document.querySelector('[data-page="world"][data-world="treasures"]')
+      .click();
+    assert.equal(document.querySelector('[data-destination="world"]').hidden, false);
+    assert.equal(document.querySelector('[data-world-panel="treasures"]').hidden, false);
+    assert.equal(document.querySelector('[data-world-panel="memories"]').hidden, true);
+    assert.equal(document.querySelector('.subnav [aria-current]').dataset.world, "treasures");
+
+    document.querySelector('.sidebar [data-page="settings"]')
+      .click();
+    document.querySelector('[data-theme="light"]')
+      .click();
+    assert.equal(document.body.dataset.theme, "light");
+    assert.equal(localStorage.getItem("gullbert.appearance.v1"), "light");
+    assert.equal(document.querySelector('button[data-theme="light"]').ariaPressed, "true");
+    assert.equal(document.querySelector('[data-destination="settings"]').hidden, false);
+    assert.equal(document.querySelector("iframe").contentDocument.body.dataset.theme, "light");
+  });
+
+  test(`${mode}: Today shows real recent memories and keeps its shelf in sync`, () => {
+    const episodes = Array.from({ length: 5 }, (_, index) => ({
+      id: index,
+      kind: "trick",
+      detail: `example ${index}`,
+      at: Date.UTC(2026, 9, 16, 12, index),
+      location: { x: 10, y: 20, width: 900, height: 600 },
+    }));
+    deliver({ memory: {
+      episodes,
+      collection: { sock: 2, bottle_cap: 3 },
+      perch: { x: 125, y: 400 },
+      visits: { pigeon: 2, gull: 1 },
+    } });
+    assert.deepEqual(
+      [...element("today-memories")
+        .querySelectorAll("strong")].map((row) => row.textContent),
+      ["Performed example 4", "Performed example 3", "Performed example 2"],
+    );
+    assert.equal(element("today-collection").children.length, 2);
+    assert.match(element("today-collection").textContent, /×2/);
+    assert.match(element("perch-summary").textContent, /125, 400/);
+    assert.match(element("visitor-summary").textContent, /Pigeon: 2 · Other gull: 1/);
+    deliver({});
+    assert.equal(element("today-memories").children.length, 0);
+    assert.equal(element("today-collection").children.length, 0);
+    assert.equal(element("today-memory-empty").hidden, false);
+    assert.equal(element("today-collection-empty").hidden, false);
+    assert.equal(element("perch-summary").textContent, "Not chosen yet");
+  });
+
+  test(`${mode}: update channel and appearance do not save companion preferences`, async () => {
+    commands.length = 0;
+    messages.length = 0;
+    element("update-beta")
+      .dispatchEvent(new dom.window.Event("change"));
+    document.querySelector('button[data-theme="dark"]')
+      .click();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(commands.some((call) => call.command === "update_settings"), false);
+    assert.equal(messages.some((message) => message.data.type === "settings"), false);
+  });
+
+  test(`${mode}: pause and wardrobe use real settings; hats use production geometry`, async () => {
+    commands.length = 0;
+    messages.length = 0;
+    element("pause-toggle")
+      .click();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(element("paused").checked, true);
+    assert.equal(element("pause-toggle").textContent, "▷ Resume antics");
+    element("hat").value = "captain";
+    element("hat")
+      .dispatchEvent(new dom.window.Event("change"));
+    await new Promise((resolve) => setImmediate(resolve));
+    const saved = mode === "native"
+      ? commands.filter((call) => call.command === "update_settings")
+        .at(-1).args.settings
+      : messages.filter((message) => message.data.type === "settings")
+        .at(-1).data.settings;
+    assert.equal(saved.paused, true);
+    assert.equal(saved.hat, "captain");
+    assert.equal("theme" in saved, false);
+
+    for (const hat of document.querySelectorAll(".portrait-hat")) {
+      assert.equal(hat.hidden, false);
+      assert.equal(hat.getAttribute("src"), "assets/theatre/captain.svg");
+      assert.equal(hat.style.left, "24px");
+      assert.equal(hat.style.top, "-6px");
+    }
+  });
+
+  test(`${mode}: demo cues stay on the website; deliberate play stays in app`, () => {
+    const forced = ["nap", "preen", "poop", "target", "baguette_parade", "eat_cursor"];
+
+    for (const action of forced) {
+      assert.equal(document.querySelector(`.room [data-action="${action}"]`), null);
+      assert.ok(document.querySelector(`#demo [data-action="${action}"]`));
+    }
+
+    for (const action of ["feed", "trick_spin", "play_cap", "place_perch", "clean"]) {
+      assert.ok(document.querySelector(`.room [data-action="${action}"]`));
+    }
+
+    commands.length = 0;
+    messages.length = 0;
+    document.querySelector('#demo [data-action="nap"]')
+      .click();
+    assert.equal(commands.length, 0);
+
+    if (mode === "native") {
+      assert.equal(element("demo").hidden, true);
+      assert.equal(messages.length, 0);
+    } else {
+      assert.equal(element("demo").hidden, false);
+      assert.deepEqual(messages, [{
+        data: { type: "action", action: "nap" },
+        origin: "https://gullbert.test",
+      }]);
+    }
+  });
+
+  test(`${mode}: native updates, targeting and failed saves retain safe state`, async () => {
+    if (mode !== "native") {
+      return;
+    }
+
+    element("updates").scrollIntoView = () => {};
+    document.querySelector('.sidebar [data-page="today"]')
+      .click();
+    listeners.get("gullbert-open-updates")({ payload: null });
+    assert.equal(document.querySelector('[data-destination="settings"]').hidden, false);
+    assert.equal(element("updates").open, true);
+    listeners.get("gullbert-target")({ payload: {
+      outcome: "started", id: 1, purpose: "feed", preparation: "cancel",
+    } });
+    assert.equal(element("placement-notice").hidden, false);
+    element("cancel-placement")
+      .click();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(commands.at(-1).command, "cancel_targeting");
+    listeners.get("gullbert-target")({ payload: { outcome: "abandoned", id: 1 } });
+    assert.equal(element("placement-notice").hidden, true);
+    failSave = true;
+    element("pause-toggle")
+      .click();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(element("paused").checked, true, "failed save restores the previous state");
+    assert.equal(element("pause-toggle").disabled, false);
+    assert.match(element("error").textContent, /Could not save preferences/);
+    failSave = false;
+  });
+
+  test(`${mode}: untrusted preview messages cannot alter the journal`, () => {
+    if (mode !== "preview") {
+      return;
+    }
+
+    deliver({ mood: "offended" });
+
+    for (const [origin, source] of [
+      ["https://other.test", document.querySelector("iframe").contentWindow],
+      [dom.window.location.origin, dom.window],
+    ]) {
+      dom.window.dispatchEvent(new dom.window.MessageEvent("message", {
+        origin, source, data: { type: "roommate", mood: "curious" },
+      }));
+      assert.equal(element("mood").textContent, "Feeling offended.");
+    }
+  });
+
+  test(`${mode}: preview reset uses safe commands without forgetting memories`, () => {
+    commands.length = 0;
+    messages.length = 0;
+    element("reset-preview")
+      .click();
+    assert.equal(commands.length, 0);
+
+    if (mode === "native") {
+      assert.equal(messages.length, 0);
+    } else {
+      assert.deepEqual(messages.map((message) => message.data), [
+        { type: "action", action: "cancel" },
+        { type: "action", action: "clean" },
+        { type: "action", action: "summon" },
+      ]);
+    }
+  });
+
+  test(`${mode}: unavailable appearance storage keeps the chosen theme usable`, () => {
+    const storagePrototype = dom.window.Storage.prototype;
+    const original = storagePrototype.setItem;
+    storagePrototype.setItem = () => {
+      throw new Error("Storage unavailable");
+    };
+
+    try {
+      document.querySelector('button[data-theme="light"]')
+        .click();
+      assert.equal(document.body.dataset.theme, "light");
+      assert.equal(element("theme-error").hidden, false);
+      assert.match(element("theme-error").textContent, /Could not save appearance/);
+    } finally {
+      storagePrototype.setItem = original;
+    }
+
+    document.querySelector('button[data-theme="dark"]')
+      .click();
+    assert.equal(element("theme-error").hidden, true);
   });
 }
