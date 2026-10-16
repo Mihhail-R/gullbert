@@ -99,15 +99,19 @@ export function cleanupObjects(sim: Geometry): CleanupTarget[] {
       height: geometry.height,
     });
   }
+
   if (sim.bag) {
     add("bag", sim.bag, sim.bag.id);
   }
+
   for (const rubbish of sim.rubbish) {
     add("rubbish", rubbish, rubbish.id);
   }
+
   if (sim.crumb) {
     add("chip", sim.crumb);
   }
+
   for (const chip of sim.looseChips) {
     objects.push({
       kind: "chip",
@@ -118,6 +122,7 @@ export function cleanupObjects(sim: Geometry): CleanupTarget[] {
       height: chip.height,
     });
   }
+
   for (const splat of sim.splats) {
     const scale = splat.scale ?? 1;
     objects.push({
@@ -129,9 +134,11 @@ export function cleanupObjects(sim: Geometry): CleanupTarget[] {
       height: 30 * scale,
     });
   }
+
   for (const cone of sim.cones) {
     add("cone", cone, cone.id);
   }
+
   return objects;
 }
 export function cleanupTarget(
@@ -146,15 +153,16 @@ function findTarget(
   point: Point,
 ): CleanupTarget | null {
   return (
-    objects.reverse().find((object) => {
-      const withinWidth =
-        point.x >= object.x - CLEANUP_HIT_PADDING &&
+    objects.reverse()
+      .find((object) => {
+        const withinWidth =
+          point.x >= object.x - CLEANUP_HIT_PADDING &&
         point.x <= object.x + object.width + CLEANUP_HIT_PADDING;
-      const withinHeight =
-        point.y >= object.y - CLEANUP_HIT_PADDING &&
+        const withinHeight =
+          point.y >= object.y - CLEANUP_HIT_PADDING &&
         point.y <= object.y + object.height + CLEANUP_HIT_PADDING;
-      return withinWidth && withinHeight;
-    }) ?? null
+        return withinWidth && withinHeight;
+      }) ?? null
   );
 }
 // Everyday clicks only select loose, visible mess. Scene-owned food and
@@ -163,24 +171,30 @@ export function directCleanupObjects(sim: DirectGeometry): CleanupTarget[] {
   if (!sim.visible || (sim.scene?.kind === "cursor" && sim.scene.takeover)) {
     return [];
   }
-  return cleanupObjects(sim).filter((object) => {
-    switch (object.kind) {
-      case "bag":
-        if (sim.bag?.attached) {
-          return false;
-        }
-        return (
-          !sim.scene ||
+
+  return cleanupObjects(sim)
+    .filter((object) => {
+      switch (object.kind) {
+        case "bag":
+          if (sim.bag?.attached) {
+            return false;
+          }
+
+          return (
+            !sim.scene ||
           !["theft", "caper", "snack", "guest"].includes(sim.scene.kind)
-        );
-      case "chip":
-        return object.id != null || !["fetch", "eat"].includes(sim.mode);
-      case "cone":
-        return sim.scene?.kind !== "municipal_gull";
-      default:
-        return true;
-    }
-  });
+          );
+
+        case "chip":
+          return object.id != null || !["fetch", "eat"].includes(sim.mode);
+
+        case "cone":
+          return sim.scene?.kind !== "municipal_gull";
+
+        default:
+          return true;
+      }
+    });
 }
 export function directCleanupTarget(sim: DirectGeometry, point: Point) {
   return findTarget(directCleanupObjects(sim), point);
@@ -244,9 +258,11 @@ export class Cleanup {
   directPick(point: Point) {
     const sim = this.#host.observe();
     const target = directCleanupTarget(sim, point);
+
     if (!target) {
       return false;
     }
+
     if (!this.#state.session) {
       this.cancel();
       this.#state.session = {
@@ -257,9 +273,11 @@ export class Cleanup {
         bag: null,
       };
     }
+
     if (this.#state.session.direct) {
       this.#state.session.until = sim.time + 4;
     }
+
     this.#pickTarget(point, target);
     return true;
   }
@@ -277,8 +295,10 @@ export class Cleanup {
     if (!this.#state.session) {
       return;
     }
+
     this.#state.pointer = { ...point };
     const target = this.target(point);
+
     if (target) {
       this.#pickTarget(point, target);
     }
@@ -287,10 +307,13 @@ export class Cleanup {
     const sim = this.#host.observe();
     const state = this.#state;
     const session = state.session;
+
     if (!session) {
       return;
     }
+
     state.pointer = { ...point };
+
     if (target.kind === "bag") {
       if (sim.bag?.servings === 0) {
         session.bag = { ...sim.bag, attached: false };
@@ -298,6 +321,7 @@ export class Cleanup {
         session.bag = null;
       }
     }
+
     this.#host.objects.remove(target.kind, target.id);
     session.removals += 1;
     session.recent = session.recent.filter((time) => {
@@ -313,22 +337,29 @@ export class Cleanup {
     const sim = this.#host.observe();
     const state = this.#state;
     const session = state.session;
+
     if (!session) {
       return;
     }
+
     state.session = null;
     state.pointer = null;
+
     if (!session.direct) {
       this.#host.rest();
     }
+
     if (!session.removals) {
       return;
     }
+
     state.sulkUntil = sim.time + 10;
     state.away = sim.facing * -1;
+
     if (!session.direct || (!sim.scene && !sim.flight)) {
       this.#host.body.face(state.away);
     }
+
     this.#remark("sulk");
     this.#scheduleRetaliation(session, sim);
     state.apology =
@@ -337,28 +368,37 @@ export class Cleanup {
   #scheduleRetaliation(session: Session, sim: CleanupObservation): void {
     const state = this.#state;
     const level = sim.settings.mischief;
+
     if (session.removals < 2 || sim.settings.paused || level <= 0) {
       return;
     }
+
     if (sim.time < state.retaliationAllowedAt) {
       return;
     }
+
     if (!session.bag && level < 2) {
       return;
     }
+
     let reactionChance = 0.35;
+
     if (level >= 2) {
       reactionChance = 0.6;
     }
+
     if (!(this.#host.random() < reactionChance)) {
       return;
     }
+
     let kind: "bag" | "splat";
+
     if (level === 1 || (session.bag && this.#host.random() < 0.5)) {
       kind = "bag";
     } else {
       kind = "splat";
     }
+
     state.retaliation = { at: sim.time + 5, kind, bag: session.bag };
     state.retaliationAllowedAt = sim.time + 90;
   }
@@ -374,6 +414,7 @@ export class Cleanup {
   configure() {
     const sim = this.#host.observe();
     const state = this.#state;
+
     if (sim.settings.paused || sim.settings.mischief === 0) {
       state.retaliation = null;
     } else if (
@@ -382,6 +423,7 @@ export class Cleanup {
     ) {
       state.retaliation = null;
     }
+
     if (sim.settings.paused) {
       state.apology = false;
     }
@@ -393,12 +435,16 @@ export class Cleanup {
   update(dt: number): boolean {
     const sim = this.#host.observe();
     const state = this.#state;
+
     if (state.session && sim.time >= state.session.until) {
       this.finish();
     }
+
     const retaliation = state.retaliation;
+
     if (retaliation && sim.time >= retaliation.at) {
       state.retaliation = null;
+
       if (!sim.scene && sim.mode === "idle" && !sim.settings.paused) {
         if (retaliation.kind === "bag" && !sim.bag && retaliation.bag) {
           this.#host.objects.restoreBag(retaliation.bag);
@@ -413,12 +459,14 @@ export class Cleanup {
         }
       }
     }
+
     // Direct cleanup never stalls an unrelated show or flight.
     if (!this.tidying) {
       if (sim.scene || sim.flight || !["idle", "walk"].includes(sim.mode)) {
         return false;
       }
     }
+
     if (state.session) {
       if (state.level >= 3 && state.pointer) {
         this.#host.body.moveToward(
@@ -426,25 +474,31 @@ export class Cleanup {
           75,
           dt,
         );
+
         if (sim.time >= state.reactionUntil) {
           this.#remark("escalation");
           state.reactionUntil = sim.time + 5;
         }
       }
+
       return true;
     }
+
     if (state.sulkUntil > sim.time) {
       if (Math.floor((state.sulkUntil - sim.time) * 2) % 6 === 0) {
         this.#host.body.face(-state.away);
       } else {
         this.#host.body.face(state.away);
       }
+
       return true;
     }
+
     if (state.sulkUntil) {
       state.sulkUntil = 0;
       state.level = 0;
       this.#host.moods.settleOffence();
+
       if (state.apology) {
         if (!sim.scene && sim.mode === "idle" && !sim.settings.paused) {
           state.apology = false;
@@ -452,8 +506,10 @@ export class Cleanup {
           return true;
         }
       }
+
       state.apology = false;
     }
+
     return state.reactionUntil > sim.time;
   }
 }
@@ -469,11 +525,13 @@ export function cleanupPose(
   }>,
 ): Pose | null {
   const state = sim.cleanup;
+
   if (!sim.tidying) {
     if (sim.scene || sim.flight || !["idle", "walk"].includes(sim.mode)) {
       return null;
     }
   }
+
   if (
     !state.session &&
     state.sulkUntil <= sim.time &&
@@ -481,14 +539,17 @@ export function cleanupPose(
   ) {
     return null;
   }
+
   if (state.sulkUntil > sim.time) {
     return "bag-offended";
   }
+
   if (state.level >= 3 && state.pointer) {
     return (["walkLeft", "bag-offended", "walkRight", "bag-offended"] as const)[
       Math.floor(sim.motionTime * 8) % 4
     ];
   }
+
   if (state.level >= 2) {
     if (Math.floor(sim.time * 4) % 2) {
       return "bag-offended";
@@ -496,6 +557,7 @@ export function cleanupPose(
       return "squawk";
     }
   }
+
   if (state.level === 1) {
     return "tilt";
   } else if (sim.time % 5 > 4.75) {

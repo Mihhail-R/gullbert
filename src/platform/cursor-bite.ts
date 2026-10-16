@@ -26,16 +26,20 @@ class CursorBiteController implements CursorBiteBridge {
       this.releaseScene(this.current);
       this.current = scene;
     }
+
     if (!scene || this.released.has(scene)) {
       return;
     }
+
     if (scene.phase === "recoil") {
       this.releaseScene(scene);
       return;
     }
+
     if (scene.phase !== "chew" || !point || this.pending) {
       return;
     }
+
     this.pending = true;
     void this.tugPointer(scene, point);
   }
@@ -48,11 +52,14 @@ class CursorBiteController implements CursorBiteBridge {
     if (!scene || this.released.has(scene)) {
       return;
     }
+
     this.released.add(scene);
+
     if (scene.cursorId != null) {
-      this.options.release(scene.cursorId).catch(() => {
+      this.options.release(scene.cursorId)
+        .catch(() => {
         // Native expiry still releases the pointer if IPC fails.
-      });
+        });
     }
   }
 
@@ -64,6 +71,7 @@ class CursorBiteController implements CursorBiteBridge {
     // Allow synchronous cancellation to invalidate a queued tug before dispatch.
     await Promise.resolve();
     let succeeded = true;
+
     try {
       if (this.isCurrent(scene)) {
         succeeded = await this.options.tug(scene.cursorId, point);
@@ -71,10 +79,13 @@ class CursorBiteController implements CursorBiteBridge {
     } catch {
       succeeded = false;
     }
+
     this.pending = false;
+
     if (succeeded || !this.isCurrent(scene)) {
       return;
     }
+
     this.releaseScene(scene);
     this.options.failed(scene);
   }

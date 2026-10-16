@@ -80,9 +80,11 @@ export function canPickup(
   if (!sim.visible || sim.tidying) {
     return false;
   }
+
   if (sim.scene?.kind === "gift" && sim.scene.phase === "away") {
     return false;
   }
+
   return theatreOffset(sim).opacity * gagOffset(sim).opacity > 0;
 }
 
@@ -119,6 +121,7 @@ export class Pickup implements SceneOwner {
     ) {
       return false;
     }
+
     this.#scene.cursorId = id;
     return true;
   }
@@ -127,6 +130,7 @@ export class Pickup implements SceneOwner {
     if (scene.kind !== "relocation") {
       throw new Error("Pickup owns only relocation scenes");
     }
+
     this.#scene = structuredClone(scene) as RelocationScene;
     this.#identity = Object.freeze({});
   }
@@ -150,6 +154,7 @@ export class Pickup implements SceneOwner {
   visibility(visible: boolean): void {
     if (!visible) {
       this.cancel();
+
       if (this.#scene) {
         this.#context.cancel();
         this.#context.rest();
@@ -159,14 +164,17 @@ export class Pickup implements SceneOwner {
 
   presentation(): { pose?: Pose } {
     const pose = this.pose();
+
     if (pose) {
       return { pose };
     }
+
     return {};
   }
 
   snapshot(): PickupSnapshot {
     let held = null;
+
     if (this.#state.held) {
       held = Object.freeze({
         start: Object.freeze({ ...this.#state.held.start }),
@@ -175,6 +183,7 @@ export class Pickup implements SceneOwner {
         dragged: this.#state.held.dragged,
       });
     }
+
     return Object.freeze({
       ...this.#state,
       recent: Object.freeze([...this.#state.recent]),
@@ -186,6 +195,7 @@ export class Pickup implements SceneOwner {
     if (!Number.isFinite(now)) {
       return;
     }
+
     this.#state.now = Math.max(this.#state.now, now);
     const current = this.#state.now;
     this.#state.recent = this.#state.recent.filter((time) => {
@@ -198,15 +208,19 @@ export class Pickup implements SceneOwner {
     const visual = context.visual();
     const rect = gullRect(context.body);
     rect.x += visual.x;
+
     if (!context.visible() || context.tidying()) {
       return false;
     }
+
     if (visual.gone || !(visual.opacity > 0)) {
       return false;
     }
+
     if (this.#state.held || !contains(rect, point)) {
       return false;
     }
+
     this.updateClock(now);
     const visualX = context.body.x + visual.x;
     this.#state.held = {
@@ -220,16 +234,20 @@ export class Pickup implements SceneOwner {
 
   move(point: Readonly<Point>): void {
     const held = this.#state.held;
+
     if (!held || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
       return;
     }
+
     if (!held.dragged) {
       if (Math.hypot(point.x - held.start.x, point.y - held.start.y) < 6) {
         return;
       }
+
       held.dragged = true;
       this.#context.beginDragging();
     }
+
     this.#context.body.place(
       this.#context.body.safePoint({
         x: point.x - held.offset.x,
@@ -242,6 +260,7 @@ export class Pickup implements SceneOwner {
   cancel(): void {
     const held = this.#state.held;
     this.#state.held = null;
+
     if (held?.dragged) {
       this.#context.rest();
     }
@@ -249,18 +268,23 @@ export class Pickup implements SceneOwner {
 
   finish(now: number): void {
     const held = this.#state.held;
+
     if (!held) {
       return;
     }
+
     this.#state.held = null;
     this.updateClock(now);
     const context = this.#context;
+
     if (!held.dragged) {
       if (!context.pickLoose(held.start)) {
         context.touch.poke(held.start);
       }
+
       return;
     }
+
     this.#state.recent.push(this.#state.now);
     const count = this.#state.recent.length;
     const settings = context.settings();
@@ -268,9 +292,11 @@ export class Pickup implements SceneOwner {
     context.rest();
     context.touch.reset();
     let targetX = context.body.width - 96;
+
     if (context.body.x < context.body.width / 2) {
       targetX = 0;
     }
+
     const scene: RelocationScene = {
       kind: "relocation",
       phase: "settle",
@@ -282,9 +308,11 @@ export class Pickup implements SceneOwner {
     };
     context.install(scene);
     const installed = this.#scene;
+
     if (!installed) {
       throw new Error("Relocation installation did not reach its owner");
     }
+
     if (level === 0) {
       if (count === 1) {
         context.speech.say(
@@ -294,19 +322,24 @@ export class Pickup implements SceneOwner {
       } else {
         context.speech.say(dialogue.gullbert.pickup.yesHereIsAlsoFine, 3);
       }
+
       return;
     }
+
     context.offend();
     context.events.emit("squawk");
+
     if (level === 1) {
       if (count === 1) {
         context.speech.say(dialogue.gullbert.pickup.youCouldHaveAsked, 3);
       } else {
         context.speech.say(dialogue.gullbert.pickup.iAmNotFurniture, 3);
       }
+
       if (count === 1 && context.random() < 0.35) {
         this.#mess(0.55);
       }
+
       if (count >= 3 && !settings.paused) {
         installed.revenge = "trash";
       }
@@ -320,6 +353,7 @@ export class Pickup implements SceneOwner {
       } else {
         installed.revenge = "trash";
       }
+
       if (count === 1) {
         context.speech.say(dialogue.gullbert.pickup.yourTurn, 3);
       } else if (count < 4) {
@@ -328,12 +362,15 @@ export class Pickup implements SceneOwner {
         context.speech.say(dialogue.gullbert.pickup.iWillRedecorate, 3);
       }
     }
+
     if (!settings.paused && installed.revenge !== "none") {
       if (this.#state.now >= this.#state.nextRevenge) {
         this.#state.revengeUntil = this.#state.now + 10000;
         this.#state.nextRevenge = this.#state.now + 20000;
       }
+
       const remaining = this.#state.revengeUntil - this.#state.now;
+
       if (remaining > 700) {
         installed.deadline = context.clock.now + remaining / 1000;
       } else {
@@ -348,12 +385,16 @@ export class Pickup implements SceneOwner {
     if (this.#state.held) {
       return "running";
     }
+
     const scene = this.#scene;
+
     if (!scene) {
       return "complete";
     }
+
     const context = this.#context;
     const now = context.clock.now;
+
     if (
       now >= scene.deadline ||
       (scene.revenge !== "none" && this.#state.now >= this.#state.revengeUntil)
@@ -362,12 +403,15 @@ export class Pickup implements SceneOwner {
       context.rest(3);
       return "complete";
     }
+
     if (scene.phase === "settle" && now >= scene.until) {
       if (scene.revenge === "chase" || scene.revenge === "trail") {
         let trail = 0;
+
         if (scene.revenge === "trail") {
           trail = 3;
         }
+
         context.install({
           kind: "cursor",
           phase: "stare",
@@ -392,11 +436,14 @@ export class Pickup implements SceneOwner {
             3,
           );
         }
+
         scene.phase = "sulk";
         let duration = 2.5;
+
         if (context.settings().mischief === 0) {
           duration = 1;
         }
+
         scene.until = now + duration;
       }
     } else if (scene.phase === "sulk" && now >= scene.until) {
@@ -419,53 +466,68 @@ export class Pickup implements SceneOwner {
       context.cancel();
       context.rest(3);
     }
+
     if (this.#scene) {
       return "running";
     }
+
     return "complete";
   }
 
   pose(): Pose | null {
     const context = this.#context;
+
     if (this.#state.held?.dragged) {
       if (context.settings().mischief === 0) {
         return "nap-wobble";
       }
+
       if (Math.floor(context.clock.now * 10) % 2) {
         return "wingUp";
       }
+
       return "wingDown";
     }
+
     const scene = this.#scene;
+
     if (!scene) {
       return null;
     }
+
     if (["collect", "return"].includes(scene.phase)) {
       if (Math.floor(context.body.motionTime * 12) % 2) {
         return "walkLeft";
       }
+
       return "walkRight";
     }
+
     if (scene.phase === "settle") {
       return "crouch";
     }
+
     if (context.settings().mischief === 0) {
       return "preen";
     }
+
     return "bag-offended";
   }
 
   trail(): void {
     const context = this.#context;
     const scene = context.cursorRetaliation();
+
     if (!scene?.retaliation) {
       return;
     }
+
     if (this.#state.now >= this.#state.revengeUntil) {
       context.cancel();
       context.rest();
       return;
     }
+
     if (
       scene.phase === "stalk" &&
       (scene.trail ?? 0) > 0 &&

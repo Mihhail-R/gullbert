@@ -57,6 +57,7 @@ export class Body {
     if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) {
       return;
     }
+
     this.#x = point.x;
     this.#y = point.y;
   }
@@ -65,6 +66,7 @@ export class Body {
     if (!Number.isFinite(direction) || direction === 0) {
       return;
     }
+
     if (direction < 0) {
       this.#facing = -1;
     } else {
@@ -102,6 +104,7 @@ export class Body {
     const dx = target.x - this.#x;
     const dy = target.y - this.#y;
     const distance = Math.hypot(dx, dy);
+
     if (Math.abs(dx) > 1) {
       if (dx < 0) {
         this.#facing = -1;
@@ -109,14 +112,19 @@ export class Body {
         this.#facing = 1;
       }
     }
+
     this.advanceMotion(delta);
+
     if (distance <= Math.max(speed * delta, 0.2)) {
       this.place(target);
+
       if (point.facing) {
         this.face(point.facing);
       }
+
       return true;
     }
+
     this.place({
       x: this.#x + (dx / distance) * speed * delta,
       y: this.#y + (dy / distance) * speed * delta,

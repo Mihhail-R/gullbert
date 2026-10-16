@@ -11,6 +11,7 @@ function customRuntime({ greedy = false, throwCleanup = false } = {}) {
       if (!greedy && name !== "demonstration") {
         return false;
       }
+
       this.#updates = 0;
       calls.push("start");
       capabilities.movement.moveTo({ x: 120, y: 140 });
@@ -27,20 +28,24 @@ function customRuntime({ greedy = false, throwCleanup = false } = {}) {
     update() {
       calls.push("update");
       this.#updates++;
+
       if (this.#updates === 2) {
         capabilities.events.emit("pop");
         return "complete";
       }
+
       return "running";
     }
     complete() {
       calls.push("complete");
+
       if (throwCleanup) {
         throw new Error("cleanup failed");
       }
     }
     interrupt() {
       calls.push("interrupt");
+
       if (throwCleanup) {
         throw new Error("cleanup failed");
       }
@@ -79,7 +84,8 @@ function assertRevoked(sim, capabilities) {
 test("registered routines receive only the extension capabilities and complete once", () => {
   const fixture = customRuntime();
   const { sim, calls, capabilities } = fixture;
-  assert.deepEqual(Object.keys(capabilities).sort(), [
+  assert.deepEqual(Object.keys(capabilities)
+    .sort(), [
     "clock",
     "events",
     "movement",
@@ -160,6 +166,7 @@ test("routine cleanup exceptions still release props and effect capabilities", (
   for (const outcome of ["complete", "interrupt"]) {
     const { sim, calls, capabilities } = customRuntime({ throwCleanup: true });
     sim.action("demonstration");
+
     if (outcome === "complete") {
       sim.step(0.05);
       assert.throws(() => {
@@ -170,6 +177,7 @@ test("routine cleanup exceptions still release props and effect capabilities", (
         sim.action("cancel");
       }, /cleanup failed/);
     }
+
     assert.equal(calls.filter((value) => value === outcome).length, 1);
     assertRevoked(sim, capabilities);
   }

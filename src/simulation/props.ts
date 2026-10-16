@@ -65,6 +65,7 @@ export class Props {
     if (this.#bag) {
       return false;
     }
+
     this.#bag = { ...bag, id: this.nextId(), attached: false };
     this.#clampBag();
     return true;
@@ -74,6 +75,7 @@ export class Props {
     if (!this.#bag) {
       return;
     }
+
     this.#bag.attached = true;
     this.#bag.x = point.x;
     this.#bag.y = point.y;
@@ -84,7 +86,9 @@ export class Props {
     if (!this.#bag) {
       return;
     }
+
     this.#bag.attached = false;
+
     if (displacement.x !== 0 || displacement.y !== 0) {
       this.#bag.x += displacement.x;
       this.#bag.y += displacement.y;
@@ -96,6 +100,7 @@ export class Props {
     if (!this.#bag || this.#bag.id !== id || this.#bag.servings <= 0) {
       return false;
     }
+
     this.#bag.servings -= 1;
     return true;
   }
@@ -115,9 +120,11 @@ export class Props {
 
   scatter(point: Point, now: number, scale?: number): void {
     const splat: Splat = { ...point, id: this.nextId(), born: now };
+
     if (scale !== undefined) {
       splat.scale = scale;
     }
+
     this.#splats.push(splat);
     this.#splats = this.#splats.slice(-6);
   }
@@ -139,6 +146,7 @@ export class Props {
     const cone = this.#cones.find((candidate) => {
       return candidate.id === id;
     });
+
     if (cone) {
       cone.x = point.x;
       cone.y = point.y;
@@ -149,6 +157,7 @@ export class Props {
     for (const chip of chips) {
       this.#looseChips.push({ ...chip, id: this.nextId() });
     }
+
     this.#looseChips = this.#looseChips.slice(-6);
   }
 
@@ -194,18 +203,22 @@ export class Props {
     this.#width = width;
     this.#height = height;
     this.#clampBag();
+
     for (const cone of this.#cones) {
       cone.x = clamp(cone.x, 14, width - 14);
       cone.y = clamp(cone.y, 36, height);
     }
+
     for (const item of this.#rubbish) {
       item.x = clamp(item.x, 0, width - 48);
       item.y = clamp(item.y, 0, height - 48);
     }
+
     for (const chip of this.#looseChips) {
       chip.x = clamp(chip.x, 0, width - chip.width);
       chip.y = clamp(chip.y, 0, height - chip.height);
     }
+
     this.#splats = this.#splats.filter((splat) => {
       return splat.x < width && splat.y < height;
     });

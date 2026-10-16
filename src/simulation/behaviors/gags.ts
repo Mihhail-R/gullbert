@@ -47,23 +47,30 @@ export function gagPose(
   sim: Pick<SimulationView, "scene" | "motionTime">,
 ): Pose | null {
   const scene = sim.scene;
+
   if (!isGag(scene)) {
     return null;
   }
+
   const walk =
     walkingFrames[Math.floor(sim.motionTime * 10) % walkingFrames.length];
+
   if (scene.kind === "postcards") {
     if (scene.phase === "reach" || scene.phase === "pull") {
       return "nibble";
     }
+
     if (scene.phase === "show") {
       return "tilt";
     }
+
     if (scene.phase === "tuck") {
       return "preen";
     }
+
     return walk;
   }
+
   if (scene.kind === "pretend_leave") {
     if (scene.phase === "peek") {
       return "tilt";
@@ -71,6 +78,7 @@ export function gagPose(
       return walk;
     }
   }
+
   if (scene.kind === "cursor_egg") {
     if (scene.phase === "settle") {
       return "crouch";
@@ -80,6 +88,7 @@ export function gagPose(
       return walk;
     }
   }
+
   if (scene.kind === "municipal_gull") {
     if (scene.phase === "inspect") {
       return "bag-inspect";
@@ -87,6 +96,7 @@ export function gagPose(
       return walk;
     }
   }
+
   if (scene.phase === "carry") {
     return walk;
   } else if (scene.phase === "offer") {
@@ -102,32 +112,42 @@ export function gagProps(
   >,
 ): SceneProp[] {
   const scene = sim.scene;
+
   if (sim.visible && scene?.kind === "postcards") {
     if (scene.phase === "approach" || scene.phase === "reach") {
       return [];
     }
+
     const size = 96;
     let x = sim.x + beakOffsetX(sim.facing);
+
     if (sim.facing < 0) {
       x -= size;
     }
+
     let opacity = 1;
+
     if (scene.phase === "pull") {
       const progress = clamp((sim.time - scene.phaseStarted) / 0.9, 0, 1);
       let edge = sim.width;
+
       if (scene.side < 0) {
         edge = -size;
       }
+
       x = edge + (x - edge) * progress;
     } else {
       x = clamp(x, 0, sim.width - size);
     }
+
     let y = clamp(sim.y + 30, 0, sim.height - size);
+
     if (scene.phase === "tuck") {
       const progress = clamp((sim.time - scene.phaseStarted) / 0.6, 0, 1);
       opacity = 1 - progress;
       y = clamp(y + 12 * progress, 0, sim.height - size);
     }
+
     return [
       {
         id: "postcard",
@@ -140,9 +160,11 @@ export function gagProps(
       },
     ];
   }
+
   if (!sim.visible || scene?.kind !== "apology" || scene.phase === "eat") {
     return [];
   }
+
   return [
     {
       id: "apology-chip",
@@ -156,25 +178,32 @@ export function gagProps(
 }
 export function gagOffset(sim: Pick<SimulationView, "scene" | "time">) {
   const scene = sim.scene;
+
   if (scene?.kind !== "pretend_leave") {
     return { x: 0, opacity: 1 };
   }
+
   const elapsed = sim.time - scene.phaseStarted;
+
   if (scene.phase === "depart") {
     return { x: scene.side * 100 * clamp(elapsed / 0.7, 0, 1), opacity: 1 };
   }
+
   if (scene.phase === "away") {
     return { x: scene.side * 100, opacity: 0 };
   }
+
   if (scene.phase === "peek") {
     return { x: scene.side * 64, opacity: 1 };
   }
+
   if (scene.phase === "reenter") {
     return {
       x: scene.side * 64 * (1 - clamp(elapsed / 0.5, 0, 1)),
       opacity: 1,
     };
   }
+
   return { x: 0, opacity: 1 };
 }
 
@@ -229,16 +258,20 @@ export class GagRoutine implements SceneOwner {
   }
   start(name: string): boolean {
     const handled = this.#startGag(name);
+
     if (handled && this.#scene) {
       this.#identity = Object.freeze({});
     }
+
     return handled;
   }
   update(dt: number): "running" | "complete" {
     this.#stepGag(dt);
+
     if (!this.#scene) {
       return "complete";
     }
+
     return "running";
   }
   complete(): void {
@@ -286,9 +319,11 @@ export class GagRoutine implements SceneOwner {
     duration: number,
   ): void {
     const sim = this.#environment;
+
     if (scene !== this.#scene) {
       return;
     }
+
     scene.phase = name;
     scene.phaseStarted = sim.clock.now;
     scene.until = sim.clock.now + duration;
@@ -298,6 +333,7 @@ export class GagRoutine implements SceneOwner {
     const sim = this.#environment;
     sim.lifecycle.complete();
     sim.lifecycle.rest(4);
+
     if (text) {
       sim.speech.say(text);
     }
@@ -306,17 +342,21 @@ export class GagRoutine implements SceneOwner {
     const sim = this.#environment;
     const level = sim.policy.settings().mischief;
     let minimumDelay;
+
     if (level === 2) {
       minimumDelay = 120;
     } else {
       minimumDelay = 240;
     }
+
     let delayRange;
+
     if (level === 2) {
       delayRange = 120;
     } else {
       delayRange = 180;
     }
+
     return {
       at: sim.clock.now + minimumDelay + sim.random() * delayRange,
       level,
@@ -325,9 +365,11 @@ export class GagRoutine implements SceneOwner {
   }
   #startGag(name: string) {
     const sim = this.#environment;
+
     if (!isGagKind(name)) {
       return false;
     }
+
     const clock = {
       started: sim.clock.now,
       phaseStarted: sim.clock.now,
@@ -335,6 +377,7 @@ export class GagRoutine implements SceneOwner {
       deadline: sim.clock.now + 14.9,
     };
     this.#gagSchedule = { ...this.#schedule(), last: name };
+
     if (name === "postcards") {
       const choices = postcards.filter((photo) => {
         return photo.photo !== this.#lastPostcard;
@@ -348,9 +391,11 @@ export class GagRoutine implements SceneOwner {
         ];
       this.#lastPostcard = photo.photo;
       let side: -1 | 1 = 1;
+
       if (sim.body.x + SIZE / 2 < sim.body.width / 2) {
         side = -1;
       }
+
       this.#scene = {
         ...clock,
         kind: "postcards",
@@ -365,11 +410,13 @@ export class GagRoutine implements SceneOwner {
       sim.speech.say(dialogue.gullbert.gags.waitIHaveHolidayPhotos);
     } else if (name === "pretend_leave") {
       let side: -1 | 1;
+
       if (sim.body.x + SIZE / 2 < sim.body.width / 2) {
         side = -1;
       } else {
         side = 1;
       }
+
       this.#scene = {
         ...clock,
         kind: name,
@@ -413,11 +460,13 @@ export class GagRoutine implements SceneOwner {
       sim.speech.say(dialogue.gullbert.gags.essentialInfrastructure);
     } else {
       let sidestepDistance;
+
       if (sim.body.x < sim.body.width / 2) {
         sidestepDistance = 90;
       } else {
         sidestepDistance = -90;
       }
+
       this.#scene = {
         ...clock,
         deadline: sim.clock.now + 9.9,
@@ -430,19 +479,23 @@ export class GagRoutine implements SceneOwner {
       };
       sim.speech.say(dialogue.gullbert.gags.aGestureOfGoodwill);
     }
+
     if (this.#scene) {
       sim.activity.beginRoutine(this.#scene.kind);
     }
+
     return true;
   }
   maybeGag() {
     const sim = this.#environment;
+
     if (
       !this.#gagSchedule ||
       this.#gagSchedule.level !== sim.policy.settings().mischief
     ) {
       this.#gagSchedule = this.#schedule();
     }
+
     if (
       !sim.policy.visible() ||
       sim.policy.settings().paused ||
@@ -450,15 +503,18 @@ export class GagRoutine implements SceneOwner {
     ) {
       return false;
     }
+
     if (sim.policy.tidying() || this.#scene || sim.activity.mode !== "idle") {
       return false;
     }
+
     if (
       sim.clock.now < this.#gagSchedule.at ||
       sim.clock.now < sim.policy.cleanup().suppressUntil
     ) {
       return false;
     }
+
     const choices = automaticGagKinds.filter((name) => {
       return name !== this.#gagSchedule?.last;
     });
@@ -471,9 +527,11 @@ export class GagRoutine implements SceneOwner {
   }
   #cancelGag() {
     const sim = this.#environment;
+
     if (!isGag(this.#scene)) {
       return;
     }
+
     sim.body.place(sim.body.safePoint(sim.body));
     sim.speech.clear();
     sim.speech.forget();
@@ -482,9 +540,11 @@ export class GagRoutine implements SceneOwner {
     const sim = this.#environment;
 
     const scene = this.#scene;
+
     if (!isGag(scene)) {
       return;
     }
+
     if (scene.kind === "pretend_leave") {
       scene.origin = sim.body.safePoint(scene.origin);
     } else if (scene.kind === "cursor_egg") {
@@ -494,6 +554,7 @@ export class GagRoutine implements SceneOwner {
       ) {
         this.gagPointer(null);
       }
+
       if (scene.nest) {
         scene.nest = {
           x: clamp(scene.nest.x, 0, sim.body.width),
@@ -502,6 +563,7 @@ export class GagRoutine implements SceneOwner {
       }
     } else {
       scene.target = sim.body.safePoint(scene.target);
+
       if (scene.kind === "municipal_gull") {
         scene.patch = this.#onScreen(scene.patch);
         scene.placements = scene.placements.map((p) => {
@@ -513,9 +575,11 @@ export class GagRoutine implements SceneOwner {
   gagPointer(point: PointerSample | null) {
     const sim = this.#environment;
     const scene = this.#scene;
+
     if (scene?.kind !== "cursor_egg") {
       return;
     }
+
     if (
       !point ||
       point.inside === false ||
@@ -524,7 +588,9 @@ export class GagRoutine implements SceneOwner {
       this.#finish(dialogue.gullbert.gags.theEggHasOtherCommitments);
       return;
     }
+
     scene.pointer = { x: point.x, y: point.y };
+
     if (
       !scene.stablePoint ||
       Math.hypot(point.x - scene.stablePoint.x, point.y - scene.stablePoint.y) >
@@ -533,6 +599,7 @@ export class GagRoutine implements SceneOwner {
       scene.stablePoint = { ...scene.pointer };
       scene.stableSince = sim.clock.now;
     }
+
     if (
       scene.phase === "settle" &&
       scene.nest &&
@@ -545,55 +612,70 @@ export class GagRoutine implements SceneOwner {
   #stepGag(dt: number) {
     const sim = this.#environment;
     const scene = this.#scene;
+
     if (!isGag(scene)) {
       return false;
     }
+
     if (sim.clock.now >= scene.deadline) {
       this.#finish();
       return true;
     }
+
     switch (scene.kind) {
       case "postcards":
         this.#stepPostcards(scene, dt);
         break;
+
       case "pretend_leave":
         this.#stepPretendLeave(scene, dt);
         break;
+
       case "cursor_egg":
         this.#stepCursorEgg(scene, dt);
         break;
+
       case "municipal_gull":
         this.#stepMunicipalGull(scene, dt);
         break;
+
       case "apology":
         this.#stepApology(scene, dt);
         break;
     }
+
     return true;
   }
 
   #stepPostcards(scene: PostcardScene, dt: number): void {
     const sim = this.#environment;
     let edge = sim.body.width - SIZE;
+
     if (scene.side < 0) {
       edge = 0;
     }
+
     const speed = Math.max(180, sim.body.width / 3);
+
     switch (scene.phase) {
       case "approach": {
         if (sim.body.moveToward({ x: edge, y: scene.target.y }, speed, dt)) {
           sim.movement.face(scene.side);
           this.#phase(scene, "reach", 0.6);
         }
+
         break;
       }
+
       case "reach": {
         if (sim.clock.now >= scene.until) {
           this.#phase(scene, "pull", 0.9);
           sim.speech.clear();
         }
+
         break;
       }
+
       case "pull": {
         const progress = clamp(
           (sim.clock.now - scene.phaseStarted) / 0.9,
@@ -607,31 +689,40 @@ export class GagRoutine implements SceneOwner {
           }),
         );
         sim.movement.face(scene.side);
+
         if (sim.clock.now >= scene.until) {
           this.#phase(scene, "carry", 3);
         }
+
         break;
       }
+
       case "carry": {
         const reached = sim.body.moveToward(scene.target, speed, dt);
         // Back away with the photograph still held in his beak.
         sim.movement.face(scene.side);
+
         if (reached || sim.clock.now >= scene.until) {
           this.#phase(scene, "show", 4.5);
           sim.speech.say(scene.caption, 4.5);
         }
+
         break;
       }
+
       case "show": {
         if (sim.clock.now >= scene.until) {
           this.#phase(scene, "tuck", 0.6);
         }
+
         break;
       }
+
       case "tuck": {
         if (sim.clock.now >= scene.until) {
           this.#finish(dialogue.gullbert.gags.aWelltravelledBird);
         }
+
         break;
       }
     }
@@ -640,11 +731,13 @@ export class GagRoutine implements SceneOwner {
   #stepPretendLeave(scene: DepartureScene, dt: number): void {
     const sim = this.#environment;
     let edge;
+
     if (scene.side === -1) {
       edge = 0;
     } else {
       edge = sim.body.width - SIZE;
     }
+
     switch (scene.phase) {
       case "approach": {
         if (
@@ -656,33 +749,43 @@ export class GagRoutine implements SceneOwner {
         ) {
           this.#phase(scene, "depart", 0.7);
         }
+
         break;
       }
+
       case "depart": {
         if (sim.clock.now >= scene.until) {
           this.#phase(scene, "away", 2);
         }
+
         break;
       }
+
       case "away": {
         if (sim.clock.now >= scene.until) {
           this.#phase(scene, "peek", 1.3);
           sim.speech.say(dialogue.gullbert.gags.forgotSomething, 3);
         }
+
         break;
       }
+
       case "peek": {
         if (sim.clock.now >= scene.until) {
           this.#phase(scene, "reenter", 0.5);
         }
+
         break;
       }
+
       case "reenter": {
         if (sim.clock.now >= scene.until) {
           this.#phase(scene, "return", 4);
         }
+
         break;
       }
+
       case "return": {
         if (
           sim.body.moveToward(
@@ -693,11 +796,14 @@ export class GagRoutine implements SceneOwner {
         ) {
           this.#finish();
         }
+
         break;
       }
     }
+
     if (departureEdgePhases.includes(scene.phase)) {
       sim.movement.moveTo({ x: edge, y: sim.body.y });
+
       if (departureOutwardPhases.includes(scene.phase)) {
         sim.movement.face(scene.side as -1 | 1);
       } else {
@@ -708,6 +814,7 @@ export class GagRoutine implements SceneOwner {
 
   #stepCursorEgg(scene: EggScene, dt: number): void {
     const sim = this.#environment;
+
     switch (scene.phase) {
       case "approach": {
         if (sim.clock.now >= scene.until) {
@@ -722,6 +829,7 @@ export class GagRoutine implements SceneOwner {
             230,
             dt,
           );
+
           if (
             reached &&
             Math.hypot(
@@ -735,18 +843,23 @@ export class GagRoutine implements SceneOwner {
             sim.speech.say(dialogue.gullbert.gags.doNotDisturbParenting, 2.5);
           }
         }
+
         break;
       }
+
       case "settle": {
         if (sim.clock.now >= scene.until) {
           this.#finish(dialogue.gullbert.gags.incubationPostponed);
         }
+
         break;
       }
+
       case "inspect": {
         if (sim.clock.now >= scene.until) {
           this.#finish(dialogue.gullbert.gags.itHatched);
         }
+
         break;
       }
     }
@@ -754,9 +867,11 @@ export class GagRoutine implements SceneOwner {
 
   #stepMunicipalGull(scene: MunicipalScene, dt: number): void {
     const sim = this.#environment;
+
     switch (scene.phase) {
       case "place": {
         const point = scene.placements[scene.placed];
+
         if (
           sim.body.moveToward({ x: point.x - 48, y: point.y - 78 }, 150, dt) &&
           sim.clock.now >= scene.until
@@ -764,23 +879,29 @@ export class GagRoutine implements SceneOwner {
           sim.objects.placeCone(point, sim.clock.now);
           scene.placed += 1;
           scene.until = sim.clock.now + 0.45;
+
           if (scene.placed === 3) {
             this.#phase(scene, "inspect", 1.5);
           }
         }
+
         break;
       }
+
       case "inspect": {
         if (sim.clock.now >= scene.until) {
           scene.movedId = sim.objects.snapshot().cones[0]?.id ?? null;
           this.#phase(scene, "retrieve", 2);
         }
+
         break;
       }
+
       case "retrieve": {
         const cone = sim.objects.snapshot().cones.find((c) => {
           return c.id === scene.movedId;
         });
+
         if (
           !cone ||
           sim.body.moveToward({ x: cone.x - 48, y: cone.y - 78 }, 150, dt) ||
@@ -788,8 +909,10 @@ export class GagRoutine implements SceneOwner {
         ) {
           this.#phase(scene, "move", 2);
         }
+
         break;
       }
+
       case "move": {
         const cone = sim.objects.snapshot().cones.find((c) => {
           return c.id === scene.movedId;
@@ -803,18 +926,22 @@ export class GagRoutine implements SceneOwner {
           110,
           dt,
         );
+
         if (cone) {
           sim.objects.moveCone(
             cone.id,
             this.#onScreen({ x: sim.body.x + 48, y: sim.body.y + 78 }),
           );
         }
+
         if (reached || sim.clock.now >= scene.until) {
           this.#phase(scene, "leave", 3);
           sim.speech.say(dialogue.gullbert.gags.worksOngoing, 3);
         }
+
         break;
       }
+
       case "leave": {
         if (
           sim.body.moveToward(scene.target, 90, dt) ||
@@ -822,6 +949,7 @@ export class GagRoutine implements SceneOwner {
         ) {
           this.#finish(dialogue.gullbert.gags.worksOngoing);
         }
+
         break;
       }
     }
@@ -829,25 +957,31 @@ export class GagRoutine implements SceneOwner {
 
   #stepApology(scene: ApologyScene, dt: number): void {
     const sim = this.#environment;
+
     switch (scene.phase) {
       case "carry": {
         if (sim.body.moveToward(scene.target, 120, dt)) {
           this.#phase(scene, "offer", 2);
           sim.speech.say(dialogue.gullbert.gags.forYou, 2);
         }
+
         break;
       }
+
       case "offer": {
         if (sim.clock.now >= scene.until) {
           this.#phase(scene, "eat", 1);
           sim.events.emit("munch");
         }
+
         break;
       }
+
       case "eat": {
         if (sim.clock.now >= scene.until) {
           this.#finish(dialogue.gullbert.gags.gladWeResolvedThat);
         }
+
         break;
       }
     }

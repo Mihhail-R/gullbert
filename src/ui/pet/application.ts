@@ -93,13 +93,16 @@ export class PetApplication {
     this.#drag = createPickupDrag({
       acquire: (rect) => {
         const native = this.#dependencies.native;
+
         if (native) {
           return native.invoke("begin_pickup", { rect });
         }
+
         return Promise.resolve(0);
       },
       release: (id, retaliate) => {
         const native = this.#dependencies.native;
+
         if (native) {
           return native.invoke("end_pickup", {
             id,
@@ -107,6 +110,7 @@ export class PetApplication {
             tug: this.#dependencies.simulation.reactionMovesCursor(),
           });
         }
+
         return Promise.resolve(null);
       },
       begin: (point) => {
@@ -149,22 +153,27 @@ export class PetApplication {
     this.#bite = createCursorBiteBridge({
       tug: (id, point) => {
         const native = this.#dependencies.native;
+
         if (!native || id == null || !this.#running()) {
           return Promise.resolve(false);
         }
+
         return native.invoke("tug_cursor", { id, ...point });
       },
       release: (id) => {
         const native = this.#dependencies.native;
+
         if (native) {
           return native.invoke("release_cursor", { id });
         }
+
         return Promise.resolve();
       },
       failed: (scene) => {
         if (!this.#running()) {
           return;
         }
+
         const owned = scene as CursorLeaseScene;
         this.#dependencies.simulation.releaseCursor(
           dialogue.gullbert.cursor.tooSlippery,
@@ -177,9 +186,11 @@ export class PetApplication {
     this.#caret = new CaretTracker({
       read: () => {
         const native = this.#dependencies.native;
+
         if (native) {
           return native.invoke("caret_position");
         }
+
         return Promise.resolve(this.#dependencies.browser.caret?.() ?? null);
       },
       sample: (sample) => {
@@ -189,11 +200,13 @@ export class PetApplication {
       cancel: this.#dependencies.clock.cancel,
     });
     let read = null;
+
     if (this.#dependencies.native) {
       read = () => {
         return this.#readNativePointer();
       };
     }
+
     this.#pointer = createPointerTracker({
       read,
       listen: (sample) => {
@@ -214,9 +227,11 @@ export class PetApplication {
     if (this.#lifecycle === "disposed") {
       return Promise.resolve();
     }
+
     if (this.#startup) {
       return this.#startup;
     }
+
     this.#lifecycle = "starting";
     const generation = ++this.#generation;
     this.#installBrowserListeners();
@@ -228,6 +243,7 @@ export class PetApplication {
     if (this.#shutdown) {
       return this.#shutdown;
     }
+
     this.#shutdown = this.#persistence.dispose();
     this.#lifecycle = "disposed";
     this.#generation++;
@@ -243,14 +259,18 @@ export class PetApplication {
     this.#caret.stop();
     this.#releaseInteraction();
     this.#bite.stop();
+
     if (this.#reactionLease) {
       this.#releaseCursorLease(this.#reactionLease.id);
       this.#reactionLease = null;
     }
+
     this.#targeting.dispose();
+
     for (const unlisten of this.#unlisteners.splice(0)) {
       unlisten();
     }
+
     this.#dependencies.audio.dispose();
     this.#dependencies.view.dispose();
     return this.#shutdown;
@@ -266,38 +286,50 @@ export class PetApplication {
 
   async #initialize(generation: number): Promise<void> {
     const native = this.#dependencies.native;
+
     try {
       if (native) {
         await this.#installNativeListeners(generation);
+
         if (!this.#current(generation)) {
           return;
         }
+
         const state = await native.invoke("pet_ready");
+
         if (!this.#current(generation)) {
           return;
         }
+
         await this.#persistence.restore();
+
         if (!this.#current(generation)) {
           return;
         }
+
         this.#dependencies.simulation.configure(state.settings);
         this.#visible = state.visible;
       } else {
         await this.#persistence.restore();
+
         if (!this.#current(generation)) {
           return;
         }
       }
+
       this.#initialized = true;
       this.#resizeSimulation();
     } catch (error) {
       if (!this.#current(generation)) {
         return;
       }
+
       this.#dependencies.reportError(error);
       this.#visible = false;
       this.#storageError =
-        "Could not restore Gullbert’s belongings. Restart to try again; saved belongings have not been replaced.";
+        "Could not restore Gullbert’s belongings. Restart to try again; saved " +
+        "belongings have not been replaced.";
+
       if (native) {
         this.#runNative(
           native.invoke("publish_roommate", {
@@ -311,27 +343,35 @@ export class PetApplication {
         });
       }
     }
+
     if (!this.#current(generation)) {
       return;
     }
+
     this.#lifecycle = "running";
     this.#dependencies.simulation.setVisible(this.#visible);
     this.#dependencies.simulation.greet();
+
     if (this.#initialized) {
       this.#persistence.start();
     }
+
     this.#publishRoommate(true);
+
     if (!native) {
       this.#dependencies.browser.publish({ type: "ready" });
     }
+
     this.#wake();
   }
 
   async #installNativeListeners(generation: number): Promise<void> {
     const native = this.#dependencies.native;
+
     if (!native) {
       return;
     }
+
     const subscriptions = [
       () => {
         return native.listen("gullbert-roommate-request", () => {
@@ -359,12 +399,15 @@ export class PetApplication {
         });
       },
     ];
+
     for (const subscribe of subscriptions) {
       const unlisten = await subscribe();
+
       if (!this.#current(generation)) {
         unlisten();
         return;
       }
+
       this.#unlisteners.push(unlisten);
     }
   }
@@ -414,10 +457,13 @@ export class PetApplication {
       if (!this.#running()) {
         return;
       }
+
       this.#cancelDrag();
+
       if (this.#dependencies.simulation.cursorEncounter()) {
         this.#dependencies.simulation.action("cancel");
       }
+
       this.#resizeSimulation();
       this.#render();
       this.#syncPointer();
@@ -437,6 +483,7 @@ export class PetApplication {
       if (!this.#running()) {
         return;
       }
+
       try {
         submitPreviewAction(message.action, {
           replace: () => {
@@ -476,6 +523,7 @@ export class PetApplication {
     if (!this.#running()) {
       return;
     }
+
     this.#cancelDrag();
     this.#caret.stop();
     this.#dependencies.simulation.configure(settings);
@@ -486,12 +534,15 @@ export class PetApplication {
     if (!this.#running()) {
       return;
     }
+
     if (error) {
       this.#storageError =
-        "Could not save Gullbert's memories. They remain available for this session; retrying shortly.";
+        "Could not save Gullbert's memories. They remain available for this " +
+        "session; retrying shortly.";
     } else {
       this.#storageError = "";
     }
+
     this.#publishRoommate(true);
   }
 
@@ -499,16 +550,21 @@ export class PetApplication {
     if (!this.#running() || !this.#initialized) {
       return;
     }
+
     const status = this.#dependencies.simulation.status();
     const key = `${status.memoryRevision}:${status.mood ?? ""}:${this.#storageError}`;
+
     if (!force && key === this.#statusKey) {
       return;
     }
+
     this.#statusKey = key;
     let mood = null;
+
     if (status.mood) {
       mood = status.mood;
     }
+
     const data = {
       type: "roommate" as const,
       memory: this.#dependencies.simulation.exportMemory(),
@@ -516,6 +572,7 @@ export class PetApplication {
       error: this.#storageError,
     };
     const native = this.#dependencies.native;
+
     if (native) {
       this.#runNative(native.invoke("publish_roommate", { status: data }));
     } else {
@@ -527,6 +584,7 @@ export class PetApplication {
     if (!this.#running() || !this.#initialized) {
       return;
     }
+
     this.#persistence.remember();
   }
 
@@ -538,6 +596,7 @@ export class PetApplication {
     ) {
       return;
     }
+
     // Input can arrive faster than the display can paint. Keep the latest
     // simulation state, and project it only once for a burst of input.
     this.#renderFrame = this.#dependencies.clock.requestFrame(() => {
@@ -555,9 +614,11 @@ export class PetApplication {
 
   #render(): void {
     this.#cancelRender();
+
     if (!this.#running()) {
       return;
     }
+
     this.#dependencies.view.render(
       this.#dependencies.simulation.present(
         this.#tidyPoint,
@@ -567,6 +628,7 @@ export class PetApplication {
     this.#updateView();
     this.#remember();
     this.#publishRoommate();
+
     for (const sound of this.#dependencies.simulation.drainSounds()) {
       if (this.#dependencies.simulation.status().sound) {
         this.#dependencies.audio.play(sound);
@@ -578,9 +640,11 @@ export class PetApplication {
     if (!this.#running()) {
       return;
     }
+
     const sim = this.#dependencies.simulation;
     const encounter = sim.cursorEncounter();
     let caughtPointer = null;
+
     if (
       !this.#dependencies.native &&
       this.#visible &&
@@ -590,18 +654,23 @@ export class PetApplication {
         caughtPointer = encounter.beak;
       }
     }
+
     let grabbable = false;
     let interactiveHover = false;
+
     if (this.#tidyPoint) {
       grabbable =
         sim.canPickup() && contains(sim.pickupRect(), this.#tidyPoint);
+
       if (!this.#targeting.active) {
         const point = this.#tidyPoint;
-        interactiveHover = sim.interactionRects().some((rect) => {
-          return contains(rect, point);
-        });
+        interactiveHover = sim.interactionRects()
+          .some((rect) => {
+            return contains(rect, point);
+          });
       }
     }
+
     this.#dependencies.view.update({
       visible: this.#visible,
       targeting: this.#targeting.active,
@@ -615,21 +684,27 @@ export class PetApplication {
 
   #tick(): void {
     this.#timer = undefined;
+
     if (!this.#running() || !this.#visible) {
       return;
     }
+
     const now = this.#dependencies.clock.now();
     const sim = this.#dependencies.simulation;
     sim.updatePickupClock(this.#dependencies.clock.wallNow());
+
     if (this.#drag.active && !sim.status().held) {
       this.#cancelDrag();
     }
+
     if (!this.#targeting.active || this.#targeting.purpose === "tidy") {
       sim.step((now - this.#last) / 1000);
     }
+
     this.#last = now;
     this.#render();
     this.#syncPointer();
+
     if (sim.status().animate) {
       this.#frame = this.#dependencies.clock.requestFrame(() => {
         this.#frame = undefined;
@@ -645,6 +720,7 @@ export class PetApplication {
   #cancelTick(): void {
     this.#dependencies.clock.cancel(this.#timer);
     this.#timer = undefined;
+
     if (this.#frame !== undefined) {
       this.#dependencies.clock.cancelFrame(this.#frame);
       this.#frame = undefined;
@@ -655,11 +731,13 @@ export class PetApplication {
     if (!this.#running()) {
       return;
     }
+
     this.#cancelTick();
     this.#timer = undefined;
     this.#last = this.#dependencies.clock.now();
     this.#dependencies.simulation.setVisible(this.#visible);
     this.#syncPointer();
+
     if (!this.#visible) {
       this.#dependencies.audio.suspend();
       this.#render();
@@ -672,14 +750,17 @@ export class PetApplication {
     if (!this.#running()) {
       return;
     }
+
     const returning = !this.#visible && next;
     this.#visible = next;
     this.#dependencies.simulation.setVisible(next);
+
     if (!next) {
       this.#cancelDrag();
       this.#tidyPoint = null;
       this.#targeting.replace();
     }
+
     if (
       returning &&
       this.#initialized &&
@@ -687,6 +768,7 @@ export class PetApplication {
     ) {
       this.#dependencies.simulation.greet();
     }
+
     this.#wake();
   }
 
@@ -694,15 +776,19 @@ export class PetApplication {
     if (!this.#running()) {
       return;
     }
+
     if (this.#targeting.cancel()) {
       return;
     }
+
     const sim = this.#dependencies.simulation;
+
     if (!this.#drag.active && !sim.cursorEncounter()) {
       if (!this.#pickupReaction || !sim.currentReaction(this.#pickupReaction)) {
         return;
       }
     }
+
     this.#cancelDrag();
     sim.action("cancel");
     this.#wake();
@@ -712,15 +798,18 @@ export class PetApplication {
     if (!this.#running()) {
       return;
     }
+
     const sim = this.#dependencies.simulation;
     this.#caret.stop();
     this.#cancelDrag();
     this.#targeting.replace();
     this.#resizeSimulation();
     sim.action(message.action, message.point);
+
     if (message.cursor_id != null) {
       sim.authorizeCursor(message.cursor_id);
     }
+
     this.#wake();
   }
 
@@ -728,8 +817,10 @@ export class PetApplication {
     if (!this.#running() || event.button !== 0 || !this.#visible) {
       return;
     }
+
     const sim = this.#dependencies.simulation;
     const point = { x: event.x, y: event.y };
+
     if (!this.#targeting.active) {
       if (sim.flickCap(point)) {
         event.preventDefault();
@@ -737,7 +828,9 @@ export class PetApplication {
         this.#wake();
         return;
       }
+
       const rect = sim.pickupRect();
+
       if (sim.canPickup() && contains(rect, point)) {
         if (this.#drag.begin(event.pointerId, point, rect)) {
           event.preventDefault();
@@ -749,11 +842,14 @@ export class PetApplication {
         this.#render();
         this.#releaseInteraction();
       }
+
       return;
     }
+
     if (event.onBanner) {
       return;
     }
+
     this.#targeting.select(point);
   }
 
@@ -761,6 +857,7 @@ export class PetApplication {
     if (event.pointerId !== this.#drag.pointerId || event.button !== 0) {
       return;
     }
+
     this.#drag.move({ x: event.x, y: event.y });
     this.#drag.finish();
     this.#dependencies.browser.releaseCapture(event.pointerId);
@@ -770,13 +867,16 @@ export class PetApplication {
     if (!this.#running()) {
       return;
     }
+
     if (event.pointerId === this.#drag.pointerId) {
       if (!(event.buttons & 1)) {
         this.#cancelDrag();
         return;
       }
+
       this.#drag.move({ x: event.x, y: event.y });
     }
+
     if (this.#targeting.active && this.#targeting.purpose === "tidy") {
       this.#tidyPoint = { x: event.x, y: event.y };
       this.#dependencies.simulation.tidyPointer(this.#tidyPoint);
@@ -788,8 +888,10 @@ export class PetApplication {
     if (!this.#running()) {
       return;
     }
+
     this.#tidyPoint = null;
     this.#dependencies.simulation.tidyPointer(null);
+
     if (
       !this.#dependencies.native &&
       this.#dependencies.simulation.cursorEncounter()?.phase === "chew"
@@ -799,12 +901,14 @@ export class PetApplication {
       );
       this.#syncPointer();
     }
+
     this.#render();
   }
 
   #cancelDrag(): void {
     const pointerId = this.#drag.pointerId;
     this.#drag.finish(true);
+
     if (pointerId != null) {
       this.#dependencies.browser.releaseCapture(pointerId);
     }
@@ -824,17 +928,21 @@ export class PetApplication {
 
   async #readNativePointer(): Promise<PointerSample | null | undefined> {
     const native = this.#dependencies.native;
+
     if (!native) {
       return null;
     }
+
     const revision = this.#drag.revision;
     const generation = this.#generation;
     let rects: ReturnType<
       ApplicationDependencies["simulation"]["interactionRects"]
     > = [];
+
     if (this.#visible && !this.#targeting.active) {
       rects = this.#dependencies.simulation.interactionRects();
     }
+
     const point = await native
       .invoke("sync_interaction", {
         rects,
@@ -843,9 +951,11 @@ export class PetApplication {
       .catch(() => {
         return null;
       });
+
     if (this.#current(generation) && revision === this.#drag.revision) {
       return point;
     }
+
     return undefined;
   }
 
@@ -865,9 +975,11 @@ export class PetApplication {
       if (!active) {
         return;
       }
+
       if (latest.inside) {
         sample(latest);
       }
+
       heartbeat = this.#dependencies.clock.schedule(beat, 100);
     };
     heartbeat = this.#dependencies.clock.schedule(beat, 100);
@@ -883,15 +995,19 @@ export class PetApplication {
     if (!this.#running()) {
       return;
     }
+
     if (this.#drag.active && (!point || point.inside === false)) {
       this.#cancelDrag();
     }
+
     this.#dependencies.simulation.pointer(point);
+
     if (point && point.inside !== false) {
       this.#tidyPoint = point;
     } else {
       this.#tidyPoint = null;
     }
+
     this.#render();
     this.#syncPointer();
   }
@@ -900,14 +1016,17 @@ export class PetApplication {
     if (!this.#running()) {
       return;
     }
+
     this.#syncBite();
     const canObserve =
       this.#visible && !this.#targeting.active && !this.#drag.active;
+
     if (canObserve && this.#dependencies.simulation.status().watchTyping) {
       this.#caret.start();
     } else {
       this.#caret.stop();
     }
+
     if (this.#visible && !this.#targeting.active) {
       this.#pointer.start();
     } else if (this.#pointer.running) {
@@ -920,7 +1039,9 @@ export class PetApplication {
     if (!this.#running()) {
       return;
     }
+
     const sim = this.#dependencies.simulation;
+
     if (
       this.#reactionLease &&
       !sim.currentReaction(this.#reactionLease.token)
@@ -929,22 +1050,29 @@ export class PetApplication {
       this.#reactionLease = null;
       this.#releaseCursorLease(id);
     }
+
     let encounter = sim.cursorEncounter();
+
     if (!this.#visible || this.#targeting.active) {
       encounter = null;
     }
+
     let token = null;
+
     if (encounter?.phase === "chew") {
       token = encounter.token;
     }
+
     if (this.#chewingToken !== token) {
       this.#dependencies.clock.cancel(this.#biteTimer);
       this.#biteTimer = undefined;
       this.#chewingToken = token;
+
       if (token) {
         const chewingToken = token;
         this.#biteTimer = this.#dependencies.clock.schedule(() => {
           const current = sim.cursorEncounter();
+
           if (
             this.#running() &&
             current?.token === chewingToken &&
@@ -957,6 +1085,7 @@ export class PetApplication {
         }, 1200);
       }
     }
+
     if (this.#dependencies.native) {
       if (encounter?.cursorId != null) {
         if (this.#cursorLeaseScene?.token !== encounter.token) {
@@ -969,16 +1098,20 @@ export class PetApplication {
           this.#cursorLeaseScene.phase = encounter.phase;
           this.#cursorLeaseScene.cursorId = encounter.cursorId;
         }
+
         let point = null;
+
         if (encounter.phase === "chew") {
           point = encounter.beak;
         }
+
         this.#bite.sync(this.#cursorLeaseScene, point);
       } else {
         this.#cursorLeaseScene = null;
         this.#bite.sync(null);
       }
     }
+
     this.#updateView();
   }
 
@@ -991,6 +1124,7 @@ export class PetApplication {
 
   #releaseInteraction(): void {
     const native = this.#dependencies.native;
+
     if (native) {
       this.#runNative(native.invoke("sync_interaction", { rects: [] }));
     }
@@ -998,6 +1132,7 @@ export class PetApplication {
 
   #releaseCursorLease(id: number): void {
     const native = this.#dependencies.native;
+
     if (native) {
       this.#runNative(native.invoke("release_cursor", { id }));
     }
@@ -1005,6 +1140,7 @@ export class PetApplication {
 
   #cancelNativeTargeting(id: number | null): void {
     const native = this.#dependencies.native;
+
     if (native) {
       this.#runNative(
         native.invoke("cancel_targeting", { id: id ?? undefined }),

@@ -19,9 +19,11 @@ export function memoryCount(value: unknown): number {
   if (finite(value)) {
     return Math.floor(clamp(value, 0, 1_000_000));
   }
+
   return 0;
 }
-const collectibleIds = Object.keys(ITEMS).filter(isCollectible);
+const collectibleIds = Object.keys(ITEMS)
+  .filter(isCollectible);
 function object(value: unknown): Record<string, unknown> {
   if (value != null && typeof value === "object" && !Array.isArray(value)) {
     return value as Record<string, unknown>;
@@ -40,24 +42,30 @@ export function normalizeMemory(
 ): Memory {
   const source = object(data);
   let safeWidth;
+
   if (finite(width)) {
     safeWidth = width;
   } else {
     safeWidth = 1200;
   }
+
   const maxX = Math.max(0, safeWidth - SIZE);
   let safeHeight;
+
   if (finite(height)) {
     safeHeight = height;
   } else {
     safeHeight = 800;
   }
+
   const maxY = Math.max(0, safeHeight - SIZE);
   function point(value: unknown) {
     const p = object(value);
+
     if (!finite(p.x) || !finite(p.y)) {
       return null;
     }
+
     return {
       x: clamp(p.x, 0, maxX),
       y: clamp(p.y, 0, maxY),
@@ -65,12 +73,15 @@ export function normalizeMemory(
   }
   const collection: Memory["collection"] = {};
   const savedCollection = object(source.collection);
+
   for (const id of collectibleIds) {
     const count = savedCollection[id];
+
     if (finite(count) && count >= 1) {
       collection[id] = Math.min(999, Math.floor(count));
     }
   }
+
   const greetings = object(source.greetings);
   const learned = object(source.learned);
   const tricks = object(learned.tricks);
@@ -78,10 +89,12 @@ export function normalizeMemory(
   const visits = object(source.visits);
   const episodes: MemoryEpisode[] = [];
   const ids = new Set<number>();
+
   if (Array.isArray(source.episodes)) {
     for (const raw of source.episodes.slice(-MEMORY_LIMIT)) {
       const event = object(raw);
       const location = object(event.location);
+
       if (
         !finite(event.id) ||
         !Number.isSafeInteger(event.id) ||
@@ -89,27 +102,35 @@ export function normalizeMemory(
       ) {
         continue;
       }
+
       if (ids.has(event.id)) {
         continue;
       }
+
       if (!finite(event.at) || event.at < 0 || event.at > 8.64e15) {
         continue;
       }
+
       if (!episodeKinds.has(event.kind as MemoryEpisode["kind"])) {
         continue;
       }
+
       if (typeof event.detail !== "string" || !event.detail.trim()) {
         continue;
       }
+
       if (!finite(location.x) || !finite(location.y)) {
         continue;
       }
+
       if (!finite(location.width) || location.width <= 0) {
         continue;
       }
+
       if (!finite(location.height) || location.height <= 0) {
         continue;
       }
+
       ids.add(event.id);
       episodes.push({
         id: event.id,
@@ -125,48 +146,61 @@ export function normalizeMemory(
         },
       });
     }
+
     episodes.sort((a, b) => {
       return a.id - b.id;
     });
   }
+
   function lessons(value: unknown): number {
     if (finite(value)) {
       return Math.floor(clamp(value, 0, 6));
     }
+
     return 0;
   }
   const spot = point(learned.snackSpot);
   const meals = lessons(object(learned.snackSpot).meals);
   let snackSpot = null;
+
   if (spot && meals > 0) {
     snackSpot = { ...spot, meals };
   }
+
   const candidate = point(learned.snackCandidate);
   const candidateMeals = lessons(object(learned.snackCandidate).meals);
   let snackCandidate = null;
+
   if (candidate && candidateMeals > 0) {
     if (snackSpot && snackSpot.meals >= 3) {
       snackCandidate = { ...candidate, meals: Math.min(2, candidateMeals) };
     }
   }
+
   let lastAt;
+
   if (finite(greetings.lastAt)) {
     lastAt = Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, greetings.lastAt));
   } else {
     lastAt = 0;
   }
+
   let lastLine;
+
   if (typeof greetings.lastLine === "string") {
     lastLine = greetings.lastLine.slice(0, 240);
   } else {
     lastLine = "";
   }
+
   let lastDiscovery: Collectible | null;
+
   if (isCollectible(greetings.lastDiscovery)) {
     lastDiscovery = greetings.lastDiscovery;
   } else {
     lastDiscovery = null;
   }
+
   return {
     version: 2,
     episodes,

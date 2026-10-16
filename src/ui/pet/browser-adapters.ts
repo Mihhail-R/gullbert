@@ -20,9 +20,11 @@ export class PetBrowser implements ApplicationBrowser {
   caret(): CaretSample | null {
     const editor = this.document.getElementById("typing-demo");
     const selection = this.window.getSelection();
+
     if (!editor || editor.hidden || this.document.activeElement !== editor) {
       return null;
     }
+
     if (
       !selection?.isCollapsed ||
       !selection.rangeCount ||
@@ -30,11 +32,15 @@ export class PetBrowser implements ApplicationBrowser {
     ) {
       return null;
     }
-    const range = selection.getRangeAt(0).cloneRange();
+
+    const range = selection.getRangeAt(0)
+      .cloneRange();
     const rect = range.getClientRects()[0];
+
     if (!rect || rect.height <= 0) {
       return null;
     }
+
     return {
       x: rect.x,
       y: rect.y,
@@ -53,24 +59,30 @@ export class PetBrowser implements ApplicationBrowser {
     callback: (event: ApplicationEvents[K]) => void,
   ): () => void {
     let target: EventTarget = this.document;
+
     if (["blur", "resize", "message", "pagehide"].includes(name)) {
       target = this.window;
     } else if (name === "cancel") {
       target = requiredElement("#cancel", this.document);
     }
+
     let eventName: string = name;
+
     if (name === "cancel") {
       eventName = "click";
     }
+
     const listener = (event: Event) => {
       if (name === "message") {
         const message = event as MessageEvent<PreviewMessage>;
+
         if (
           message.origin !== this.window.location.origin ||
           message.source !== this.window.parent
         ) {
           return;
         }
+
         callback(message.data as ApplicationEvents[K]);
       } else if (name === "keydown") {
         callback((event as KeyboardEvent).key as ApplicationEvents[K]);
@@ -113,9 +125,11 @@ export class PetBrowser implements ApplicationBrowser {
 
   private pointerEvent(event: PointerEvent): ApplicationPointerEvent {
     let onBanner = false;
+
     if (event.target instanceof Element) {
       onBanner = event.target.closest("#target-banner") !== null;
     }
+
     return {
       x: event.clientX,
       y: event.clientY,
@@ -192,11 +206,13 @@ export class PetView implements ApplicationView {
     const copy = targetDescriptions[state.purpose] ?? targetDescriptions.poop;
     updateText(this.title, copy[0]);
     updateText(this.description, copy[1]);
+
     if (state.purpose === "tidy") {
       updateText(this.cancel, "Done");
     } else {
       updateText(this.cancel, "Never mind");
     }
+
     this.world.hidden = !state.visible;
     this.banner.hidden = !state.targeting;
     const body = this.document.body;
@@ -211,6 +227,7 @@ export class PetView implements ApplicationView {
     body.classList.toggle("interactive-hover", state.interactiveHover);
     body.classList.toggle("cursor-caught", state.caughtPointer !== null);
     this.caughtPointer.hidden = state.caughtPointer === null;
+
     if (state.caughtPointer) {
       this.showCaughtPointer(state.caughtPointer);
     }

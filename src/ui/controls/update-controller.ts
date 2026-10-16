@@ -27,6 +27,7 @@ export class UpdateController {
     if (this.#state.busy) {
       return;
     }
+
     this.#publish({
       available: false,
       notes: "",
@@ -38,6 +39,7 @@ export class UpdateController {
     if (this.#state.busy) {
       return;
     }
+
     this.#publish({
       busy: true,
       available: false,
@@ -45,8 +47,10 @@ export class UpdateController {
       progress: null,
       status: "Checking GitHub…",
     });
+
     try {
       const update = await this.#dependencies.check(beta);
+
       if (update) {
         this.#publish({
           available: true,
@@ -68,12 +72,14 @@ export class UpdateController {
     if (this.#state.busy || !this.#state.available) {
       return;
     }
+
     this.#publish({
       busy: true,
       available: false,
       status: "Downloading update…",
       progress: 0,
     });
+
     try {
       await this.#dependencies.install();
       this.#publish({ status: "Restarting Gullbert…" });
@@ -85,6 +91,7 @@ export class UpdateController {
     if (!this.#state.busy) {
       return;
     }
+
     if (installing) {
       this.#publish({
         status: "Verifying and installing update…",

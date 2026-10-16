@@ -7,12 +7,21 @@ Small, funny, local. Start with `npm ci` and `npm run preview` to work in the br
 ```sh
 npm test
 npm run check
+npm run lint
 npm run format:check
 cargo test --manifest-path src-tauri/Cargo.toml --locked
 npm run test:routing
 ```
 
-Use `npm run format` to apply frontend and documentation formatting. For native changes, also run `cargo fmt --manifest-path src-tauri/Cargo.toml --check`, test the desktop overlay, and state which operating system you used. Check click-through, dragging, targeting, Escape, hiding, and shortcuts; browser mocks cannot verify OS input delivery. Include a screenshot or short clip for a new gag.
+Use `npm run format` to format assets and documentation with Prettier, then fix code layout with ESLint. Use `npm run lint:fix` for code alone, or `npx eslint path/to/file.ts --fix` for a focused change.
+
+ESLint owns TypeScript and JavaScript layout; Prettier ignores those files to preserve wrapped calls and chains. Lint enforces a strict 100-character limit, braces, block spacing, and simple ternaries.
+
+Cyclomatic complexity above 10 per function produces a warning. Complexity warnings are advisory and do not fail local lint or CI; style errors still fail both. Lint checks never rewrite files unless explicitly run with `--fix`.
+
+CI runs `npm run lint` and rejects style violations. Naming, meaningful statement groups, the three-check condition limit, and module ownership still require review. `npm run check` remains the TypeScript correctness check; Babel parses TypeScript syntax for linting without depending on the compiler version.
+
+For native changes, also run `cargo fmt --manifest-path src-tauri/Cargo.toml --check`, test the desktop overlay, and state which operating system you used. Check click-through, dragging, targeting, Escape, hiding, and shortcuts; browser mocks cannot verify OS input delivery. Include a screenshot or short clip for a new gag.
 
 Keep autonomous actions infrequent and bounded. Commands take priority, hidden time does not accumulate events, and remembered belongings survive cleanup. Keep the core offline, without telemetry, cloud AI services, auto-start, or background network calls. Screen capture is confined to the explicitly enabled local-vision feature: transient, cropped, and processed on-device. The explicit App updates flow may contact GitHub to discover and download signed releases. Discuss larger changes before adding dependencies.
 

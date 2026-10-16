@@ -22,23 +22,29 @@ export function guestPose(
   sim: Pick<SimulationView, "scene" | "motionTime">,
 ): Pose | null {
   const scene = sim.scene;
+
   if (scene?.kind !== "guest") {
     return null;
   }
+
   if (scene.phase === "arrival") {
     return (["idle", "walkLeft", "idle", "walkRight"] as const)[
       Math.floor(sim.motionTime * 10) % 4
     ];
   }
+
   if (scene.phase === "squawk-main") {
     return "squawk";
   }
+
   if (["faceoff", "posture", "squawk-guest"].includes(scene.phase)) {
     return "bag-offended";
   }
+
   if (["inspect", "stare", "snatch"].includes(scene.phase)) {
     return "tilt";
   }
+
   if (scene.phase === "reaction") {
     return "nap-accuse";
   } else {
@@ -48,29 +54,37 @@ export function guestPose(
 
 function guestAsset(scene: GuestScene, time: number) {
   let prefix;
+
   if (scene.species === "pigeon") {
     prefix = "pigeon";
   } else {
     prefix = "guest";
   }
+
   if (["arrival", "departure"].includes(scene.phase)) {
     let walkingPose;
+
     if (Math.floor(time * 9) % 2) {
       walkingPose = "walk";
     } else {
       walkingPose = "idle";
     }
+
     return `${prefix}-${walkingPose}`;
   }
+
   if (scene.phase === "squawk-guest") {
     return `${prefix}-squawk`;
   }
+
   if (["faceoff", "posture", "squawk-main"].includes(scene.phase)) {
     return `${prefix}-posture`;
   }
+
   if (scene.species === "pigeon" && scene.phase === "inspect") {
     return "pigeon-inspect";
   }
+
   return `${prefix}-idle`;
 }
 
@@ -78,9 +92,11 @@ export function guestProps(
   sim: Pick<SimulationView, "scene" | "visible" | "time" | "width" | "height">,
 ) {
   const scene = sim.scene;
+
   if (!sim.visible || scene?.kind !== "guest") {
     return [];
   }
+
   const props: SceneProp[] = [
     {
       id: "visitor",
@@ -92,6 +108,7 @@ export function guestProps(
       flip: scene.guest.facing < 0,
     },
   ];
+
   if (scene.species === "gull") {
     function chip(id: string, x: number, y: number) {
       return {
@@ -103,6 +120,7 @@ export function guestProps(
         height: 18,
       };
     }
+
     for (let i = 0; i < 5; i++) {
       props.push(
         chip(
@@ -112,17 +130,20 @@ export function guestProps(
         ),
       );
     }
+
     if (!scene.chipTaken) {
       props.push(
         chip("disputed-chip", scene.anchor.x - 12, scene.anchor.y - 8),
       );
     } else {
       let beakOffsetX;
+
       if (scene.guest.facing < 0) {
         beakOffsetX = 6;
       } else {
         beakOffsetX = 66;
       }
+
       props.push({
         id: "snatched-chip",
         asset: "chip",
@@ -133,6 +154,7 @@ export function guestProps(
       });
     }
   }
+
   return props;
 }
 
@@ -140,9 +162,11 @@ export function guestSpeech(
   sim: Pick<SimulationView, "scene" | "visible" | "time">,
 ) {
   const scene = sim.scene;
+
   if (!sim.visible || scene?.kind !== "guest") {
     return null;
   }
+
   if (
     !scene.guestText ||
     sim.time < scene.guestStarts ||
@@ -150,6 +174,7 @@ export function guestSpeech(
   ) {
     return null;
   }
+
   return {
     text: scene.guestText,
     x: scene.guest.x + 48,
@@ -225,16 +250,20 @@ export class GuestRoutine implements SceneOwner {
   }
   start(name: string): boolean {
     const handled = this.#startGuest(name);
+
     if (handled && this.#scene) {
       this.#identity = Object.freeze({});
     }
+
     return handled;
   }
   update(dt: number): "running" | "complete" {
     this.#stepGuest(dt);
+
     if (!this.#scene) {
       return "complete";
     }
+
     return "running";
   }
   complete(): void {
@@ -286,23 +315,31 @@ export class GuestRoutine implements SceneOwner {
   ) {
     const sim = this.#environment;
     const scene = this.#scene;
+
     if (scene?.kind !== "guest") {
       return;
     }
+
     scene.phase = phase;
     scene.phaseStarted = sim.clock.now;
     let mainDuration = 0;
+
     if (mainText) {
       mainDuration = readingDuration(mainText);
     }
+
     let guestDelay = 0;
+
     if (mainText && guestText) {
       guestDelay = mainDuration + TURN_PAUSE;
     }
+
     let guestDuration = 0;
+
     if (guestText) {
       guestDuration = readingDuration(guestText);
     }
+
     scene.guestStarts = sim.clock.now + guestDelay;
     scene.guestUntil = scene.guestStarts + guestDuration;
     scene.until = Math.max(
@@ -313,37 +350,47 @@ export class GuestRoutine implements SceneOwner {
     scene.guestText = guestText;
     sim.speech.clear();
     sim.speech.forget();
+
     if (mainText) {
       sim.speech.say(mainText, mainDuration);
     }
+
     sim.body.resetMotion();
   }
   #startGuest(name: string) {
     const sim = this.#environment;
+
     if (!["invite_pigeon", "gull_argument"].includes(name)) {
       return false;
     }
+
     let species: GuestScene["species"];
+
     if (name === "invite_pigeon") {
       species = "pigeon";
     } else {
       species = "gull";
     }
+
     const bag = sim.objects.snapshot().bag;
     const hasSnack = species === "pigeon" && bag !== null && bag.servings > 0;
     // A shared stage keeps both birds and the snack readable on the display.
     let anchorX;
+
     if (hasSnack && bag) {
       anchorX = bag.x + 25;
     } else {
       anchorX = sim.body.x + 100;
     }
+
     let anchorY;
+
     if (hasSnack && bag) {
       anchorY = bag.y + 30;
     } else {
       anchorY = sim.body.y + 72;
     }
+
     const anchor = {
       x: clamp(
         anchorX,
@@ -365,11 +412,13 @@ export class GuestRoutine implements SceneOwner {
       y: anchor.y - 72,
     });
     let bagId: number | null;
+
     if (hasSnack && bag) {
       bagId = bag.id;
     } else {
       bagId = null;
     }
+
     this.#scene = {
       kind: "guest",
       species,
@@ -396,18 +445,22 @@ export class GuestRoutine implements SceneOwner {
     sim.activity.stopTravel();
     this.#cooldown();
     this.#dialogueIndex = sim.belongings.snapshot().memory.visits[species];
+
     if (species === "pigeon") {
       this.#exchange("arrival", 2.6, dialogue.guests.pigeon.arrival);
     } else {
       this.#exchange("arrival", 2.6, dialogue.guests.seagull.arrival);
     }
+
     return true;
   }
   #cancelGuest() {
     const sim = this.#environment;
+
     if (this.#scene?.kind !== "guest") {
       return false;
     }
+
     this.#scene = null;
     sim.speech.clear();
     sim.speech.forget();
@@ -416,9 +469,11 @@ export class GuestRoutine implements SceneOwner {
   }
   #depart(lines: readonly GuestExchange[]) {
     const scene = this.#scene;
+
     if (scene?.kind !== "guest") {
       return;
     }
+
     scene.departureOrigin = { x: scene.guest.x, y: scene.guest.y - 35 };
     scene.guest.facing = 1;
     this.#exchange("departure", 2.4, lines);
@@ -434,18 +489,22 @@ export class GuestRoutine implements SceneOwner {
   #stepGuest(dt: number) {
     const sim = this.#environment;
     const scene = this.#scene;
+
     if (scene?.kind !== "guest") {
       return false;
     }
+
     if (!sim.policy.visible() || sim.clock.now >= scene.deadline) {
       this.#finish();
       return true;
     }
+
     const guest = scene.guest;
     const mainTarget = sim.body.safePoint(scene.mainTarget);
     const guestTarget = sim.body.safePoint(scene.guestTarget);
     scene.anchor.x = clamp(scene.anchor.x, 12, sim.body.width - 12);
     scene.anchor.y = clamp(scene.anchor.y, 12, sim.body.height - 12);
+
     if (scene.phase === "arrival") {
       const progress = clamp((sim.clock.now - scene.phaseStarted) / 2.6, 0, 1);
       guest.x = lerp(scene.entryX, guestTarget.x, progress);
@@ -459,12 +518,14 @@ export class GuestRoutine implements SceneOwner {
         Math.max(sim.body.width, sim.body.height),
         dt,
       );
+
       if (sim.clock.now >= scene.until) {
         sim.belongings.visited(scene.species, mainTarget);
         sim.body.place({ x: mainTarget.x, y: sim.body.y });
         sim.body.place({ x: sim.body.x, y: mainTarget.y });
         guest.x = guestTarget.x;
         sim.body.face(1 as -1 | 1);
+
         if (scene.species === "pigeon") {
           this.#exchange("inspect", 2, dialogue.guests.pigeon.inspect);
         } else {
@@ -475,6 +536,7 @@ export class GuestRoutine implements SceneOwner {
       const progress = clamp((sim.clock.now - (scene.until - 2.4)) / 2.4, 0, 1);
       guest.x = lerp(scene.departureOrigin.x, sim.body.width + 100, progress);
       guest.y = guestTarget.y;
+
       if (sim.clock.now >= scene.until) {
         this.#finish();
       }
@@ -491,6 +553,7 @@ export class GuestRoutine implements SceneOwner {
         x: clamp(scene.anchor.x - 12, 0, sim.body.width - 24) + 12 - 18,
         y: clamp(scene.anchor.y - 8, 0, sim.body.height - 18) + 9 - 47,
       });
+
       if (scene.phase === "snatch") {
         const progress = clamp(
           (sim.clock.now - scene.phaseStarted) / 0.56,
@@ -508,14 +571,17 @@ export class GuestRoutine implements SceneOwner {
         guest.x = lerp(snatchTarget.x, guestTarget.x, progress);
         guest.y = lerp(snatchTarget.y, guestTarget.y, progress);
       }
+
       // Missing or emptied bags turn the same visit into judgmental looks.
       if (scene.species === "pigeon" && scene.hasSnack) {
         const bag = sim.objects.snapshot().bag;
+
         if (scene.bagId !== bag?.id || !((bag?.servings ?? 0) > 0)) {
           scene.hasSnack = false;
           this.#exchange("inspect", 1.5, dialogue.guests.pigeon.snackRemoved);
         }
       }
+
       if (sim.clock.now >= scene.until) {
         if (scene.species === "pigeon") {
           this.#stepPigeon();
@@ -524,13 +590,16 @@ export class GuestRoutine implements SceneOwner {
         }
       }
     }
+
     return true;
   }
   #stepPigeon() {
     const scene = this.#scene;
+
     if (scene?.kind !== "guest") {
       return;
     }
+
     if (scene.phase === "inspect") {
       if (scene.hasSnack) {
         this.#exchange(
@@ -566,15 +635,18 @@ export class GuestRoutine implements SceneOwner {
   #stepArgument() {
     const sim = this.#environment;
     const scene = this.#scene;
+
     if (scene?.kind !== "guest") {
       return;
     }
+
     switch (scene.phase) {
       case "stare": {
         this.#exchange("posture", 1.8, dialogue.guests.seagull.posture);
 
         break;
       }
+
       case "posture": {
         this.#exchange(
           "squawk-main",
@@ -585,6 +657,7 @@ export class GuestRoutine implements SceneOwner {
 
         break;
       }
+
       case "squawk-main": {
         this.#exchange(
           "squawk-guest",
@@ -595,17 +668,20 @@ export class GuestRoutine implements SceneOwner {
 
         break;
       }
+
       case "squawk-guest": {
         this.#exchange("snatch", 0.8, dialogue.guests.seagull.snatch);
 
         break;
       }
+
       case "snatch": {
         scene.chipTaken = true;
         this.#exchange("reaction", 2, dialogue.guests.seagull.reaction);
 
         break;
       }
+
       case "reaction": {
         this.#depart(dialogue.guests.seagull.departure);
 
@@ -615,9 +691,11 @@ export class GuestRoutine implements SceneOwner {
   }
   maybeGuest() {
     const sim = this.#environment;
+
     if (this.#nextGuest == null) {
       this.#nextGuest = sim.clock.now + 180 + sim.random() * 180;
     }
+
     if (
       !sim.policy.visible() ||
       sim.policy.settings().paused ||
@@ -625,17 +703,21 @@ export class GuestRoutine implements SceneOwner {
     ) {
       return false;
     }
+
     if (this.#scene || sim.activity.mode !== "idle") {
       return false;
     }
+
     if (sim.clock.now < this.#nextGuest) {
       return false;
     }
+
     if (sim.random() < 0.65) {
       sim.commands.action("invite_pigeon");
     } else {
       sim.commands.action("gull_argument");
     }
+
     return true;
   }
 }

@@ -21,24 +21,28 @@ function advance(sim, seconds) {
     sim.step(0.05);
   }
 }
-test("click and sub-threshold motion remain pokes; completed drag counts once and preserves grab offset", () => {
-  const sim = bird(0);
-  const point = { x: sim.inspect().x + 40, y: sim.inspect().y + 50 };
-  sim.beginPickup(point, 0);
-  sim.movePickup({ x: point.x + 3, y: point.y });
-  sim.finishPickup(false, 100);
-  assert.equal(sim.inspect().pickup.recent.length, 0);
-  assert.equal(sim.inspect().touch.reaction, "poke");
-  sim.beginPickup(point, 200);
-  sim.movePickup({ x: 200, y: 250 });
-  assert.ok(Math.abs(sim.inspect().x - 160) < 1e-9);
-  assert.equal(sim.inspect().y, 200);
-  assert.equal(sim.inspect().mode, "carried");
-  sim.finishPickup(false, 300);
-  sim.finishPickup(false, 400);
-  assert.deepEqual(sim.inspect().pickup.recent, [300]);
-  assert.match(sim.inspect().bubble, /wrong place/);
-});
+test(
+  "click and sub-threshold motion remain pokes; completed drag counts once and " +
+  "preserves grab offset",
+  () => {
+    const sim = bird(0);
+    const point = { x: sim.inspect().x + 40, y: sim.inspect().y + 50 };
+    sim.beginPickup(point, 0);
+    sim.movePickup({ x: point.x + 3, y: point.y });
+    sim.finishPickup(false, 100);
+    assert.equal(sim.inspect().pickup.recent.length, 0);
+    assert.equal(sim.inspect().touch.reaction, "poke");
+    sim.beginPickup(point, 200);
+    sim.movePickup({ x: 200, y: 250 });
+    assert.ok(Math.abs(sim.inspect().x - 160) < 1e-9);
+    assert.equal(sim.inspect().y, 200);
+    assert.equal(sim.inspect().mode, "carried");
+    sim.finishPickup(false, 300);
+    sim.finishPickup(false, 400);
+    assert.deepEqual(sim.inspect().pickup.recent, [300]);
+    assert.match(sim.inspect().bubble, /wrong place/);
+  }
+);
 test("five-minute history expires individually even while hidden, never persists", () => {
   const sim = bird(0);
   drag(sim, 0);
@@ -48,38 +52,50 @@ test("five-minute history expires individually even while hidden, never persists
   assert.deepEqual(sim.inspect().pickup.recent, [60100]);
   sim.updatePickupClock(360100);
   assert.deepEqual(sim.inspect().pickup.recent, []);
-  assert.equal(JSON.stringify(sim.exportMemory()).includes("recent"), false);
+  assert.equal(JSON.stringify(sim.exportMemory())
+    .includes("recent"), false);
 });
 test("Polite-ish remains cooperative through repeated handling", () => {
   const sim = bird(0, 0);
-  for (let i = 0; i < 6; i++) drag(sim, i * 1000, { x: 150 + i * 50, y: 200 });
+
+  for (let i = 0; i < 6; i++) {
+    drag(sim, i * 1000, { x: 150 + i * 50, y: 200 });
+  }
+
   advance(sim, 3);
   assert.equal(sim.inspect().scene, null);
   assert.equal(sim.inspect().splats.length, 0);
   assert.equal(sim.inspect().rubbish.length, 0);
 });
-test("Menace fear poop is tiny; third pickup carries cleanable trash back without replacing food", () => {
-  const sim = bird(1, 0);
-  sim.action("place_bag", { x: 624, y: 524 });
-  drag(sim, 0);
-  assert.equal(sim.inspect().splats[0].scale, 0.55);
-  drag(sim, 1000, { x: 500, y: 200 });
-  const origin = { x: sim.inspect().x, y: sim.inspect().y };
-  drag(sim, 2000, { x: 250, y: 300 });
-  assert.equal(sim.inspect().scene.revenge, "trash");
-  for (let tick = 0; tick < 300 && !sim.inspect().rubbish.length; tick++)
-    advance(sim, 0.05);
-  assert.equal(sim.inspect().rubbish.length, 1);
-  assert.equal(sim.inspect().rubbish[0].x, origin.x + 24);
-  assert.equal(sim.inspect().bag.servings, 3);
-  const rubbish = sim.inspect().rubbish[0];
-  assert.equal(
-    sim.present({ x: rubbish.x + 20, y: rubbish.y + 20 }).highlight.kind,
-    "rubbish",
-  );
-  sim.action("direct_pick", { x: rubbish.x + 20, y: rubbish.y + 20 });
-  assert.equal(sim.inspect().rubbish.length, 0);
-});
+test(
+  "Menace fear poop is tiny; third pickup carries cleanable trash back without " +
+  "replacing food",
+  () => {
+    const sim = bird(1, 0);
+    sim.action("place_bag", { x: 624, y: 524 });
+    drag(sim, 0);
+    assert.equal(sim.inspect().splats[0].scale, 0.55);
+    drag(sim, 1000, { x: 500, y: 200 });
+    const origin = { x: sim.inspect().x, y: sim.inspect().y };
+    drag(sim, 2000, { x: 250, y: 300 });
+    assert.equal(sim.inspect().scene.revenge, "trash");
+
+    for (let tick = 0; tick < 300 && !sim.inspect().rubbish.length; tick++) {
+      advance(sim, 0.05);
+    }
+
+    assert.equal(sim.inspect().rubbish.length, 1);
+    assert.equal(sim.inspect().rubbish[0].x, origin.x + 24);
+    assert.equal(sim.inspect().bag.servings, 3);
+    const rubbish = sim.inspect().rubbish[0];
+    assert.equal(
+      sim.present({ x: rubbish.x + 20, y: rubbish.y + 20 }).highlight.kind,
+      "rubbish",
+    );
+    sim.action("direct_pick", { x: rubbish.x + 20, y: rubbish.y + 20 });
+    assert.equal(sim.inspect().rubbish.length, 0);
+  }
+);
 test("Public enemy escalates chase, trail, then giant poop or rubbish", () => {
   for (const [random, revenge] of [
     [0, "big"],
@@ -95,6 +111,7 @@ test("Public enemy escalates chase, trail, then giant poop or rubbish", () => {
     drag(sim, 3000, { x: 400, y: 200 });
     assert.equal(sim.inspect().scene.revenge, revenge);
     advance(sim, 1);
+
     if (revenge === "big") {
       assert.equal(sim.inspect().splats[0].scale, 2.5);
       const s = sim.inspect().splats[0];
@@ -132,51 +149,66 @@ test("trail has at most three splats and ends with its chase", () => {
   const sim = bird();
   drag(sim, 0);
   drag(sim, 1000, { x: 400, y: 200 });
+
   for (let i = 0; i < 190; i++) {
     sim.pointer({ x: sim.inspect().x < 450 ? 850 : 20, y: 20 });
     advance(sim, 0.05);
   }
+
   assert.equal(sim.inspect().splats.length, 3);
   assert.notEqual(sim.inspect().scene?.kind, "cursor");
 });
-test("cancel, food, hide, pause and lowering level stop reactions; paused dragging remains available", () => {
-  for (const cancel of [
-    (s) => s.action("cancel"),
-    (s) => s.action("feed"),
-    (s) => s.setVisible(false),
-    (s) => s.configure({ paused: true }),
-    (s) => s.configure({ mischief: 0 }),
-  ]) {
+test(
+  "cancel, food, hide, pause and lowering level stop reactions; paused dragging " +
+  "remains available",
+  () => {
+    for (const cancel of [
+      (s) => s.action("cancel"),
+      (s) => s.action("feed"),
+      (s) => s.setVisible(false),
+      (s) => s.configure({ paused: true }),
+      (s) => s.configure({ mischief: 0 }),
+    ]) {
+      const sim = bird();
+      drag(sim, 0);
+      cancel(sim);
+      assert.notEqual(sim.inspect().scene?.kind, "relocation");
+      assert.notEqual(sim.inspect().scene?.kind, "cursor");
+    }
+
     const sim = bird();
+    sim.configure({ paused: true });
     drag(sim, 0);
-    cancel(sim);
-    assert.notEqual(sim.inspect().scene?.kind, "relocation");
-    assert.notEqual(sim.inspect().scene?.kind, "cursor");
+    assert.equal(sim.inspect().scene.revenge, "none");
+    assert.equal(sim.inspect().pickup.recent.length, 1);
   }
-  const sim = bird();
-  sim.configure({ paused: true });
-  drag(sim, 0);
-  assert.equal(sim.inspect().scene.revenge, "none");
-  assert.equal(sim.inspect().pickup.recent.length, 1);
-});
-test("drag interrupts a flight without dropping its pending poop; cancellation and screen clamps are safe", () => {
-  const sim = bird();
-  sim.action("poop", { x: 700, y: 200 });
-  sim.beginPickup({ x: sim.inspect().x + 45, y: sim.inspect().y + 45 }, 0);
-  sim.movePickup({ x: 9999, y: -999 });
-  assert.equal(sim.inspect().x, 804);
-  assert.equal(sim.inspect().y, 0);
-  assert.equal(sim.inspect().flight, null);
-  assert.equal(sim.inspect().pendingPoop, null);
-  sim.finishPickup(true, sim.inspect().pickup.now);
-  advance(sim, 1);
-  assert.equal(sim.inspect().pickup.recent.length, 0);
-  assert.equal(sim.inspect().splats.length, 0);
-});
+);
+test(
+  "drag interrupts a flight without dropping its pending poop; cancellation and " +
+  "screen clamps are safe",
+  () => {
+    const sim = bird();
+    sim.action("poop", { x: 700, y: 200 });
+    sim.beginPickup({ x: sim.inspect().x + 45, y: sim.inspect().y + 45 }, 0);
+    sim.movePickup({ x: 9999, y: -999 });
+    assert.equal(sim.inspect().x, 804);
+    assert.equal(sim.inspect().y, 0);
+    assert.equal(sim.inspect().flight, null);
+    assert.equal(sim.inspect().pendingPoop, null);
+    sim.finishPickup(true, sim.inspect().pickup.now);
+    advance(sim, 1);
+    assert.equal(sim.inspect().pickup.recent.length, 0);
+    assert.equal(sim.inspect().splats.length, 0);
+  }
+);
 test("bulk cleanup removes every new mess type and preserves remembered belongings", () => {
   const sim = bird();
   sim.restoreMemory({ perch: { x: 10, y: 10 } });
-  for (let i = 0; i < 4; i++) drag(sim, i * 1000, { x: 200 + i * 60, y: 250 });
+
+  for (let i = 0; i < 4; i++) {
+    drag(sim, i * 1000, { x: 200 + i * 60, y: 250 });
+  }
+
   advance(sim, 8);
   sim.splat({ x: 200, y: 100 });
   assert.equal(sim.inspect().rubbish.length, 1);

@@ -27,12 +27,15 @@ export class Belongings {
 
   remember(kind: MemoryEpisode["kind"], detail: string, point: Point): void {
     const at = this.#now();
+
     if (!Number.isFinite(at) || at < 0 || at > 8.64e15) {
       return;
     }
+
     if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) {
       return;
     }
+
     const episodes = this.#memory.episodes;
     episodes.push({
       id: (episodes.at(-1)?.id ?? 0) + 1,
@@ -46,9 +49,11 @@ export class Belongings {
         height: this.#height,
       },
     });
+
     if (episodes.length > MEMORY_LIMIT) {
       episodes.shift();
     }
+
     this.#revision += 1;
   }
 
@@ -75,6 +80,7 @@ export class Belongings {
         revision: this.#revision,
       });
     }
+
     return this.#snapshot;
   }
 
@@ -91,6 +97,7 @@ export class Belongings {
     this.#width = width;
     this.#height = height;
     const memory = normalizeMemory(this.#memory, width, height);
+
     if (JSON.stringify(memory) !== JSON.stringify(this.#memory)) {
       this.#memory = memory;
       this.#revision += 1;
@@ -103,9 +110,11 @@ export class Belongings {
       this.#width,
       this.#height,
     ).perch;
+
     if (this.#memory.perch) {
       this.remember("perch", "favourite spot", this.#memory.perch);
     }
+
     this.#revision += 1;
   }
 
@@ -122,21 +131,26 @@ export class Belongings {
       (this.#memory.collection[item] ?? 0) + 1,
     );
     this.#memory.greetings.lastDiscovery = item;
+
     if (point) {
       this.remember("gift", item, point);
     }
+
     this.#revision += 1;
   }
 
   rewardTrick(trick: Trick, point?: Point): number {
     const learned = this.#memory.learned;
+
     if (learned.tricks[trick] < 6) {
       learned.tricks[trick] += 1;
       this.#revision += 1;
     }
+
     if (point) {
       this.remember("reward", trick, point);
     }
+
     return learned.tricks[trick];
   }
 
@@ -146,13 +160,16 @@ export class Belongings {
       this.#width,
       this.#height,
     ).perch;
+
     if (!location) {
       return;
     }
+
     this.remember("meal", "chip", location);
     const learned = this.#memory.learned;
     const spot = learned.snackSpot;
     const previous = JSON.stringify(learned);
+
     if (spot && Math.hypot(spot.x - location.x, spot.y - location.y) <= 90) {
       learned.snackSpot = {
         x: Math.round((spot.x * spot.meals + location.x) / (spot.meals + 1)),
@@ -163,13 +180,16 @@ export class Belongings {
     } else if (spot && spot.meals >= 3) {
       const candidate = learned.snackCandidate;
       let meals = 1;
+
       if (
         candidate &&
         Math.hypot(candidate.x - location.x, candidate.y - location.y) <= 90
       ) {
         meals = candidate.meals + 1;
       }
+
       learned.snackCandidate = { ...location, meals };
+
       if (meals >= 3) {
         learned.snackSpot = learned.snackCandidate;
         learned.snackCandidate = null;
@@ -177,6 +197,7 @@ export class Belongings {
     } else {
       learned.snackSpot = { ...location, meals: 1 };
     }
+
     if (previous !== JSON.stringify(learned)) {
       this.#revision += 1;
     }
@@ -205,24 +226,32 @@ export class Belongings {
     if (!Number.isFinite(now) || now < 0) {
       return null;
     }
+
     const history = this.#memory.greetings;
     const elapsed = now - history.lastAt;
+
     if (history.seen && elapsed >= 0 && elapsed < GREETING_COOLDOWN_MS) {
       return null;
     }
+
     const collection = this.#memory.collection;
     function owned(id: unknown): id is Collectible {
       return isCollectible(id) && (collection[id] ?? 0) > 0;
     }
     let item;
+
     if (owned(history.lastDiscovery)) {
       item = history.lastDiscovery;
     } else {
-      item = Object.keys(collection).find(owned);
+      item = Object.keys(collection)
+        .find(owned);
     }
+
     let lines = firstLines;
+
     if (history.seen) {
       const name = item && ITEMS[item].name.toLowerCase();
+
       if (name) {
         lines = dialogue.gullbert.greetings.treasure.map((line) => {
           return line.replaceAll("{item}", name);
@@ -231,12 +260,15 @@ export class Belongings {
         lines = returnLines;
       }
     }
+
     let choices = lines.filter((line) => {
       return line !== history.lastLine;
     });
+
     if (choices.length === 0) {
       choices = lines;
     }
+
     const line =
       choices[
         Math.min(choices.length - 1, Math.floor(random() * choices.length))

@@ -66,6 +66,7 @@ test("preview serves the entry point and modules, including query strings", asyn
 
 test("malformed preview URLs return 400 without stopping subsequent requests", async (t) => {
   const request = await playground(t);
+
   for (const requestPath of ["/%", "/%E0%A4%A", "http://["]) {
     assert.equal((await request(requestPath)).status, 400);
     assert.equal((await request("/")).status, 200);

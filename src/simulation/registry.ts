@@ -23,12 +23,14 @@ export class RoutineRegistry {
     if (this.#active && ownsScene(this.#active)) {
       return this.#active.scene;
     }
+
     return null;
   }
   get identity(): object | null {
     if (this.#active && ownsScene(this.#active)) {
       return this.#active.identity;
     }
+
     return this.#active;
   }
   get active(): boolean {
@@ -40,27 +42,35 @@ export class RoutineRegistry {
         if (!ownsScene(routine) || routine.scene) {
           this.#active = routine;
         }
+
         return true;
       }
     }
+
     return false;
   }
   update(delta: number): boolean {
     const owner = this.#active;
+
     if (!owner) {
       return false;
     }
+
     const result = owner.update(delta);
+
     if (this.#active === owner && result === "complete") {
       this.complete();
     }
+
     return true;
   }
   install(scene: ReadonlyValue<Scene>): void {
     const owner = this.#owners.get(scene.kind);
+
     if (!owner) {
       throw new Error(`No routine owns ${scene.kind}`);
     }
+
     if (this.#active && this.#active !== owner) {
       if (ownsScene(this.#active)) {
         this.#active.clear();
@@ -68,6 +78,7 @@ export class RoutineRegistry {
         this.#active.interrupt();
       }
     }
+
     owner.install(scene);
     this.#active = owner;
   }

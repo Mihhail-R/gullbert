@@ -25,12 +25,15 @@ export function theatrePose(
   sim: Pick<SimulationView, "scene" | "motionTime" | "time">,
 ): Pose | null {
   const scene = sim.scene;
+
   if (!isTheatre(scene)) {
     return null;
   }
+
   const walk = (["idle", "walkLeft", "idle", "walkRight"] as const)[
     Math.floor(sim.motionTime * 10) % 4
   ];
+
   switch (scene.kind) {
     case "bubbles":
       return (
@@ -42,34 +45,45 @@ export function theatrePose(
           } as Partial<Record<BubblesScene["phase"], Pose>>
         )[scene.phase] ?? walk
       );
+
     case "bath":
       switch (scene.phase) {
         case "splash":
           return "bath-wet";
+
         case "shake":
           return Math.floor(sim.time * 12) % 2
             ? "bath-shake-a"
             : "bath-shake-b";
+
         default:
           return walk;
       }
+
     case "toss":
       switch (scene.phase) {
         case "takeoff":
           return "crouch";
+
         case "intercept":
           return Math.floor(sim.time * 10) % 2 ? "wingUp" : "wingDown";
+
         case "land":
           return "wingDown";
+
         case "miss-flail":
           return Math.floor(sim.time * 12) % 2 ? "nap-startle" : "wingDown";
+
         case "miss":
           return "bag-offended";
+
         case "eat":
           return "nibble";
+
         default:
           return walk;
       }
+
     case "baguette":
       if (
         ["carry", "exit"].includes(scene.phase) &&
@@ -77,6 +91,7 @@ export function theatrePose(
       ) {
         return walk;
       }
+
       return "nibble";
   }
 }
@@ -96,9 +111,11 @@ export function theatreProps(
   >,
 ): SceneProp[] {
   const scene = sim.scene;
+
   if (!sim.visible || !isTheatre(scene)) {
     return [];
   }
+
   switch (scene.kind) {
     case "bubbles": {
       return [
@@ -124,6 +141,7 @@ export function theatreProps(
         }),
       ];
     }
+
     case "bath": {
       const props: SceneProp[] = [
         {
@@ -135,15 +153,18 @@ export function theatreProps(
           height: 40,
         },
       ];
+
       if (["splash", "shake"].includes(scene.phase)) {
         for (let index = 0; index < 8; index += 1) {
           const age = ((sim.time - scene.phaseStarted) * 1.5 + index / 8) % 1;
           let direction: -1 | 1;
+
           if (index % 2) {
             direction = 1;
           } else {
             direction = -1;
           }
+
           props.push({
             id: `drop-${index}`,
             asset: "drop",
@@ -163,18 +184,23 @@ export function theatreProps(
           });
         }
       }
+
       return props;
     }
+
     case "toss": {
       // Rendering can run synchronously on resize before the next physics tick.
       const chip = scene.chip && pointOnScreen(sim, scene.chip, 18);
+
       if (scene.chip && chip) {
         let rotation;
+
         if (["takeoff", "intercept"].includes(scene.phase)) {
           rotation = (sim.time - scene.started) * 360;
         } else {
           rotation = 0;
         }
+
         return [
           {
             id: scene.chip.id,
@@ -190,15 +216,18 @@ export function theatreProps(
         return [];
       }
     }
+
     case "baguette": {
       const mouth = beak(sim);
       const offset = theatreOffset(sim);
       let horizontalOffset;
+
       if (scene.phase === "pause") {
         horizontalOffset = 13;
       } else {
         horizontalOffset = Math.sin(sim.motionTime * 8) * 5;
       }
+
       return [
         {
           id: "baguette",
@@ -219,17 +248,23 @@ export function theatreProps(
 // and departure move the complete carried silhouette beyond the display edge.
 export function theatreOffset(sim: Pick<SimulationView, "scene" | "time">) {
   const scene = sim.scene;
+
   if (scene?.kind !== "baguette") {
     return { x: 0, opacity: 1 };
   }
+
   const progress = clamp((sim.time - scene.phaseStarted) / 0.8, 0, 1);
+
   switch (scene.phase) {
     case "entrance":
       return { x: -scene.direction * 220 * (1 - progress), opacity: 1 };
+
     case "departure":
       return { x: scene.direction * 220 * progress, opacity: 1 };
+
     case "gone":
       return { x: 0, opacity: 0 };
+
     default:
       return { x: 0, opacity: 1 };
   }

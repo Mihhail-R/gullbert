@@ -6,6 +6,7 @@ export async function setupUpdates() {
   if (!native) {
     return;
   }
+
   const panel = $<HTMLDetailsElement>("#updates");
   const check = $<HTMLButtonElement>("#update-check");
   const install = $<HTMLButtonElement>("#update-install");
@@ -32,6 +33,7 @@ export async function setupUpdates() {
       notes.hidden = !state.notes;
       progress.hidden = !state.busy;
       progress.max = 1;
+
       if (state.progress === null) {
         progress.removeAttribute("value");
       } else {
@@ -39,6 +41,7 @@ export async function setupUpdates() {
       }
     },
   });
+
   try {
     const version = await invoke("app_version");
     $(".version").textContent = `v${version}`;
@@ -56,6 +59,7 @@ export async function setupUpdates() {
       )) {
         section.open = section === panel;
       }
+
       panel.scrollIntoView({ block: "nearest" });
     });
     check.disabled = false;

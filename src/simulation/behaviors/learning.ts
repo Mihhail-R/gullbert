@@ -78,6 +78,7 @@ export class LearningRoutine implements SceneOwner {
     ) {
       return this.#scene.trick;
     }
+
     return null;
   }
 
@@ -95,18 +96,22 @@ export class LearningRoutine implements SceneOwner {
     sim.belongings.rememberMeal(point);
     const trick = this.#mealReward;
     this.#mealReward = null;
+
     if (trick) {
       const lessons = sim.belongings.rewardTrick(trick, point);
       let bank = lines.reinforced;
+
       if (lessons === 3) {
         bank = lines.learned;
       } else if (lessons >= 6) {
         bank = lines.mastered;
       }
+
       const performed = sim.belongings.snapshot().memory.performances[trick];
       const line = bank[(performed - 1) % bank.length];
       sim.speech.say(line, 4);
     }
+
     this.#nextHabit = Math.max(this.#nextHabit, sim.clock.now + 90);
   }
 
@@ -115,6 +120,7 @@ export class LearningRoutine implements SceneOwner {
     this.#playUntil = sim.clock.now + 18;
     // Leave a quiet, touchable moment after a game, including the first lesson.
     sim.activity.settleUntil(sim.clock.now + 12);
+
     if (sim.belongings.snapshot().memory.learned.scratchesAfterPlay >= 3) {
       sim.speech.say(lines.scratchExpected, 4);
     }
@@ -122,12 +128,15 @@ export class LearningRoutine implements SceneOwner {
 
   scratched(): void {
     const sim = this.#environment;
+
     if (this.#playUntil <= sim.clock.now) {
       return;
     }
+
     this.#playUntil = 0;
     sim.belongings.rememberScratchAfterPlay();
     sim.belongings.remember("scratch", "after play", sim.body);
+
     if (sim.belongings.snapshot().memory.learned.scratchesAfterPlay === 3) {
       sim.speech.say(lines.scratchLearned, 4);
     }
@@ -135,6 +144,7 @@ export class LearningRoutine implements SceneOwner {
 
   expectationPose(): Pose | null {
     const sim = this.#environment;
+
     if (
       sim.activity.mode === "idle" &&
       sim.clock.now < this.#playUntil &&
@@ -142,11 +152,13 @@ export class LearningRoutine implements SceneOwner {
     ) {
       return "tilt";
     }
+
     return null;
   }
 
   maybeStart(): boolean {
     const sim = this.#environment;
+
     if (
       !sim.policy.visible() ||
       sim.policy.settings().paused ||
@@ -154,14 +166,18 @@ export class LearningRoutine implements SceneOwner {
     ) {
       return false;
     }
+
     if (sim.clock.now < this.#nextHabit) {
       return false;
     }
+
     const learned = sim.belongings.snapshot().memory.learned;
     const choices: string[] = [];
+
     if (learned.snackSpot && learned.snackSpot.meals >= 3) {
       choices.push("habit_snack");
     }
+
     if (sim.policy.settings().mischief > 0) {
       for (const trick of ["spin", "dead"] as const) {
         if (learned.tricks[trick] >= 3) {
@@ -169,9 +185,11 @@ export class LearningRoutine implements SceneOwner {
         }
       }
     }
+
     if (!choices.length) {
       return false;
     }
+
     const command =
       choices[
         Math.min(choices.length - 1, Math.floor(sim.random() * choices.length))
@@ -183,6 +201,7 @@ export class LearningRoutine implements SceneOwner {
 
   start(name: string, point?: Point): boolean {
     const sim = this.#environment;
+
     if (name === "forget_learning") {
       this.cancelAssociations();
       sim.belongings.forgetLearning();
@@ -190,27 +209,35 @@ export class LearningRoutine implements SceneOwner {
       sim.speech.say(lines.forgotten, 3);
       return true;
     }
+
     const snackSpot = sim.belongings.snapshot().memory.learned.snackSpot;
     const habit = name === "habit_snack" && snackSpot !== null;
     const trick = commands[name];
+
     if (!habit && !trick) {
       return false;
     }
+
     if (point && (!Number.isFinite(point.x) || !Number.isFinite(point.y))) {
       sim.lifecycle.rest();
       return true;
     }
+
     const origin = { x: sim.body.x, y: sim.body.y };
     let target = origin;
+
     if (habit && snackSpot) {
       target = sim.body.safePoint(snackSpot);
     } else if (point) {
       target = sim.body.safePoint({ x: point.x - 48, y: point.y - 78 });
     }
+
     let kind: LearningScene["kind"] = "trick";
+
     if (habit) {
       kind = "habit";
     }
+
     const chosen = trick ?? "come";
     const practiced =
       sim.belongings.snapshot().memory.learned.tricks[chosen] >= 3;
@@ -226,22 +253,28 @@ export class LearningRoutine implements SceneOwner {
       practiced,
       unsolicited: name.startsWith("show_"),
     };
+
     if (practiced || habit) {
       this.#scene.until = sim.clock.now + 0.35;
     }
+
     this.#identity = Object.freeze({});
     sim.activity.beginRoutine(kind);
     const performed = sim.belongings.snapshot().memory.performances[chosen];
     let bank = lines.consider[chosen];
+
     if (practiced) {
       bank = lines.perform[chosen];
     }
+
     let line = bank[performed % bank.length];
+
     if (habit) {
       line = lines.checkSpot;
     } else if (this.#scene.unsolicited) {
       line = lines.showoff;
     }
+
     sim.speech.say(line, 3);
     return true;
   }
@@ -256,24 +289,31 @@ export class LearningRoutine implements SceneOwner {
   update(dt: number): "running" | "complete" {
     const sim = this.#environment;
     const scene = this.#scene;
+
     if (!scene) {
       return "complete";
     }
+
     if (scene.phase === "consider" && sim.clock.now >= scene.until) {
       let duration = 2.5;
+
       if (scene.trick === "come") {
         duration = 18;
       } else if (scene.trick === "dead") {
         duration = 3.5;
       }
+
       this.#phase("perform", duration);
     } else if (scene.phase === "perform") {
       const elapsed = sim.clock.now - scene.phaseStarted;
+
       if (scene.trick === "come") {
         let speed = 150;
+
         if (scene.practiced) {
           speed = 270;
         }
+
         if (sim.body.moveToward(scene.target, speed, dt)) {
           this.#performed();
         } else if (sim.clock.now >= scene.until) {
@@ -288,12 +328,15 @@ export class LearningRoutine implements SceneOwner {
             y: scene.origin.y + (1 - Math.cos(angle)) * 6,
           }),
         );
+
         if (Math.cos(angle) >= 0) {
           sim.body.face(scene.facing);
         } else {
           sim.body.face(-scene.facing);
         }
+
         sim.body.advanceMotion(dt);
+
         if (sim.clock.now >= scene.until) {
           sim.body.place(sim.body.safePoint(scene.origin));
           this.#performed();
@@ -305,11 +348,14 @@ export class LearningRoutine implements SceneOwner {
       if (scene.phase === "reward") {
         sim.speech.say(lines.unpaid, 3);
       }
+
       this.#finish();
     }
+
     if (!this.#scene) {
       return "complete";
     }
+
     return "running";
   }
 
@@ -329,17 +375,21 @@ export class LearningRoutine implements SceneOwner {
 
   presentation(): RoutinePresentation {
     const scene = this.#scene;
+
     if (!scene) {
       return {};
     }
+
     const sim = this.#environment;
     let pose: Pose = "tilt";
     let rotation = 0;
+
     if (scene.phase === "perform") {
       if (scene.trick === "dead") {
         const elapsed = sim.clock.now - scene.phaseStarted;
         rotation = 85 * clamp(elapsed / 0.6, 0, 1) * scene.facing;
         pose = "nap-sleep";
+
         if (!scene.practiced && elapsed > 1.6 && elapsed < 2.2) {
           pose = "blink";
         }
@@ -349,6 +399,7 @@ export class LearningRoutine implements SceneOwner {
         ];
       }
     }
+
     return { pose, rotation };
   }
 
@@ -360,6 +411,7 @@ export class LearningRoutine implements SceneOwner {
   }
   #performed(): void {
     const sim = this.#environment;
+
     if (this.#scene?.kind === "habit") {
       this.#phase("check", 3);
       sim.speech.say(lines.emptySpot, 3);

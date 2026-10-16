@@ -10,6 +10,7 @@ export function normalizeHat(value: unknown): Hat {
     case "paper-crown":
     case "fried-egg":
       return value;
+
     default:
       return "none";
   }
@@ -27,28 +28,37 @@ export function hatPlacement(
   sim: Pick<SimulationView, "pose" | "scene" | "bag" | "facing" | "settings">,
 ) {
   const hat = hatPosture(sim);
+
   if (hat === "none") {
     return null;
   }
+
   const pose = sim.pose ?? "idle";
   const scene = sim.scene;
+
   if (sim.bag?.attached) {
     return null;
   }
+
   switch (scene?.kind) {
     case "gift":
       if (scene.carrying) {
         return null;
       }
+
       break;
+
     case "baguette":
       return null;
+
     case "bath":
       if (["splash", "shake"].includes(scene.phase)) {
         return null;
       }
+
       break;
   }
+
   if (
     ["bag-trapped", "bag-panic", "bag-shake", "theft-grip"].includes(pose) ||
     pose.startsWith("bath-")
@@ -58,24 +68,31 @@ export function hatPlacement(
 
   let x = 24;
   let y;
+
   if (hat === "cone") {
     y = -9;
   } else {
     y = -6;
   }
+
   if (pose === "walkLeft") {
     y -= 3;
   }
+
   if (pose === "crouch" || pose === "nibble") {
     y += 3;
   }
+
   if (pose === "nap-wobble") {
     x -= 3;
   }
+
   const flip = sim.facing < 0;
+
   if (flip) {
     x = 96 - x - 48;
   }
+
   return { asset: hat, x, y, width: 48, height: 36, flip, rotation: 0 };
 }
 
@@ -85,12 +102,16 @@ export function hatRemark(sim: {
   readonly random: () => number;
 }) {
   const hat = hatPosture(sim);
+
   if (hat === "none") {
     return null;
   }
+
   const lines = dialogue.gullbert.hats[hat];
+
   if (!lines) {
     return null;
   }
+
   return lines[Math.floor((sim.random?.() ?? 0) * lines.length) % lines.length];
 }

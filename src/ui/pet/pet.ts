@@ -7,6 +7,7 @@ import type { ApplicationDependencies } from "./application-contracts.js";
 
 const memoryKey = "gullbert.roommate.v1";
 let nativeDependency: ApplicationDependencies["native"] = null;
+
 if (native) {
   nativeDependency = {
     invoke,
@@ -24,12 +25,14 @@ const application = new PetApplication({
       if (native) {
         return invoke("load_roommate");
       }
+
       return JSON.parse(localStorage.getItem(memoryKey) ?? "null");
     },
     save: (memory) => {
       if (native) {
         return invoke("save_roommate", { memory });
       }
+
       localStorage.setItem(memoryKey, JSON.stringify(memory));
     },
   },
@@ -61,8 +64,10 @@ const application = new PetApplication({
 
 if (!native) {
   const playground = document.getElementById("typing-playground");
+
   if (playground) {
     playground.hidden = false;
   }
 }
+
 await application.start();

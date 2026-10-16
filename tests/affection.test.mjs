@@ -12,8 +12,12 @@ function bird() {
 function untilHop(sim) {
   for (let tick = 0; tick < 800; tick++) {
     sim.step(0.05);
-    if (sim.present().affection.kind === "hop") return;
+
+    if (sim.present().affection.kind === "hop") {
+      return;
+    }
   }
+
   assert.fail("meal never reached its happy hop");
 }
 
@@ -56,11 +60,16 @@ test("scratches lean and fluff, then briefly look offended on release", () => {
   const sim = bird();
   const point = { x: sim.inspect().x + 60, y: sim.inspect().y + 35 };
   const frames = [];
+
   for (let tick = 0; tick < 30; tick++) {
     sim.pointer(point);
     sim.step(0.05);
-    if (sim.present().affection.kind === "scratch") frames.push(sim.present());
+
+    if (sim.present().affection.kind === "scratch") {
+      frames.push(sim.present());
+    }
   }
+
   assert.ok(frames.some((view) => view.affection.fluff));
   assert.ok(frames.some((view) => !view.affection.fluff));
   assert.ok(frames.every((view) => view.affection.x === 3));

@@ -48,6 +48,7 @@ export function createPetRenderer(world: HTMLElement) {
   gull.append(carried);
   function prop(node: HTMLImageElement, item: Item | null | undefined) {
     node.hidden = !item;
+
     if (item && node.dataset.item !== item) {
       node.dataset.item = item;
       node.src = `assets/belongings/${item}.svg`;
@@ -56,33 +57,41 @@ export function createPetRenderer(world: HTMLElement) {
   function renderBelongings(sim: PetPresentation) {
     const spot = sim.perch;
     perch.hidden = !spot;
+
     if (spot) {
       perch.style.left = `${spot.x + 33}px`;
       perch.style.top = `${spot.y + 84}px`;
     }
+
     prop(carried, sim.carriedItem);
     let carriedItemX;
+
     if (sim.facing === 1) {
       carriedItemX = 69;
     } else {
       carriedItemX = 3;
     }
+
     carried.style.left = `${carriedItemX}px`;
     gull.hidden = sim.gullHidden;
     gull.dataset.mood = sim.mood;
   }
   function render(sim: PetPresentation) {
     const hits = sim.hitRegions;
+
     while (hitNodes.length > hits.length) {
       hitNodes.pop()!.remove();
     }
+
     hits.forEach((rect, index) => {
       let node = hitNodes[index];
+
       if (!node) {
         node = document.createElement("div");
         hitNodes.push(node);
         hitLayer.append(node);
       }
+
       Object.assign(node.style, {
         left: `${rect.x}px`,
         top: `${rect.y}px`,
@@ -103,15 +112,18 @@ export function createPetRenderer(world: HTMLElement) {
     bird.style.setProperty("--routine-rotation", `${sim.rotation}deg`);
     // Match the raised-step head position used by hatPlacement.
     let stepOffsetY;
+
     if (sim.pose === "walkLeft") {
       stepOffsetY = -3;
     } else {
       stepOffsetY = 0;
     }
+
     sprite.style.transform = `translateY(${stepOffsetY}px) scaleX(${sim.facing})`;
     renderTheatre(sim);
     updateText(speech, sim.bubble);
     speech.style.left = `${clamp(48, 95 - visualX, sim.width - visualX - 95)}px`;
+
     if (sim.y < 80) {
       speech.style.bottom = "-40px";
     } else if (sim.hat === "none") {
@@ -119,6 +131,7 @@ export function createPetRenderer(world: HTMLElement) {
     } else {
       speech.style.bottom = "112px";
     }
+
     if (sim.crumb) {
       crumb.style.display = "block";
       crumb.style.left = `${Math.round(sim.crumb.x)}px`;
@@ -126,15 +139,18 @@ export function createPetRenderer(world: HTMLElement) {
     } else {
       crumb.style.display = "none";
     }
+
     bag.hidden = sim.bagHidden;
     gull.dataset.pickups = String(sim.pickupCount);
     carriedRubbish.hidden = !sim.carryingRubbish;
     let carriedRubbishX;
+
     if (sim.facing === 1) {
       carriedRubbishX = 62;
     } else {
       carriedRubbishX = -14;
     }
+
     carriedRubbish.style.left = `${carriedRubbishX}px`;
     carriedRubbish.style.top = "45px";
     const liveRubbish = new Set(
@@ -142,55 +158,68 @@ export function createPetRenderer(world: HTMLElement) {
         return item.id;
       }),
     );
+
     for (const [id, node] of rubbishNodes) {
       if (!liveRubbish.has(id)) {
         node.remove();
         rubbishNodes.delete(id);
       }
     }
+
     for (const item of sim.rubbish) {
       let node = rubbishNodes.get(item.id);
+
       if (!node) {
         node = document.createElement("div");
         node.className = "rubbish-bag loose-rubbish";
         world.append(node);
         rubbishNodes.set(item.id, node);
       }
+
       node.style.left = `${item.x}px`;
       node.style.top = `${item.y}px`;
     }
+
     gull.dataset.phase = sim.phase;
+
     if (sim.bag) {
       bag.style.left = `${Math.round(sim.bag.x)}px`;
       bag.style.top = `${Math.round(sim.bag.y)}px`;
       bag.classList.toggle("empty", sim.bag.servings === 0);
       bag.classList.toggle("attached", sim.bag.attached);
+
       if (sim.bag.servings) {
         let servingLabel;
+
         if (sim.bag.servings === 1) {
           servingLabel = "chip";
         } else {
           servingLabel = "chips";
         }
+
         bag.dataset.servings = `${sim.bag.servings} ${servingLabel}`;
       } else {
         bag.dataset.servings = "empty";
       }
     }
+
     const objects = sim.cleanupObjects;
     const liveChips = new Set(
       sim.looseChips.map((chip) => {
         return chip.id;
       }),
     );
+
     for (const [id, node] of chips) {
       if (!liveChips.has(id)) {
         node.remove();
         chips.delete(id);
       }
     }
+
     for (const chip of sim.looseChips) {
       let node = chips.get(chip.id);
+
       if (!node) {
         node = document.createElement("img");
         node.className = "loose-chip";
@@ -200,12 +229,14 @@ export function createPetRenderer(world: HTMLElement) {
         chipLayer.append(node);
         chips.set(chip.id, node);
       }
+
       node.style.left = `${Math.round(chip.x)}px`;
       node.style.top = `${Math.round(chip.y)}px`;
       node.style.width = `${chip.width}px`;
       node.style.height = `${chip.height}px`;
       node.style.transform = `rotate(${chip.rotation ?? 0}deg)`;
     }
+
     const coneRects = objects.filter((object) => {
       return object.kind === "cone";
     });
@@ -214,17 +245,21 @@ export function createPetRenderer(world: HTMLElement) {
         return cone.id;
       }),
     );
+
     for (const [id, node] of cones) {
       if (!liveCones.has(id)) {
         node.remove();
         cones.delete(id);
       }
     }
+
     for (const cone of coneRects) {
       if (cone.id == null) {
         continue;
       }
+
       let node = cones.get(cone.id);
+
       if (!node) {
         node = document.createElement("img");
         node.className = "municipal-cone";
@@ -234,15 +269,18 @@ export function createPetRenderer(world: HTMLElement) {
         coneLayer.append(node);
         cones.set(cone.id, node);
       }
+
       node.style.left = `${Math.round(cone.x)}px`;
       node.style.top = `${Math.round(cone.y)}px`;
       node.style.width = `${cone.width}px`;
       node.style.height = `${cone.height}px`;
     }
+
     const target = sim.highlight;
     gull.dataset.touch = sim.touchReaction;
     highlight.dataset.direct = String(!sim.tidying);
     highlight.hidden = !target;
+
     if (target) {
       highlight.dataset.kind = target.kind;
       highlight.style.left = `${Math.round(target.x - 8)}px`;
@@ -250,29 +288,41 @@ export function createPetRenderer(world: HTMLElement) {
       highlight.style.width = `${target.width + 16}px`;
       highlight.style.height = `${target.height + 16}px`;
     }
+
     const alive = new Set(
       sim.splats.map((s) => {
         return s.id;
       }),
     );
+
     for (const [id, node] of nodes) {
       if (!alive.has(id)) {
         node.remove();
         nodes.delete(id);
       }
     }
+
     for (const s of sim.splats) {
       let node = nodes.get(s.id);
+
       if (!node) {
         node = document.createElement("div");
         node.className = "splat";
         node.innerHTML =
-          '<svg viewBox="0 0 16 10" aria-hidden="true"><path fill="#c4ced5" d="M3 1h2v1h1v1h4V2h1V0h2v1h1v2h-1v1h1v1h2v2h-1v1h-3v1h-2v1H7V9H5v1H3V8H1V7H0V5h2V4h2V3H3Z"/><path fill="#f6f3e8" d="M4 2h1v1h1v1h5V3h1V1h1v2h-1v2h2v1h1v1h-3v1h-2v1H7V8H4v1H3V7H1V6h2V5h2V3H4Z"/><path fill="#93a9b5" d="M7 4h3v1h2v2h-2v1H7V7H5V5h2Z"/><path fill="#c4ced5" d="M7 4h3v1H7ZM6 5h2v1H6Z"/></svg>';
+          '<svg viewBox="0 0 16 10" aria-hidden="true">' +
+          '<path fill="#c4ced5" d="M3 1h2v1h1v1h4V2h1V0h2v1h1v2h-1v1h1v1h2v2h-1v1' +
+          'h-3v1h-2v1H7V9H5v1H3V8H1V7H0V5h2V4h2V3H3Z"/>' +
+          '<path fill="#f6f3e8" d="M4 ' +
+          '2h1v1h1v1h5V3h1V1h1v2h-1v2h2v1h1v1h-3v1h-2v1H7V8H4v1H3V7H1V6h2V5h2V3H4Z"/>' +
+          '<path fill="#93a9b5" d="M7 4h3v1h2v2h-2v1H7V7H5V5h2Z"/>' +
+          '<path fill="#c4ced5" d="M7 4h3v1H7ZM6 5h2v1H6Z"/>' +
+          '</svg>';
         node.style.left = `${Math.round(s.x)}px`;
         node.style.top = `${Math.round(s.y)}px`;
         splats.append(node);
         nodes.set(s.id, node);
       }
+
       const scale = s.scale ?? 1;
       node.style.width = `${48 * scale}px`;
       node.style.height = `${30 * scale}px`;
@@ -284,12 +334,15 @@ export function createPetRenderer(world: HTMLElement) {
   }
   function dispose() {
     renderTheatre.dispose();
+
     for (const node of rubbishNodes.values()) {
       node.remove();
     }
+
     for (const node of nodes.values()) {
       node.remove();
     }
+
     for (const node of [
       hitLayer,
       carriedRubbish,
@@ -302,6 +355,7 @@ export function createPetRenderer(world: HTMLElement) {
     ]) {
       node.remove();
     }
+
     rubbishNodes.clear();
     nodes.clear();
     cones.clear();

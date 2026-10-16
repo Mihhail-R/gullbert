@@ -88,7 +88,10 @@ test("network failure clears an earlier offer instead of reporting up to date", 
   let calls = 0;
   const controller = new UpdateController({
     check: async () => {
-      if (calls++ === 0) return { version: "0.4.0", notes: "New release" };
+      if (calls++ === 0) {
+        return { version: "0.4.0", notes: "New release" };
+      }
+
       throw new Error("GitHub unavailable");
     },
     install: async () => {},

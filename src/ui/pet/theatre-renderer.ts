@@ -15,17 +15,21 @@ export function createTheatreRenderer(
   hat.id = "tiny-hat";
   hat.alt = "";
   hat.hidden = true;
-  requiredElement("#bird", gull).append(hat);
+  requiredElement("#bird", gull)
+    .append(hat);
   world.append(layer, dialogue);
   const nodes = new Map<string | number, HTMLImageElement | HTMLSpanElement>();
   function draw(node: HTMLImageElement | HTMLSpanElement, prop: Prop) {
     if (node.dataset.asset !== prop.asset) {
       node.dataset.asset = prop.asset;
+
       if (node instanceof HTMLImageElement) {
         let filename = `${prop.asset}.svg`;
+
         if (prop.asset.endsWith(".png")) {
           filename = prop.asset;
         }
+
         if (prop.asset === "bottle_cap") {
           node.src = "assets/belongings/bottle_cap.svg";
         } else {
@@ -33,20 +37,24 @@ export function createTheatreRenderer(
         }
       }
     }
+
     if (prop.text !== undefined) {
       updateText(node, prop.text);
     }
+
     node.style.left = `${Math.round(prop.x)}px`;
     node.style.top = `${Math.round(prop.y)}px`;
     node.style.width = `${prop.width}px`;
     node.style.height = `${prop.height}px`;
     node.style.opacity = String(prop.opacity ?? 1);
     let scaleX;
+
     if (prop.flip) {
       scaleX = -1;
     } else {
       scaleX = 1;
     }
+
     node.style.transform = `rotate(${prop.rotation ?? 0}deg) scaleX(${scaleX})`;
   }
   function renderTheatre(sim: PetPresentation) {
@@ -56,14 +64,17 @@ export function createTheatreRenderer(
         return prop.id;
       }),
     );
+
     for (const [id, node] of nodes) {
       if (!alive.has(id)) {
         node.remove();
         nodes.delete(id);
       }
     }
+
     for (const prop of props) {
       let node = nodes.get(prop.id);
+
       if (!node) {
         if (prop.text !== undefined) {
           node = document.createElement("span");
@@ -72,19 +83,23 @@ export function createTheatreRenderer(
           image.alt = "";
           node = image;
         }
+
         node.setAttribute("aria-hidden", "true");
         node.className = "theatre-prop";
         node.dataset.prop = String(prop.id);
         layer.append(node);
         nodes.set(prop.id, node);
       }
+
       draw(node, prop);
       node.dataset.playable = String(
         prop.asset === "bottle_cap" && sim.phase === "ready",
       );
     }
+
     const message = sim.guestSpeech;
     dialogue.hidden = !message;
+
     if (message) {
       updateText(dialogue, message.text);
       dialogue.style.left = `${Math.max(90, Math.min(sim.width - 90, message.x))}px`;
@@ -92,28 +107,34 @@ export function createTheatreRenderer(
     } else {
       updateText(dialogue, "");
     }
+
     const placement = sim.hatPlacement;
     hat.hidden = !placement;
+
     if (placement) {
       draw(hat, placement);
     }
+
     gull.dataset.hat = sim.hat;
     // Walking uses the standing frame; the pet renderer adds the vertical bob.
     const walkingPose = sim.pose === "walkLeft" || sim.pose === "walkRight";
     const bathPose = ["bath-wet", "bath-shake-a", "bath-shake-b"].includes(
       sim.pose,
     );
+
     if (bathPose) {
       sprite.style.backgroundImage = `url("assets/theatre/${sim.pose}.svg")`;
       sprite.style.backgroundPosition = "0 0";
     } else {
       sprite.style.backgroundImage = "";
       let frame;
+
       if (walkingPose) {
         frame = 0;
       } else {
         frame = sim.frame;
       }
+
       sprite.style.backgroundPosition = `${-frame * 96}px 0`;
     }
   }

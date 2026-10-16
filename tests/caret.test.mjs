@@ -15,10 +15,14 @@ function harness(read) {
     cancel: (key) => timers.delete(key),
   });
   async function poll() {
-    const [key, callback] = timers.entries().next().value;
+    const [key, callback] = timers.entries()
+      .next().value;
     timers.delete(key);
     callback();
-    for (let i = 0; i < 5; i++) await Promise.resolve();
+
+    for (let i = 0; i < 5; i++) {
+      await Promise.resolve();
+    }
   }
   return { tracker, timers, samples, poll };
 }
@@ -40,7 +44,11 @@ test("caret polling is serial and stale reads cannot reappear after hide/restart
   h.tracker.start();
   assert.equal(h.timers.size, 0, "no overlapping native call on restart");
   resolve({ x: 1, y: 2 });
-  for (let i = 0; i < 5; i++) await Promise.resolve();
+
+  for (let i = 0; i < 5; i++) {
+    await Promise.resolve();
+  }
+
   assert.deepEqual(h.samples, [null]);
   assert.equal(h.timers.size, 1);
   await h.poll();
@@ -51,7 +59,10 @@ test("caret polling is serial and stale reads cannot reappear after hide/restart
 test("failed reads clear the caret and polling recovers; stop removes timers", async () => {
   let fail = true;
   const h = harness(async () => {
-    if (fail) throw Error("unavailable");
+    if (fail) {
+      throw Error("unavailable");
+    }
+
     return { x: 3, y: 4 };
   });
   h.tracker.start();

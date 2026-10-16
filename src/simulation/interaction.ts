@@ -15,6 +15,7 @@ export function capHitRect(
   if (scene?.phase !== "ready") {
     return null;
   }
+
   return {
     x: scene.cap.x - 24,
     y: scene.cap.y - 24,
@@ -54,7 +55,9 @@ export function interactionRects(
   if (!interactive || !sim.visible) {
     return [];
   }
+
   const rects: HitRect[] = [];
+
   for (const object of directCleanupObjects(sim)) {
     rects.push({
       x: object.x - CLEANUP_HIT_PADDING,
@@ -63,14 +66,18 @@ export function interactionRects(
       height: object.height + CLEANUP_HIT_PADDING * 2,
     });
   }
+
   if (canPickup(sim)) {
     rects.push(pickupRect(sim));
   }
+
   if (sim.scene?.kind === "cap") {
     const cap = capHitRect(sim.scene);
+
     if (cap) {
       rects.push(cap);
     }
   }
+
   return rects;
 }

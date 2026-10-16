@@ -44,6 +44,7 @@ class PickupDragController implements PickupDrag {
     if (this.gesture || !this.options.begin(point)) {
       return false;
     }
+
     const gesture: Gesture = {
       pointerId,
       id: null,
@@ -66,9 +67,11 @@ class PickupDragController implements PickupDrag {
 
   finish(cancelled = false): void {
     const gesture = this.gesture;
+
     if (!gesture) {
       return;
     }
+
     this.gesture = null;
     this.gestureRevision++;
     (this.options.cancel ?? clearTimeout)(gesture.timer);
@@ -84,6 +87,7 @@ class PickupDragController implements PickupDrag {
     if (this.gesture) {
       return this.gesture.pointerId;
     }
+
     return undefined;
   }
 
@@ -91,6 +95,7 @@ class PickupDragController implements PickupDrag {
     if (this.gesture) {
       return this.gesture.id;
     }
+
     return null;
   }
 
@@ -103,15 +108,19 @@ class PickupDragController implements PickupDrag {
     rect: HitRect,
   ): Promise<number | null> {
     let id: number | null = null;
+
     try {
       id = await this.options.acquire(rect);
     } catch {
       // Failed acquisition cancels only the gesture that requested it.
     }
+
     gesture.id = id;
+
     if (id == null && this.gesture === gesture) {
       this.finish(true);
     }
+
     return id;
   }
 
@@ -121,17 +130,23 @@ class PickupDragController implements PickupDrag {
   ): Promise<void> {
     try {
       const id = await gesture.lease;
+
       if (id == null) {
         return;
       }
+
       let retaliate = false;
+
       if (reaction && this.options.current(reaction)) {
         retaliate = true;
       }
+
       const cursorId = await this.options.release(id, retaliate);
+
       if (cursorId == null) {
         return;
       }
+
       // The reaction can change while native release is still in flight.
       if (reaction && this.options.current(reaction)) {
         this.options.armed(reaction, cursorId);

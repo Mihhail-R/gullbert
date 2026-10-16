@@ -15,18 +15,23 @@ export function cursorPose(
   sim: Pick<SimulationView, "scene" | "motionTime">,
 ): Pose | null {
   const scene = sim.scene;
+
   if (scene?.kind !== "cursor") {
     return null;
   }
+
   if (scene.phase === "stare") {
     return "tilt";
   }
+
   if (scene.phase === "peck" || scene.phase === "chew") {
     return "nibble";
   }
+
   if (scene.phase === "recoil") {
     return "nap-startle";
   }
+
   return (["idle", "walkLeft", "idle", "walkRight"] as const)[
     Math.floor(sim.motionTime * 14) % 4
   ];
@@ -80,16 +85,20 @@ export class CursorRoutine implements SceneOwner {
   }
   start(name: string): boolean {
     const handled = this.#startCursor(name);
+
     if (handled && this.#scene) {
       this.#identity = Object.freeze({});
     }
+
     return handled;
   }
   update(dt: number): "running" | "complete" {
     this.#stepCursor(dt);
+
     if (!this.#scene) {
       return "complete";
     }
+
     return "running";
   }
   complete(): void {
@@ -127,15 +136,19 @@ export class CursorRoutine implements SceneOwner {
 
   #startCursor(name: string) {
     const sim = this.#environment;
+
     if (!["nibble_cursor", "eat_cursor"].includes(name)) {
       return false;
     }
+
     sim.food.clearRequest();
+
     if (sim.policy.settings().paused || !sim.policy.visible()) {
       sim.lifecycle.rest();
       sim.speech.say(dialogue.gullbert.cursor.pointerInspectionOnHold);
       return true;
     }
+
     this.#scene = {
       kind: "cursor",
       takeover: name === "eat_cursor",
@@ -152,9 +165,11 @@ export class CursorRoutine implements SceneOwner {
   pointerSample(point: PointerSample | null) {
     const sim = this.#environment;
     const scene = this.#scene;
+
     if (scene?.kind !== "cursor") {
       return;
     }
+
     if (
       !point ||
       point.inside === false ||
@@ -162,13 +177,16 @@ export class CursorRoutine implements SceneOwner {
     ) {
       sim.lifecycle.complete();
       sim.lifecycle.rest();
+
       if (point) {
         sim.speech.say(dialogue.gullbert.cursor.tooSlippery);
       } else {
         sim.speech.say(dialogue.gullbert.cursor.whereDidItGo);
       }
+
       return;
     }
+
     scene.pointer = { x: point.x, y: point.y };
   }
   #finish(text: string) {
@@ -179,11 +197,14 @@ export class CursorRoutine implements SceneOwner {
   }
   releaseCursor(text = dialogue.gullbert.cursor.notAChip) {
     const sim = this.#environment;
+
     if (this.#scene?.kind !== "cursor") {
       return;
     }
+
     this.#scene.phase = "recoil";
     this.#scene.until = sim.clock.now + 1.35;
+
     if (this.#scene.retaliation && text === dialogue.gullbert.cursor.notAChip) {
       sim.speech.say(dialogue.gullbert.cursor.considerUsEven, 2);
     } else {
@@ -195,15 +216,18 @@ export class CursorRoutine implements SceneOwner {
     if (!this.#scene?.takeover || !Number.isFinite(id)) {
       return false;
     }
+
     this.#scene.cursorId = id;
     return true;
   }
 
   retaliation() {
     const scene = this.#scene;
+
     if (!scene?.retaliation) {
       return null;
     }
+
     return observe({
       phase: scene.phase,
       retaliation: scene.retaliation,
@@ -214,32 +238,40 @@ export class CursorRoutine implements SceneOwner {
 
   consumeTrail(nextAt: number): void {
     const scene = this.#scene;
+
     if (!scene?.retaliation || (scene.trail ?? 0) <= 0) {
       return;
     }
+
     scene.trail = (scene.trail ?? 0) - 1;
     scene.nextSplat = nextAt;
   }
   #stepCursor(dt: number) {
     const sim = this.#environment;
     const scene = this.#scene;
+
     if (scene?.kind !== "cursor") {
       return false;
     }
+
     if (sim.clock.now >= scene.deadline) {
       this.#finish(dialogue.gullbert.cursor.notWorthTheEffort);
       return true;
     }
+
     if ((sim.objects.snapshot().bag?.servings ?? 0) > 0) {
       sim.commands.action("search_snack");
       return true;
     }
+
     if (!scene.pointer) {
       if (sim.clock.now - scene.started >= 1.5) {
         this.#finish(dialogue.gullbert.cursor.whereDidItGo);
       }
+
       return true;
     }
+
     switch (scene.phase) {
       case "stare": {
         if (scene.pointer.x >= sim.body.x + 48) {
@@ -247,19 +279,23 @@ export class CursorRoutine implements SceneOwner {
         } else {
           sim.body.face(-1 as -1 | 1);
         }
+
         if (sim.clock.now >= scene.until) {
           scene.phase = "stalk";
         }
 
         break;
       }
+
       case "stalk": {
         let facing;
+
         if (scene.pointer.x >= sim.body.x + 48) {
           facing = 1;
         } else {
           facing = -1;
         }
+
         const target = {
           x: scene.pointer.x - beakOffsetX(facing),
           y: scene.pointer.y - 48,
@@ -270,11 +306,13 @@ export class CursorRoutine implements SceneOwner {
           x: sim.body.x + beakOffsetX(facing),
           y: sim.body.y + 48,
         };
+
         if (
           Math.hypot(beak.x - scene.pointer.x, beak.y - scene.pointer.y) < 27
         ) {
           scene.phase = "peck";
           scene.until = sim.clock.now + 0.38;
+
           if (scene.retaliation) {
             sim.speech.say(dialogue.gullbert.cursor.gotYou, 0.65);
           } else {
@@ -284,20 +322,25 @@ export class CursorRoutine implements SceneOwner {
 
         break;
       }
+
       case "peck": {
         if (sim.clock.now >= scene.until) {
           const beak = cursorBeak(sim.body);
+
           if (
             Math.hypot(beak.x - scene.pointer.x, beak.y - scene.pointer.y) >= 27
           ) {
             scene.phase = "stalk";
+
             if (scene.retaliation) {
               sim.speech.say(dialogue.gullbert.cursor.comeBackHere, 1);
             } else {
               sim.speech.say(dialogue.gullbert.cursor.holdStillLunch, 1);
             }
+
             return true;
           }
+
           if (scene.takeover && scene.deadline - sim.clock.now > 1.3) {
             scene.phase = "chew";
             scene.caughtAt = sim.clock.now;
@@ -306,6 +349,7 @@ export class CursorRoutine implements SceneOwner {
             sim.events.emit("munch");
             return true;
           }
+
           this.releaseCursor();
           sim.body.moveToward(
             { x: sim.body.x - sim.body.facing * 14, y: sim.body.y },
@@ -315,8 +359,10 @@ export class CursorRoutine implements SceneOwner {
           sim.speech.say(dialogue.gullbert.cursor.notAChip, 2);
           sim.events.emit("munch");
         }
+
         break;
       }
+
       case "chew": {
         if (sim.clock.now >= scene.until) {
           this.releaseCursor();
@@ -332,6 +378,7 @@ export class CursorRoutine implements SceneOwner {
 
         break;
       }
+
       case "recoil": {
         if (sim.clock.now >= scene.until) {
           if (scene.retaliation) {
@@ -340,9 +387,11 @@ export class CursorRoutine implements SceneOwner {
             this.#finish(dialogue.gullbert.cursor.notAChip);
           }
         }
+
         break;
       }
     }
+
     return true;
   }
 }

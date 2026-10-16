@@ -19,8 +19,11 @@ test("missing and malformed snapshots produce fresh, empty durable memories", ()
     collection: {},
     greetings: { seen: false, lastAt: 0, lastLine: "", lastDiscovery: null },
   };
-  for (const input of [undefined, null, false, 7, "bad", [], { perch: [] }])
+
+  for (const input of [undefined, null, false, 7, "bad", [], { perch: [] }]) {
     assert.deepEqual(normalizeMemory(input), expected);
+  }
+
   const first = normalizeMemory();
   first.collection.sock = 9;
   first.greetings.seen = true;
@@ -30,14 +33,17 @@ test("missing and malformed snapshots produce fresh, empty durable memories", ()
 test("normalization rejects malformed locations and clamps remembered belongings", () => {
   const result = normalizeMemory({ perch: { x: 1e9, y: -20 } }, 800, 600);
   assert.deepEqual(result.perch, { x: 704, y: 0 });
+
   for (const value of [
     null,
     [],
     { x: "1", y: 2 },
     { x: Infinity, y: 2 },
     { x: 1, y: NaN },
-  ])
+  ]) {
     assert.equal(normalizeMemory({ perch: value }).perch, null);
+  }
+
   assert.deepEqual(normalizeMemory({ perch: { x: 80, y: 90 } }, 10, 20).perch, {
     x: 0,
     y: 0,
@@ -129,7 +135,11 @@ test("legacy nest snapshots retain gifts, perch and greetings without restoring 
   const { nest, ...expected } = legacy;
   assert.deepEqual(sim.exportMemory(), expected);
   sim.action("bring_gift");
-  for (let i = 0; i < 400; i++) sim.step(0.05);
+
+  for (let i = 0; i < 400; i++) {
+    sim.step(0.05);
+  }
+
   assert.equal(sim.inspect().memory.collection.bottle_cap, 3);
   sim.action("clean");
   assert.deepEqual(sim.inspect().memory.perch, expected.perch);

@@ -59,6 +59,7 @@ export class CapRoutine implements SceneOwner {
     if (name !== "play_cap") {
       return false;
     }
+
     const sim = this.#environment;
     const cap = this.#onScreen(this.#mouth());
     this.#scene = {
@@ -85,9 +86,11 @@ export class CapRoutine implements SceneOwner {
 
   pointerSample(point: PointerSample | null): void {
     const scene = this.#scene;
+
     if (!scene || !point || point.inside === false) {
       return;
     }
+
     if (
       !isPointOnScreen(
         point,
@@ -97,6 +100,7 @@ export class CapRoutine implements SceneOwner {
     ) {
       return;
     }
+
     // Losing the pointer leaves the last known return destination intact.
     scene.pointer = { x: point.x, y: point.y };
   }
@@ -104,9 +108,11 @@ export class CapRoutine implements SceneOwner {
   flick(point: Point): boolean {
     const scene = this.#scene;
     const rect = capHitRect(scene);
+
     if (!scene || !rect) {
       return false;
     }
+
     if (
       !isPointOnScreen(
         point,
@@ -117,22 +123,27 @@ export class CapRoutine implements SceneOwner {
     ) {
       return false;
     }
+
     const sim = this.#environment;
     let dx = scene.cap.x - point.x;
     let dy = scene.cap.y - point.y;
+
     if (Math.hypot(dx, dy) < 3) {
       dx = scene.cap.x - sim.body.x - 48;
       dy = scene.cap.y - sim.body.y - 48;
     }
+
     if (Math.hypot(dx, dy) < 3) {
       dx = sim.body.facing;
       dy = 0;
     }
+
     const distance = Math.hypot(dx, dy);
     let target = this.#onScreen({
       x: scene.cap.x + (dx / distance) * 230,
       y: scene.cap.y + (dy / distance) * 230,
     });
+
     // A kick into a display edge rebounds inward instead of getting stuck.
     if (Math.hypot(target.x - scene.cap.x, target.y - scene.cap.y) < 35) {
       target = this.#onScreen({
@@ -140,6 +151,7 @@ export class CapRoutine implements SceneOwner {
         y: scene.cap.y - (dy / distance) * 230,
       });
     }
+
     scene.target = target;
     scene.pointer = { x: point.x, y: point.y };
     this.#phase("chase", 7);
@@ -149,15 +161,19 @@ export class CapRoutine implements SceneOwner {
 
   resize(): void {
     const scene = this.#scene;
+
     if (!scene) {
       return;
     }
+
     scene.cap = this.#onScreen(scene.cap);
+
     if (scene.phase === "victory") {
       scene.target = this.#environment.body.safePoint(scene.target);
     } else {
       scene.target = this.#onScreen(scene.target);
     }
+
     if (scene.pointer) {
       scene.pointer = {
         x: clamp(scene.pointer.x, 0, this.#environment.body.width),
@@ -169,16 +185,20 @@ export class CapRoutine implements SceneOwner {
   update(dt: number): "running" | "complete" {
     const sim = this.#environment;
     const scene = this.#scene;
+
     if (!scene) {
       return "complete";
     }
+
     if (sim.clock.now >= scene.deadline) {
       this.#finish(dialogue.gullbert.cap.abandoned);
       return "complete";
     }
+
     switch (scene.phase) {
       case "drop": {
         this.#slideCap(220, dt);
+
         if (sim.clock.now >= scene.until) {
           scene.cap = { ...scene.target };
           this.#phase("ready", READY_SECONDS);
@@ -186,6 +206,7 @@ export class CapRoutine implements SceneOwner {
 
         break;
       }
+
       case "ready": {
         if (sim.clock.now >= scene.until) {
           this.#phase("collect", 7);
@@ -194,9 +215,11 @@ export class CapRoutine implements SceneOwner {
 
         break;
       }
+
       case "chase": {
         const stopped = this.#slideCap(CAP_SPEED, dt);
         const arrived = this.#approachCap(dt);
+
         if (stopped && arrived) {
           this.#phase("peck", 0.3);
         } else if (sim.clock.now >= scene.until) {
@@ -205,22 +228,27 @@ export class CapRoutine implements SceneOwner {
 
         break;
       }
+
       case "peck": {
         if (sim.clock.now >= scene.until) {
           scene.rounds += 1;
           scene.target = this.#onScreen(scene.pointer ?? scene.cap);
           this.#phase("return", 6);
+
           if (scene.rounds >= 3) {
             sim.speech.say(dialogue.gullbert.cap.lastReturn, 1.4);
           } else {
             sim.speech.say(dialogue.gullbert.cap.yourMove, 1.4);
           }
         }
+
         break;
       }
+
       case "return": {
         if (this.#slideCap(CAP_SPEED, dt) || sim.clock.now >= scene.until) {
           scene.cap = { ...scene.target };
+
           if (scene.rounds >= 3) {
             this.#phase("collect", 7);
           } else {
@@ -230,13 +258,16 @@ export class CapRoutine implements SceneOwner {
 
         break;
       }
+
       case "collect": {
         if (this.#approachCap(dt)) {
           scene.carrying = true;
           let direction = 1;
+
           if (sim.body.x + 48 > sim.body.width / 2) {
             direction = -1;
           }
+
           scene.target = sim.body.safePoint({
             x: sim.body.x + direction * 150,
             y: sim.body.y,
@@ -249,9 +280,11 @@ export class CapRoutine implements SceneOwner {
 
         break;
       }
+
       case "victory": {
         sim.body.moveToward(scene.target, 180, dt);
         scene.cap = this.#mouth();
+
         if (sim.clock.now >= scene.until) {
           this.#finish();
         }
@@ -259,9 +292,11 @@ export class CapRoutine implements SceneOwner {
         break;
       }
     }
+
     if (!this.#scene) {
       return "complete";
     }
+
     return "running";
   }
 
@@ -282,12 +317,15 @@ export class CapRoutine implements SceneOwner {
 
   presentation(): RoutinePresentation {
     const scene = this.#scene;
+
     if (!scene) {
       return {};
     }
+
     const sim = this.#environment;
     let pose: Pose = "idle";
     let rotation = 0;
+
     if (["chase", "collect", "victory"].includes(scene.phase)) {
       pose = (["idle", "walkLeft", "idle", "walkRight"] as const)[
         Math.floor(sim.body.motionTime * 14) % 4
@@ -299,13 +337,17 @@ export class CapRoutine implements SceneOwner {
     } else if (scene.phase === "ready" && sim.clock.now % 3 > 2.6) {
       pose = "blink";
     }
+
     if (["chase", "return"].includes(scene.phase)) {
       rotation = (sim.clock.now - scene.phaseStarted) * 720;
     }
+
     let cap = this.#onScreen(scene.cap);
+
     if (scene.carrying) {
       cap = this.#mouth();
     }
+
     return {
       pose,
       props: [
@@ -340,10 +382,12 @@ export class CapRoutine implements SceneOwner {
     const dx = scene.target.x - scene.cap.x;
     const dy = scene.target.y - scene.cap.y;
     const distance = Math.hypot(dx, dy);
+
     if (distance <= speed * dt) {
       scene.cap = { ...scene.target };
       return true;
     }
+
     scene.cap.x += (dx / distance) * speed * dt;
     scene.cap.y += (dy / distance) * speed * dt;
     return false;
@@ -353,14 +397,17 @@ export class CapRoutine implements SceneOwner {
     const scene = this.#scene!;
     const body = this.#environment.body;
     let facing = -1;
+
     if (scene.cap.x >= body.x + 48) {
       facing = 1;
     }
+
     if (scene.cap.x < 78) {
       facing = -1;
     } else if (scene.cap.x > body.width - 78) {
       facing = 1;
     }
+
     return body.moveToward(
       {
         x: scene.cap.x - beakOffsetX(facing),
@@ -384,6 +431,7 @@ export class CapRoutine implements SceneOwner {
     const sim = this.#environment;
     sim.lifecycle.complete();
     sim.lifecycle.rest(4);
+
     if (text) {
       sim.speech.say(text);
     }

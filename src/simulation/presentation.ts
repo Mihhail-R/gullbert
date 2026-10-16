@@ -30,6 +30,7 @@ export function projectPresentation(
   routine: RoutinePresentation = {},
 ) {
   let highlight = null;
+
   if (pointer && (interactive || sim.tidying)) {
     if (sim.tidying) {
       highlight = cleanupTarget(sim, pointer);
@@ -37,18 +38,23 @@ export function projectPresentation(
       highlight = directCleanupTarget(sim, pointer);
     }
   }
+
   const affection = affectionMotion(sim);
   let pose = sim.pose;
   let frame = sim.frame;
+
   if (affection.kind === "hop") {
     pose = "blink";
+
     if (affection.y > 0) {
       pose = "crouch";
     } else if (affection.y < 0) {
       pose = "wingUp";
     }
+
     frame = POSES[pose];
   }
+
   const view = {
     affection,
     rotation: routine.rotation ?? 0,

@@ -10,7 +10,9 @@ function bird() {
   return sim;
 }
 function advance(sim, seconds) {
-  for (let i = 0; i < seconds * 20; i++) sim.step(0.05);
+  for (let i = 0; i < seconds * 20; i++) {
+    sim.step(0.05);
+  }
 }
 
 test("recent naps, curiosity, successful poop and snack outcomes produce moods", () => {
@@ -55,6 +57,7 @@ test("every mood offers an existing idle pose and nonrepeating relevant remarks"
       spoken = line;
     },
   );
+
   for (const name of ["sleepy", "curious", "smug", "snack-minded"]) {
     mood.set(name, 0);
     assert.equal(typeof spoken, "string");
@@ -62,6 +65,7 @@ test("every mood offers an existing idle pose and nonrepeating relevant remarks"
     assert.ok(mood.pose("idle", 0));
     assert.equal(mood.pose("fly", 0), null);
   }
+
   mood.update(mood.snapshot().mood.until);
   assert.equal(mood.remark(100), null);
   assert.equal(mood.pose("idle", 100), null);
@@ -100,6 +104,7 @@ test("moods bias only eligible quiet slots and never block explicit actions", ()
   now = 20;
   assert.equal(routine.choose(), "preen");
   const sim = bird();
+
   for (const action of ["nap", "tilt", "poop", "search_snack"]) {
     sim.action(action);
     advance(sim, 4);

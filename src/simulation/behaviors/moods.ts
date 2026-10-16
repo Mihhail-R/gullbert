@@ -66,15 +66,19 @@ export class Mood {
 
   remark(now: number): string | null {
     this.update(now);
+
     if (!this.#mood) {
       return null;
     }
+
     let choices = moods[this.#mood.name].lines.filter((line) => {
       return line !== this.#lastMoodLine;
     });
+
     if (choices.length === 0) {
       choices = moods[this.#mood.name].lines;
     }
+
     const line =
       choices[
         Math.min(
@@ -90,13 +94,17 @@ export class Mood {
     if (!moods[name]) {
       return false;
     }
+
     this.#mood = { name, until: now + moods[name].duration };
+
     if (speak) {
       const remark = this.remark(now);
+
       if (remark) {
         this.#say(remark);
       }
     }
+
     return true;
   }
 
@@ -108,20 +116,25 @@ export class Mood {
 
   preferredRoutine(now: number): QuietName | null {
     this.update(now);
+
     if (this.#mood) {
       return moods[this.#mood.name].routine;
     }
+
     return null;
   }
 
   pose(mode: string, now: number): Pose | null {
     this.update(now);
+
     if (mode !== "idle" || now % 5 >= 1.2) {
       return null;
     }
+
     if (this.#mood) {
       return moods[this.#mood.name].pose;
     }
+
     return null;
   }
 }

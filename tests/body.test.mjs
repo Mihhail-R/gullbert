@@ -2,20 +2,24 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { Body } from "../web-dist/simulation/body.js";
 
-test("body travel preserves distance, facing, animation time, and requested arrival orientation", () => {
-  const body = new Body(800, 600);
-  body.place({ x: 100, y: 100 });
-  assert.equal(body.moveToward({ x: 40, y: 180, facing: 1 }, 100, 0.5), false);
-  assert.equal(body.x, 70);
-  assert.equal(body.y, 140);
-  assert.equal(body.facing, -1);
-  assert.equal(body.motionTime, 0.5);
-  assert.equal(body.moveToward({ x: 40, y: 180, facing: 1 }, 100, 0.5), true);
-  assert.equal(body.x, 40);
-  assert.equal(body.y, 180);
-  assert.equal(body.facing, 1);
-  assert.equal(body.motionTime, 1);
-});
+test(
+  "body travel preserves distance, facing, animation time, and requested arrival " +
+  "orientation",
+  () => {
+    const body = new Body(800, 600);
+    body.place({ x: 100, y: 100 });
+    assert.equal(body.moveToward({ x: 40, y: 180, facing: 1 }, 100, 0.5), false);
+    assert.equal(body.x, 70);
+    assert.equal(body.y, 140);
+    assert.equal(body.facing, -1);
+    assert.equal(body.motionTime, 0.5);
+    assert.equal(body.moveToward({ x: 40, y: 180, facing: 1 }, 100, 0.5), true);
+    assert.equal(body.x, 40);
+    assert.equal(body.y, 180);
+    assert.equal(body.facing, 1);
+    assert.equal(body.motionTime, 1);
+  }
+);
 
 test("ordinary travel clamps its destination while scene placement can exit the screen", () => {
   const body = new Body(200, 180);

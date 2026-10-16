@@ -27,6 +27,7 @@ export class ScopedRoutine implements Routine {
         if (owner.#active && owner.#visible) {
           return capabilities.random();
         }
+
         return 0;
       },
       movement: Object.freeze({
@@ -69,6 +70,7 @@ export class ScopedRoutine implements Routine {
           if (!owner.#active || !owner.#visible) {
             return 0;
           }
+
           const id = capabilities.props.add(prop);
           owner.#props.add(id);
           return id;
@@ -93,8 +95,10 @@ export class ScopedRoutine implements Routine {
     if (["feed", "cancel", "summon", "squawk", "poop"].includes(name)) {
       return false;
     }
+
     this.#visible = this.#isVisible();
     this.#active = true;
+
     try {
       if (this.#routine.start(name, point)) {
         return true;
@@ -103,6 +107,7 @@ export class ScopedRoutine implements Routine {
       this.#clear();
       throw error;
     }
+
     this.#clear();
     return false;
   }
@@ -129,16 +134,20 @@ export class ScopedRoutine implements Routine {
   }
   presentation() {
     const presentation = this.#routine.presentation();
+
     if (!this.#visible) {
       return { ...presentation, props: [], looseProps: [], guestSpeech: null };
     }
+
     return presentation;
   }
   #clear(): void {
     this.#active = false;
+
     for (const id of this.#props) {
       this.#capabilities.props.remove(id);
     }
+
     this.#props.clear();
   }
 }

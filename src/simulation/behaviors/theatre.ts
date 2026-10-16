@@ -78,16 +78,20 @@ export class TheatreRoutine implements SceneOwner {
   }
   start(name: string, point?: Point): boolean {
     const handled = this.#startTheatre(name, point);
+
     if (handled && this.#scene) {
       this.#identity = Object.freeze({});
     }
+
     return handled;
   }
   update(dt: number): "running" | "complete" {
     this.#stepTheatre(dt);
+
     if (!this.#scene) {
       return "complete";
     }
+
     return "running";
   }
   complete(): void {
@@ -124,9 +128,11 @@ export class TheatreRoutine implements SceneOwner {
   }
   #tossReactionDelay(): number {
     const sim = this.#environment;
+
     if (sim.random() < 0.2) {
       return 0.9;
     }
+
     return 0.3;
   }
   #beak() {
@@ -145,9 +151,11 @@ export class TheatreRoutine implements SceneOwner {
   }
   #phase(name: TheatreScene["phase"], duration: number) {
     const sim = this.#environment;
+
     if (!isTheatre(this.#scene)) {
       return;
     }
+
     this.#scene.phase = name;
     this.#scene.phaseStarted = sim.clock.now;
     this.#scene.until = sim.clock.now + duration;
@@ -157,6 +165,7 @@ export class TheatreRoutine implements SceneOwner {
     const sim = this.#environment;
     sim.lifecycle.complete();
     sim.lifecycle.rest(4);
+
     if (message) {
       sim.speech.say(message);
     }
@@ -170,14 +179,17 @@ export class TheatreRoutine implements SceneOwner {
         recent: [],
       };
     }
+
     return this.#rareTheatre;
   }
   #startTheatre(name: string, point?: Point) {
     const sim = this.#environment;
     const kind = COMMANDS[name];
+
     if (!kind) {
       return false;
     }
+
     const clock = {
       started: sim.clock.now,
       deadline: sim.clock.now + 18,
@@ -185,6 +197,7 @@ export class TheatreRoutine implements SceneOwner {
       until: sim.clock.now,
     };
     sim.activity.beginRoutine(kind);
+
     if (kind === "bubbles") {
       const mouth = this.#beak();
       const bubbles = Array.from({ length: 6 }, (_, index) => {
@@ -222,11 +235,13 @@ export class TheatreRoutine implements SceneOwner {
         point ?? { x: sim.body.width * 0.7, y: sim.body.y + 75 },
       );
       let direction: -1 | 1;
+
       if (end.x >= sim.body.x + 48) {
         direction = 1;
       } else {
         direction = -1;
       }
+
       const start = this.#pointOnScreen({
         x: sim.body.x + 48 - direction * 150,
         y: sim.body.y + 88,
@@ -257,17 +272,21 @@ export class TheatreRoutine implements SceneOwner {
       memory.nextCheck = memory.nextAllowed;
       memory.recent = [...memory.recent, kind].slice(-3);
       let direction: -1 | 1;
+
       if (sim.body.x < sim.body.width / 2) {
         direction = 1;
       } else {
         direction = -1;
       }
+
       const origin = { x: sim.body.x, y: sim.body.y };
+
       if (direction === 1) {
         sim.body.place({ x: 0, y: sim.body.y });
       } else {
         sim.body.place({ x: sim.body.width - 96, y: sim.body.y });
       }
+
       sim.body.face(direction as -1 | 1);
       this.#scene = {
         ...clock,
@@ -282,18 +301,23 @@ export class TheatreRoutine implements SceneOwner {
       };
       this.#phase("entrance", 0.8);
     }
+
     return true;
   }
   #cancelTheatre() {
     const sim = this.#environment;
+
     if (!isTheatre(this.#scene)) {
       return;
     }
+
     sim.speech.clear();
     sim.speech.forget();
+
     if (this.#scene.kind === "baguette") {
       sim.body.place(sim.body.safePoint(this.#scene.origin));
     }
+
     if (this.#scene?.kind === "toss") {
       sim.body.place({
         x: sim.body.x,
@@ -304,6 +328,7 @@ export class TheatreRoutine implements SceneOwner {
   maybeTheatre() {
     const sim = this.#environment;
     const memory = this.#rareMemory();
+
     if (
       !sim.policy.visible() ||
       sim.policy.settings().paused ||
@@ -311,23 +336,29 @@ export class TheatreRoutine implements SceneOwner {
     ) {
       return false;
     }
+
     if (this.#scene || sim.activity.mode !== "idle") {
       return false;
     }
+
     if (
       sim.clock.now < memory.nextAllowed ||
       sim.clock.now < memory.nextCheck
     ) {
       return false;
     }
+
     memory.nextCheck = sim.clock.now + 60;
+
     if (sim.random() >= 0.08) {
       return false;
     }
+
     // Keep a bounded history now; additional rare scenes can join this list
     // without ever immediately repeating the last available alternative.
     const choices = ["baguette"];
     let candidates;
+
     if (choices.length > 1) {
       candidates = choices.filter((kind) => {
         return kind !== memory.recent.at(-1);
@@ -335,22 +366,28 @@ export class TheatreRoutine implements SceneOwner {
     } else {
       candidates = choices;
     }
+
     const selected = candidates[Math.floor(sim.random() * candidates.length)];
+
     if (selected === "baguette") {
       sim.commands.action("baguette_parade");
     }
+
     return true;
   }
   #stepTheatre(dt: number) {
     const sim = this.#environment;
     const scene = this.#scene;
+
     if (!isTheatre(scene)) {
       return false;
     }
+
     if (sim.clock.now >= scene.deadline) {
       this.#finish();
       return true;
     }
+
     if (scene.kind === "bubbles") {
       this.#stepBubbles(dt);
     } else if (scene.kind === "bath") {
@@ -360,20 +397,24 @@ export class TheatreRoutine implements SceneOwner {
     } else {
       this.#stepBaguette(dt);
     }
+
     return true;
   }
   #stepBubbles(dt: number) {
     const sim = this.#environment;
     const scene = this.#scene;
+
     if (scene?.kind !== "bubbles") {
       return;
     }
+
     scene.pops = scene.pops.filter((pop) => {
       return sim.clock.now < pop.until;
     });
     scene.bubbles = scene.bubbles.filter((bubble) => {
       return sim.clock.now < bubble.expires;
     });
+
     for (const bubble of scene.bubbles) {
       Object.assign(
         bubble,
@@ -383,6 +424,7 @@ export class TheatreRoutine implements SceneOwner {
         }),
       );
     }
+
     if (scene.phase === "chase") {
       const mouth = this.#beak();
       const target = scene.bubbles.reduce<Bubble | null>((best, bubble) => {
@@ -396,16 +438,20 @@ export class TheatreRoutine implements SceneOwner {
           return best;
         }
       }, null);
+
       if (!target) {
         this.#finish(dialogue.gullbert.theatre.airspaceSecured);
         return;
       }
+
       let facing;
+
       if (target.x >= sim.body.x + 48) {
         facing = 1;
       } else {
         facing = -1;
       }
+
       scene.targetId = target.id;
       sim.body.moveToward(
         {
@@ -418,6 +464,7 @@ export class TheatreRoutine implements SceneOwner {
       );
       sim.body.face(facing as -1 | 1);
       const contact = this.#beak();
+
       if (Math.hypot(contact.x - target.x, contact.y - target.y) <= 22) {
         scene.bubbles = scene.bubbles.filter((bubble) => {
           return bubble.id !== target.id;
@@ -441,9 +488,11 @@ export class TheatreRoutine implements SceneOwner {
   #stepBath(dt: number) {
     const sim = this.#environment;
     const scene = this.#scene;
+
     if (scene?.kind !== "bath") {
       return;
     }
+
     if (scene.phase === "approach") {
       if (sim.body.moveToward(scene.target, 220, dt)) {
         this.#phase("splash", 2.8);
@@ -457,11 +506,13 @@ export class TheatreRoutine implements SceneOwner {
     } else if (scene.phase === "shake" && sim.clock.now >= scene.until) {
       this.#phase("exit", 2);
       let exitOffsetX;
+
       if (sim.body.x < sim.body.width / 2) {
         exitOffsetX = 110;
       } else {
         exitOffsetX = -110;
       }
+
       scene.exit = sim.body.safePoint({
         x: sim.body.x + exitOffsetX,
         y: sim.body.y,
@@ -489,17 +540,22 @@ export class TheatreRoutine implements SceneOwner {
   #landToss(caught: boolean) {
     const sim = this.#environment;
     const scene = this.#scene;
+
     if (scene?.kind !== "toss") {
       return;
     }
+
     scene.caught = caught;
     scene.landFrom = sim.body.y;
+
     if (caught) {
       this.#phase("land", 0.65);
     } else {
       this.#phase("miss-flail", 0.45);
     }
+
     scene.recoilFrom = { x: sim.body.x, y: sim.body.y };
+
     if (caught) {
       scene.chip = null;
       sim.events.emit("munch");
@@ -512,27 +568,35 @@ export class TheatreRoutine implements SceneOwner {
   #stepToss(dt: number) {
     const sim = this.#environment;
     const scene = this.#scene;
+
     if (scene?.kind !== "toss") {
       return;
     }
+
     const elapsed = sim.clock.now - scene.started;
+
     // A landed chip must follow display changes just like one still in flight.
     if (scene.chip) {
       Object.assign(scene.chip, this.#pointOnScreen(scene.chip, 18));
     }
+
     if (["takeoff", "intercept"].includes(scene.phase) && scene.chip) {
       Object.assign(scene.chip, this.#chipPosition(scene, elapsed));
+
       if (elapsed >= scene.reaction) {
         if (scene.phase === "takeoff") {
           this.#phase("intercept", 3);
         }
+
         const target = this.#chipPosition(scene, elapsed + 0.12);
         let facing;
+
         if (scene.chip.x >= sim.body.x + 48) {
           facing = 1;
         } else {
           facing = -1;
         }
+
         sim.body.moveToward(
           {
             x: target.x - beakOffsetX(facing),
@@ -553,16 +617,18 @@ export class TheatreRoutine implements SceneOwner {
           mouth.x - scene.chip.x,
           mouth.y - scene.chip.y,
         );
+
         if (elapsed < scene.arc.duration && distance <= 10) {
           scene.contact = { beak: mouth, chip: { ...scene.chip }, distance };
           this.#landToss(true);
           return;
         }
       }
+
       if (elapsed >= scene.arc.duration) {
         this.#landToss(false);
       }
-    } else
+    } else {
       switch (scene.phase) {
         case "miss-flail": {
           const t = clamp((sim.clock.now - scene.phaseStarted) / 0.45, 0, 1);
@@ -572,6 +638,7 @@ export class TheatreRoutine implements SceneOwner {
               y: scene.recoilFrom.y - Math.sin(t * Math.PI) * 22,
             }),
           );
+
           if (sim.clock.now >= scene.until) {
             scene.landFrom = sim.body.y;
             this.#phase("land", 0.65);
@@ -579,6 +646,7 @@ export class TheatreRoutine implements SceneOwner {
 
           break;
         }
+
         case "land": {
           const t = clamp((sim.clock.now - scene.phaseStarted) / 0.65, 0, 1);
           const ground = sim.body.safePoint({
@@ -592,6 +660,7 @@ export class TheatreRoutine implements SceneOwner {
               y: scene.landFrom + (ground - scene.landFrom) * t,
             }).y,
           });
+
           if (sim.clock.now >= scene.until) {
             if (scene.caught) {
               this.#phase("eat", 1.75);
@@ -602,21 +671,26 @@ export class TheatreRoutine implements SceneOwner {
 
           break;
         }
+
         case "miss": {
           if (sim.clock.now >= scene.until) {
             this.#phase("retrieve", 8);
             sim.speech.say(dialogue.gullbert.theatre.groundLunchIsStillLunch);
           }
+
           break;
         }
+
         case "retrieve": {
           if (scene.chip) {
             let facing;
+
             if (scene.chip.x >= sim.body.x + 48) {
               facing = 1;
             } else {
               facing = -1;
             }
+
             sim.body.moveToward(
               {
                 x: scene.chip.x - beakOffsetX(facing),
@@ -627,6 +701,7 @@ export class TheatreRoutine implements SceneOwner {
               dt,
             );
             sim.body.face(facing as -1 | 1);
+
             // A lowered peck reaches below the normal flying beak.
             if (
               Math.hypot(
@@ -641,30 +716,39 @@ export class TheatreRoutine implements SceneOwner {
               this.#finish(dialogue.gullbert.theatre.savingThatForLater);
             }
           }
+
           break;
         }
+
         case "eat": {
           if (sim.clock.now >= scene.until) {
             this.#finish();
           }
+
           break;
         }
       }
+    }
   }
   #stepBaguette(dt: number) {
     const sim = this.#environment;
     const scene = this.#scene;
+
     if (scene?.kind !== "baguette") {
       return;
     }
+
     const speed = Math.max(70, sim.body.width / 9);
+
     switch (scene.phase) {
       case "entrance": {
         if (sim.clock.now >= scene.until) {
           this.#phase("carry", 6);
         }
+
         break;
       }
+
       case "carry": {
         if (
           sim.body.moveToward(scene.target, speed, dt) ||
@@ -675,22 +759,27 @@ export class TheatreRoutine implements SceneOwner {
 
         break;
       }
+
       case "pause": {
         if (sim.clock.now >= scene.until) {
           this.#phase("exit", 6);
           let exitX;
+
           if (scene.direction === 1) {
             exitX = sim.body.width - 96;
           } else {
             exitX = 0;
           }
+
           scene.target = sim.body.safePoint({
             x: exitX,
             y: sim.body.y,
           });
         }
+
         break;
       }
+
       case "exit": {
         if (
           sim.body.moveToward(scene.target, speed, dt) ||
@@ -701,19 +790,24 @@ export class TheatreRoutine implements SceneOwner {
 
         break;
       }
+
       case "departure": {
         if (sim.clock.now >= scene.until) {
           this.#phase("gone", 0.4);
         }
+
         break;
       }
+
       case "gone": {
         if (sim.clock.now >= scene.until) {
           this.#finish();
         }
+
         break;
       }
     }
+
     sim.body.face(scene.direction as -1 | 1);
   }
 }

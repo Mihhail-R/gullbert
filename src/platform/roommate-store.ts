@@ -36,15 +36,18 @@ export class MemoryPersistence {
     if (this.#disposed) {
       return Promise.resolve();
     }
+
     this.#restoration ??= this.#load();
     return this.#restoration;
   }
 
   async #load(): Promise<void> {
     const memory = await this.#dependencies.storage.load();
+
     if (this.#disposed) {
       return;
     }
+
     this.#dependencies.restore(memory);
     this.#restored = true;
   }
@@ -54,6 +57,7 @@ export class MemoryPersistence {
     if (this.#disposed || !this.#restored || this.#active) {
       return;
     }
+
     this.#active = true;
     this.remember();
   }
@@ -62,16 +66,21 @@ export class MemoryPersistence {
     if (!this.#active || this.#retry !== undefined) {
       return;
     }
+
     const revision = this.#dependencies.revision();
+
     if (revision === this.#submittedRevision) {
       return;
     }
+
     this.#submittedRevision = revision;
     this.#pending = structuredClone(this.#dependencies.snapshot());
+
     if (!this.#writing) {
-      this.#writing = this.#drain().finally(() => {
-        this.#writing = null;
-      });
+      this.#writing = this.#drain()
+        .finally(() => {
+          this.#writing = null;
+        });
     }
   }
 
@@ -79,6 +88,7 @@ export class MemoryPersistence {
     if (this.#shutdown) {
       return this.#shutdown;
     }
+
     this.#cancelRetry();
     // Capture before application teardown; bypass backoff for the final attempt.
     this.remember();
@@ -94,6 +104,7 @@ export class MemoryPersistence {
     while (this.#pending) {
       const snapshot = this.#pending;
       this.#pending = null;
+
       try {
         await this.#dependencies.storage.save(snapshot);
         this.#result(null);
@@ -107,7 +118,9 @@ export class MemoryPersistence {
     if (!this.#active) {
       return;
     }
+
     this.#cancelRetry();
+
     if (error) {
       this.#submittedRevision = -1;
       this.#retry = this.#dependencies.clock.schedule(() => {
@@ -115,6 +128,7 @@ export class MemoryPersistence {
         this.remember();
       }, 5000);
     }
+
     this.#dependencies.result(error);
   }
 

@@ -15,10 +15,14 @@ const bird = (extra = {}) => ({
 });
 
 test("hat settings admit only the supplied hats and none", () => {
-  for (const value of [null, undefined, {}, "CAPTAIN", "crown", "none"])
+  for (const value of [null, undefined, {}, "CAPTAIN", "crown", "none"]) {
     assert.equal(normalizeHat(value), "none");
-  for (const hat of ["captain", "cone", "beanie", "paper-crown", "fried-egg"])
+  }
+
+  for (const hat of ["captain", "cone", "beanie", "paper-crown", "fried-egg"]) {
     assert.equal(normalizeHat(hat), hat);
+  }
+
   assert.equal(hatPlacement(bird({ settings: {} })), null);
 });
 
@@ -30,14 +34,19 @@ test("hats follow head movement, mirror locally and retain integer pixel scale",
   const mirrored = hatPlacement(bird({ pose: "nap-wobble", facing: -1 }));
   assert.equal(mirrored.x, 96 - sway.x - sway.width);
   assert.equal(mirrored.flip, true);
-  for (const pose of ["idle", "walkRight", "wingUp", "wingDown", "nap-sleep"])
+
+  for (const pose of ["idle", "walkRight", "wingUp", "wingDown", "nap-sleep"]) {
     assert.ok(hatPlacement(bird({ pose })));
-  for (const n of [idle.x, idle.y, idle.width, idle.height])
+  }
+
+  for (const n of [idle.x, idle.y, idle.width, idle.height]) {
     assert.equal(Math.abs(n % 3), 0);
+  }
 });
 
 test("temporary incompatible poses hide a hat without losing its selection", () => {
   const sim = bird();
+
   for (const extra of [
     { bag: { attached: true } },
     { scene: { kind: "gift", carrying: true } },
@@ -50,6 +59,7 @@ test("temporary incompatible poses hide a hat without losing its selection", () 
     assert.equal(hatPlacement({ ...sim, ...extra }), null);
     assert.equal(sim.settings.hat, "captain");
   }
+
   assert.equal(hatPlacement(sim).asset, "captain");
   assert.ok(hatPlacement(bird({ scene: { kind: "bath", phase: "exit" } })));
 });
@@ -70,6 +80,7 @@ test("changing or removing a hat leaves the current scene untouched", () => {
 test("configure changes hats during real scenes without canceling their activity", () => {
   const sim = new Gullbert(800, 600, () => 0.5);
   sim.configure({ paused: true, mischief: 0 });
+
   for (const action of [
     "blow_bubbles",
     "bath_time",
@@ -80,6 +91,7 @@ test("configure changes hats during real scenes without canceling their activity
     const scene = sim.inspect().scene;
     const mode = sim.inspect().mode;
     assert.ok(scene);
+
     for (const hat of [
       "captain",
       "cone",
@@ -94,6 +106,7 @@ test("configure changes hats during real scenes without canceling their activity
       assert.equal(sim.inspect().mode, mode);
     }
   }
+
   sim.configure({ hat: "captain" });
   assert.equal(hatPlacement(sim.inspect()), null);
   sim.action("clean");

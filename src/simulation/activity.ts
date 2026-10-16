@@ -108,6 +108,7 @@ export class Activity {
         y: clamp(this.#flight.groundY, 0, this.#body.height - SIZE),
       });
     }
+
     this.#flight = null;
   }
   beginDrop(landing: Point, now: number): void {
@@ -132,6 +133,7 @@ export class Activity {
     this.#objects.scatter(point, now);
     this.#effects.emit("plop");
     this.#pendingPoop = null;
+
     if (this.#flight) {
       this.#mode = "land";
       this.#flight.startedY = this.#body.y;
@@ -140,12 +142,14 @@ export class Activity {
       this.#mode = "proud";
       this.#until = now + 2;
     }
+
     this.#effects.mood("smug");
   }
   resize(): void {
     if (this.#goal) {
       this.#goal = this.#body.safePoint(this.#goal);
     }
+
     if (this.#flight) {
       this.#flight.startedY = clamp(
         this.#flight.startedY,
@@ -168,6 +172,7 @@ export class Activity {
         this.#body.height - SIZE,
       );
     }
+
     if (this.#pendingPoop) {
       this.#pendingPoop.x = clamp(this.#pendingPoop.x, 8, this.#body.width - 8);
       this.#pendingPoop.y = clamp(
@@ -176,6 +181,7 @@ export class Activity {
         this.#body.height - 8,
       );
     }
+
     if (this.#objects.snapshot().crumb && this.#goal) {
       this.#objects.offerCrumb({ x: this.#goal.x + 60, y: this.#goal.y + 78 });
     }
@@ -185,6 +191,7 @@ export class Activity {
     if (this.#stepFlight(now)) {
       return true;
     }
+
     this.#stepTravel(now, delta);
     return false;
   }
@@ -199,12 +206,15 @@ export class Activity {
           this.#body.height - SIZE,
         ),
       });
+
       if (now >= this.#until) {
         this.#mode = "fly";
         this.#body.resetMotion();
       }
+
       return true;
     }
+
     if (this.#mode === "land" && this.#flight) {
       const progress = clamp(1 - (this.#until - now) / 0.65, 0, 1);
       this.#body.place({
@@ -214,14 +224,17 @@ export class Activity {
           (this.#flight.landingY - this.#flight.startedY) * progress,
       });
       this.#flight.groundY = this.#body.y;
+
       if (now >= this.#until) {
         this.#body.place({ x: this.#body.x, y: this.#flight.landingY });
         this.#flight = null;
         this.#mode = "proud";
         this.#until = now + 1.4;
       }
+
       return true;
     }
+
     return false;
   }
   #stepTravel(now: number, delta: number): void {
@@ -230,23 +243,31 @@ export class Activity {
       const deltaY = this.#goal.y - this.#body.y;
       const remaining = Math.hypot(deltaX, deltaY);
       let speed = 64;
+
       if (this.#mode === "fly") {
         speed = 300;
       } else if (this.#mode === "fetch") {
         speed = 180;
       }
+
       const travel = speed * delta;
+
       if (Math.abs(deltaX) > 1) {
         let facing = 1;
+
         if (deltaX < 0) {
           facing = -1;
         }
+
         if (facing !== this.#body.facing) {
           this.#body.resetMotion();
         }
+
         this.#body.face(facing);
       }
+
       this.#body.advanceMotion(delta);
+
       if (this.#flight) {
         this.#flight.groundY = clamp(
           this.#body.y + 44,
@@ -254,14 +275,17 @@ export class Activity {
           this.#body.height - SIZE,
         );
       }
+
       if (remaining <= Math.max(travel, 0.2)) {
         this.#body.place(this.#goal);
         this.#goal = null;
+
         if (this.#mode === "fetch") {
           if (!this.#objects.snapshot().crumb) {
             this.rest(now);
             return;
           }
+
           this.#mode = "eat";
           this.#until = now + 2.25;
           this.#effects.mood("snack-minded");

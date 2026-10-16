@@ -79,6 +79,7 @@ export function harness(options = {}) {
       if (options.flickCap) {
         return options.flickCap(point);
       }
+
       return false;
     },
     beginPickup() {
@@ -143,12 +144,14 @@ export function harness(options = {}) {
     },
   };
   let native = null;
+
   if (options.native) {
     native = {
       async listen(name, callback) {
         if (options.listen) {
           return options.listen(name, callback);
         }
+
         nativeListeners.set(name, callback);
         return () => {
           nativeListeners.delete(name);
@@ -156,22 +159,27 @@ export function harness(options = {}) {
       },
       async invoke(name, args) {
         calls.push([name, args]);
+
         if (options.invoke) {
           const value = options.invoke(name, args);
+
           if (value !== undefined) {
             return value;
           }
         }
+
         if (name === "pet_ready") {
           return {
             visible: true,
             settings: { sound: false, paused: false, mischief: 1, hat: "none" },
           };
         }
+
         return null;
       },
     };
   }
+
   const app = new PetApplication({
     simulation: options.simulation ?? simulation,
     browser,
@@ -181,10 +189,12 @@ export function harness(options = {}) {
         if (options.load) {
           return options.load();
         }
+
         return { collection: { sock: 3 } };
       },
       save(value) {
         saved.push(value);
+
         if (options.save) {
           return options.save(value);
         }
@@ -252,12 +262,14 @@ export function harness(options = {}) {
     displayFrame(delta = 1000 / 60) {
       currentTime += delta;
       const pending = [...frames];
+
       for (const [id, timer] of [...timers]) {
         if (timer.at <= currentTime) {
           timers.delete(id);
           timer.callback();
         }
       }
+
       for (const [id, callback] of pending) {
         if (frames.delete(id)) {
           callback(currentTime);
@@ -276,6 +288,7 @@ export function harness(options = {}) {
     frame() {
       currentTime += 100;
       const entry = [...timers].find(([, timer]) => timer.delay === 100);
+
       if (entry) {
         timers.delete(entry[0]);
         entry[1].callback();

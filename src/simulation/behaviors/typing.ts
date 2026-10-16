@@ -64,9 +64,11 @@ export class TypingRoutine implements SceneOwner {
   }
   #validCaret(sample: CaretSample): boolean {
     const body = this.#env.body;
+
     if (!Number.isFinite(sample.x) || !Number.isFinite(sample.y)) {
       return false;
     }
+
     if (
       !Number.isFinite(sample.height) ||
       sample.height <= 0 ||
@@ -74,19 +76,24 @@ export class TypingRoutine implements SceneOwner {
     ) {
       return false;
     }
+
     if (sample.x < 0 || sample.x >= body.width) {
       return false;
     }
+
     return sample.y >= 0 && sample.y < body.height;
   }
   sample(sample: CaretSample | null): void {
     const env = this.#env;
+
     if (!sample || !this.enabled() || !this.#validCaret(sample)) {
       this.#caret = null;
       this.#activeAt = -Infinity;
       return;
     }
+
     const previous = this.#caret;
+
     if (
       previous?.context === sample.context &&
       (previous.position !== sample.position ||
@@ -96,10 +103,12 @@ export class TypingRoutine implements SceneOwner {
     } else if (!previous || previous.context !== sample.context) {
       this.#activeAt = -Infinity;
     }
+
     if (sample.source === "vision") {
       // Vision mode grazes on stationary text too; typing is not required.
       this.#activeAt = env.clock.now;
     }
+
     this.#caret = { ...sample };
     this.#seenAt = env.clock.now;
   }
@@ -118,6 +127,7 @@ export class TypingRoutine implements SceneOwner {
         this.#pointerMovedAt = this.#env.clock.now;
       }
     }
+
     this.#pointer = point;
     this.#pointerAt = this.#env.clock.now;
   }
@@ -131,18 +141,22 @@ export class TypingRoutine implements SceneOwner {
   }
   maybeStart(): boolean {
     const env = this.#env;
+
     if (!this.enabled() || this.#scene || !this.#fresh()) {
       return false;
     }
+
     if (env.clock.now < this.#nextAt || env.clock.now - this.#activeAt > 5) {
       return false;
     }
+
     if (
       env.policy.tidying() ||
       env.clock.now < env.policy.cleanup().suppressUntil
     ) {
       return false;
     }
+
     env.commands.action("caret_fishing");
     return true;
   }
@@ -150,21 +164,28 @@ export class TypingRoutine implements SceneOwner {
     if (name !== "caret_fishing") {
       return false;
     }
+
     const env = this.#env;
+
     if (!this.enabled() || !this.#fresh() || !this.#caret) {
       env.lifecycle.rest();
       return true;
     }
+
     const bold = env.policy.settings().mischief >= 2;
     let delay = 65;
+
     if (bold) {
       delay = 25;
     }
+
     this.#nextAt = env.clock.now + delay + env.random() * 20;
     let glyph = "o";
+
     if (bold) {
       glyph = [";", ")", ",", "?", ":", "(", ".", "!"][this.#catches % 8];
     }
+
     if (
       this.#caret.source === "vision" &&
       this.#caret.glyph &&
@@ -172,6 +193,7 @@ export class TypingRoutine implements SceneOwner {
     ) {
       glyph = this.#caret.glyph;
     }
+
     this.#scene = {
       kind: "typing",
       visual: this.#caret.source === "vision",
@@ -193,9 +215,11 @@ export class TypingRoutine implements SceneOwner {
   }
   #fresh(): boolean {
     let freshness = 1.2;
+
     if (this.#caret?.source === "vision") {
       freshness = 3;
     }
+
     return (
       this.#caret !== null && this.#env.clock.now - this.#seenAt < freshness
     );
@@ -216,22 +240,28 @@ export class TypingRoutine implements SceneOwner {
   update(dt: number): "running" | "complete" {
     const env = this.#env;
     const scene = this.#scene;
+
     if (!scene) {
       return "complete";
     }
+
     if (!this.enabled() || env.clock.now >= scene.deadline) {
       return this.#finish();
     }
+
     const sourcePhase =
       ["approach", "watch", "pounce"].includes(scene.phase) ||
       (scene.phase === "innocent" && !scene.carrying);
+
     if (sourcePhase && !scene.visual) {
       if (!this.#fresh() || this.#caret?.context !== scene.source) {
         return this.#finish();
       }
     }
+
     const pointer = this.#pointer;
     let nearby = false;
+
     if (
       pointer &&
       pointer.inside !== false &&
@@ -243,6 +273,7 @@ export class TypingRoutine implements SceneOwner {
           pointer.y - (env.body.y + 48),
         ) < 120;
     }
+
     if (
       nearby &&
       (scene.phase === "innocent" || env.clock.now - this.#pointerMovedAt < 0.6)
@@ -252,23 +283,28 @@ export class TypingRoutine implements SceneOwner {
         scene.phase = "innocent";
         env.speech.say(dialogue.gullbert.typing.justANormalBird, 2);
       }
+
       scene.until = env.clock.now + 1.1;
       return "running";
     }
+
     if (scene.phase === "innocent") {
       if (env.clock.now < scene.until) {
         return "running";
       }
+
       scene.phase = scene.resume;
       scene.until = env.clock.now + 0.7;
       env.speech.say(dialogue.gullbert.typing.pause, 0.8);
       return "running";
     }
+
     switch (scene.phase) {
       case "approach": {
         if (!scene.visual) {
           scene.target = this.#target();
         }
+
         if (env.body.moveToward(scene.target, 240, dt)) {
           env.body.face(1);
           scene.phase = "watch";
@@ -277,11 +313,14 @@ export class TypingRoutine implements SceneOwner {
 
         break;
       }
+
       case "watch": {
         let target = scene.target;
+
         if (!scene.visual) {
           target = this.#target();
         }
+
         if (
           Math.hypot(target.x - scene.target.x, target.y - scene.target.y) > 35
         ) {
@@ -293,20 +332,24 @@ export class TypingRoutine implements SceneOwner {
 
         break;
       }
+
       case "pounce": {
         if (env.clock.now >= scene.until) {
           if (!scene.steal) {
             env.speech.say(dialogue.gullbert.typing.itWasHereASecondAgo);
             return this.#finish();
           }
+
           scene.carrying = true;
           this.#catches++;
           scene.phase = "carry";
           env.events.emit("pop");
           env.speech.say(dialogue.gullbert.typing.youWerentUsingThis);
         }
+
         break;
       }
+
       case "carry": {
         if (env.body.moveToward(this.#nestPoint(), 230, dt)) {
           scene.phase = "deposit";
@@ -315,13 +358,16 @@ export class TypingRoutine implements SceneOwner {
 
         break;
       }
+
       case "deposit": {
         if (env.clock.now >= scene.until) {
           if (scene.buildNest) {
             let twig = scene.glyph;
+
             if (/[a-z0-9]/i.test(twig)) {
               twig = [";", ",", ")", ":"][this.#nest.length % 4];
             }
+
             this.#nest.push(twig);
             this.#nest = this.#nest.slice(-12);
             env.speech.say(dialogue.gullbert.typing.structuralPunctuation);
@@ -329,12 +375,15 @@ export class TypingRoutine implements SceneOwner {
             env.speech.say(dialogue.gullbert.typing.oDelicious);
             env.events.emit("munch");
           }
+
           scene.carrying = false;
           return this.#finish();
         }
+
         break;
       }
     }
+
     return "running";
   }
   #finish(): "complete" {
@@ -358,6 +407,7 @@ export class TypingRoutine implements SceneOwner {
   visibility(visible: boolean): void {
     if (!visible) {
       this.resetSensing();
+
       if (this.#scene) {
         this.#finish();
       }
@@ -370,6 +420,7 @@ export class TypingRoutine implements SceneOwner {
     if (!this.#env.policy.visible() || this.#nest.length === 0) {
       return [];
     }
+
     const home = this.#nestPoint();
     const props: SceneProp[] = [
       {
@@ -381,6 +432,7 @@ export class TypingRoutine implements SceneOwner {
         height: 28,
       },
     ];
+
     for (const [i, text] of this.#nest.entries()) {
       props.push({
         id: `nest-letter-${i}`,
@@ -393,15 +445,19 @@ export class TypingRoutine implements SceneOwner {
         rotation: ((i % 3) - 1) * 25,
       });
     }
+
     return props;
   }
   presentation(): RoutinePresentation {
     const scene = this.#scene;
+
     if (!scene) {
       return {};
     }
+
     const env = this.#env;
     let pose: RoutinePresentation["pose"] = "crouch";
+
     if (scene.phase === "innocent") {
       pose = "blink";
     } else if (scene.phase === "pounce" || scene.phase === "deposit") {
@@ -411,7 +467,9 @@ export class TypingRoutine implements SceneOwner {
         Math.floor(env.body.motionTime * 12) % 4
       ];
     }
+
     const props: SceneProp[] = [];
+
     if (scene.phase === "pounce") {
       props.push({
         id: "letter-bait",
@@ -423,6 +481,7 @@ export class TypingRoutine implements SceneOwner {
         height: 28,
       });
     }
+
     if (scene.carrying && scene.phase !== "innocent") {
       props.push({
         id: "stolen-letter",
@@ -435,6 +494,7 @@ export class TypingRoutine implements SceneOwner {
         rotation: -15,
       });
     }
+
     return { pose, props };
   }
 }

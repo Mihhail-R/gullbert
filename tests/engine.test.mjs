@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 import { dropAt } from "./simulation-helpers.mjs";
 import { Gullbert, SIZE } from "../web-dist/simulation/engine.js";
 function advance(g, seconds) {
-  for (let i = 0; i < seconds * 20; i++) g.step(0.05);
+  for (let i = 0; i < seconds * 20; i++) {
+    g.step(0.05);
+  }
 }
 test("roaming stays on screen across tiny and large displays", () => {
   for (const [w, h] of [
@@ -12,6 +14,7 @@ test("roaming stays on screen across tiny and large displays", () => {
     [3840, 2160],
   ]) {
     const g = new Gullbert(w, h, () => 0.4);
+
     for (let i = 0; i < 5000; i++) {
       g.step(0.05);
       assert.ok(g.inspect().x >= 0 && g.inspect().x <= w - SIZE);
@@ -52,7 +55,11 @@ test("targeted poop lands at the requested point, then expires", () => {
 test("splats have a hard upper bound and cleaning cancels pending drops", () => {
   const g = new Gullbert();
   g.configure({ paused: true });
-  for (let i = 0; i < 20; i++) dropAt(g, { x: 10, y: 100 });
+
+  for (let i = 0; i < 20; i++) {
+    dropAt(g, { x: 10, y: 100 });
+  }
+
   assert.equal(g.inspect().splats.length, 6);
   g.action("poop");
   g.action("clean");
@@ -91,12 +98,16 @@ test("poop run takes off, flaps, drops and lands at a grounded pose", () => {
   g.action("poop", { x: 600, y: 400 });
   assert.equal(g.inspect().mode, "takeoff");
   const modes = new Set();
+
   for (let i = 0; i < 120; i++) {
     modes.add(g.inspect().mode);
     g.step(0.05);
   }
-  for (const mode of ["takeoff", "fly", "drop", "land", "proud", "idle"])
+
+  for (const mode of ["takeoff", "fly", "drop", "land", "proud", "idle"]) {
     assert.ok(modes.has(mode), mode);
+  }
+
   assert.equal(g.inspect().y, 314);
   assert.equal(g.inspect().flight, null);
   assert.deepEqual(
@@ -109,7 +120,11 @@ test("every flight phase can be replaced without a delayed gift", () => {
     const g = new Gullbert(800, 600, () => 0.5);
     g.configure({ paused: true, mischief: 0, sound: false });
     g.action("poop", { x: 600, y: 400 });
-    for (let i = 0; i < 100 && g.inspect().mode !== phase; i++) g.step(0.05);
+
+    for (let i = 0; i < 100 && g.inspect().mode !== phase; i++) {
+      g.step(0.05);
+    }
+
     assert.equal(g.inspect().mode, phase);
     const gifts = g.inspect().splats.length;
     g.action("nap");
@@ -137,7 +152,11 @@ test("explicit commands wake naps and interrupt quiet routines", () => {
 test("walking cadence follows chase speed and stops at idle", () => {
   const g = new Gullbert(1000, 700, () => 0.5);
   g.configure({ paused: false, mischief: 0, sound: false });
-  while (g.inspect().mode !== "walk") g.step(0.05);
+
+  while (g.inspect().mode !== "walk") {
+    g.step(0.05);
+  }
+
   g.step(0.1);
   assert.equal(g.inspect().pose, "idle");
   g.action("feed_here", { x: 950, y: 600 });
@@ -150,9 +169,14 @@ test("resizing during landing keeps every landing step inside the screen", () =>
   const g = new Gullbert(1920, 1080, () => 0.5);
   g.configure({ paused: true, mischief: 0, sound: false });
   g.action("poop", { x: 1800, y: 900 });
-  for (let i = 0; i < 200 && g.inspect().mode !== "land"; i++) g.step(0.05);
+
+  for (let i = 0; i < 200 && g.inspect().mode !== "land"; i++) {
+    g.step(0.05);
+  }
+
   assert.equal(g.inspect().mode, "land");
   g.resize(400, 300);
+
   for (let i = 0; i < 20; i++) {
     g.step(0.05);
     assert.ok(g.inspect().y >= 0 && g.inspect().y <= 204);
