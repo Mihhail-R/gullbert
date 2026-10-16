@@ -18,6 +18,7 @@ use windows_sys::Win32::{
     System::SystemInformation::OSVERSIONINFOW,
     UI::{HiDpi::*, WindowsAndMessaging::*},
 };
+use zeroize::{Zeroize, Zeroizing};
 
 #[link(name = "ntdll")]
 unsafe extern "system" {
@@ -65,7 +66,7 @@ fn read() -> Option<RawResult> {
 }
 
 struct Frame {
-    rgb: Vec<u8>,
+    rgb: Zeroizing<Vec<u8>>,
     crop: Rect,
     pointer: (i32, i32),
     display: u32,
@@ -79,6 +80,8 @@ struct CaptureResources {
     memory: HDC,
     bitmap: HBITMAP,
     previous: HGDIOBJ,
+    pixels: *mut u8,
+    pixel_bytes: usize,
 }
 impl Drop for CaptureResources {
     fn drop(&mut self) {
@@ -86,15 +89,26 @@ impl Drop for CaptureResources {
             if !self.previous.is_null() {
                 SelectObject(self.memory, self.previous);
             }
+
+            if !self.pixels.is_null() {
+                // Finish any queued GDI writes, including capture failure paths,
+                // before touching the DIB memory from the CPU.
+                GdiFlush();
+                std::slice::from_raw_parts_mut(self.pixels, self.pixel_bytes).zeroize();
+            }
+
             if !self.bitmap.is_null() {
                 DeleteObject(self.bitmap);
             }
+
             if !self.memory.is_null() {
                 DeleteDC(self.memory);
             }
+
             if !self.screen.is_null() {
                 ReleaseDC(null_mut(), self.screen);
             }
+
             if !self.dpi.is_null() {
                 SetThreadDpiAwarenessContext(self.dpi);
             }
@@ -125,36 +139,45 @@ unsafe fn capture_region() -> Option<Frame> {
         memory: null_mut(),
         bitmap: null_mut(),
         previous: null_mut(),
+        pixels: null_mut(),
+        pixel_bytes: 0,
     };
     resources.dpi = SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
     if resources.dpi.is_null() {
         return None;
     }
+
     let mut composed = 0;
     if DwmIsCompositionEnabled(&mut composed) < 0 || composed == 0 {
         return None;
     }
+
     let mut excluded = true;
     if EnumWindows(Some(exclude_window), (&mut excluded as *mut bool) as LPARAM) == 0 || !excluded {
         return None;
     }
+
     // Wait for affinity changes to reach the compositor before reading pixels.
     if DwmFlush() < 0 {
         return None;
     }
+
     let mut pointer: POINT = zeroed();
     if GetCursorPos(&mut pointer) == 0 {
         return None;
     }
+
     let monitor = MonitorFromPoint(pointer, MONITOR_DEFAULTTONULL);
     if monitor.is_null() {
         return None;
     }
+
     let mut info: MONITORINFO = zeroed();
     info.cbSize = size_of::<MONITORINFO>() as u32;
     if GetMonitorInfoW(monitor, &mut info) == 0 {
         return None;
     }
+
     let rect = info.rcMonitor;
     let crop = geometry::crop(
         Rect {
@@ -169,10 +192,12 @@ unsafe fn capture_region() -> Option<Frame> {
     if resources.screen.is_null() {
         return None;
     }
+
     resources.memory = CreateCompatibleDC(resources.screen);
     if resources.memory.is_null() {
         return None;
     }
+
     let mut bitmap_info: BITMAPINFO = zeroed();
     bitmap_info.bmiHeader.biSize = size_of::<BITMAPINFOHEADER>() as u32;
     bitmap_info.bmiHeader.biWidth = crop.width();
@@ -192,10 +217,14 @@ unsafe fn capture_region() -> Option<Frame> {
     if resources.bitmap.is_null() || pixels.is_null() {
         return None;
     }
+
+    resources.pixels = pixels.cast();
+    resources.pixel_bytes = (crop.width() * crop.height() * 4) as usize;
     let previous = SelectObject(resources.memory, resources.bitmap);
     if previous.is_null() || previous as isize == -1 {
         return None;
     }
+
     resources.previous = previous;
     if BitBlt(
         resources.memory,
@@ -212,14 +241,18 @@ unsafe fn capture_region() -> Option<Frame> {
     {
         return None;
     }
+
     let bytes = std::slice::from_raw_parts(
         pixels as *const u8,
         (crop.width() * crop.height() * 4) as usize,
     );
-    let mut rgb = Vec::with_capacity((crop.width() * crop.height() * 3) as usize);
+    let mut rgb = Zeroizing::new(Vec::with_capacity(
+        (crop.width() * crop.height() * 3) as usize,
+    ));
     for pixel in bytes.chunks_exact(4) {
         rgb.extend_from_slice(&[pixel[2], pixel[1], pixel[0]]);
     }
+
     Some(Frame {
         rgb,
         crop,

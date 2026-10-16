@@ -1,5 +1,7 @@
 mod action_catalog;
+mod ipc_commands;
 use std::{env, path::PathBuf, process::Command};
+
 fn main() {
     println!("cargo:rerun-if-changed=../src/actions/catalog.json");
     println!("cargo:rerun-if-changed=action_catalog.rs");
@@ -10,6 +12,7 @@ fn main() {
         generated,
     )
     .unwrap();
+
     if env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") {
         use sha2::{Digest, Sha256};
         println!("cargo:rerun-if-changed=models/manifest.json");
@@ -27,6 +30,7 @@ fn main() {
             );
         }
     }
+
     println!("cargo:rerun-if-changed=native/vision.m");
     if env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("macos") {
         let out = PathBuf::from(env::var_os("OUT_DIR").unwrap());
@@ -85,6 +89,7 @@ fn main() {
             assert!(status.success());
             println!("cargo:rustc-link-lib=static=gullbert_spike");
         }
+
         println!("cargo:rustc-link-search=native={}", out.display());
         println!("cargo:rustc-link-lib=static=gullbert_vision");
         println!("cargo:rustc-link-lib=framework=AppKit");
@@ -105,5 +110,10 @@ fn main() {
         );
         println!("cargo:rustc-link-lib=static=clang_rt.osx");
     }
-    tauri_build::build()
+
+    tauri_build::try_build(
+        tauri_build::Attributes::new()
+            .app_manifest(tauri_build::AppManifest::new().commands(ipc_commands::COMMANDS)),
+    )
+    .expect("Could not build application permissions");
 }

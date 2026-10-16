@@ -12,6 +12,12 @@ mod updates;
 mod vision;
 mod windows;
 
+#[cfg(target_os = "macos")]
+#[path = "single_instance_macos.rs"]
+mod single_instance;
+#[cfg(not(target_os = "macos"))]
+use tauri_plugin_single_instance as single_instance;
+
 use actions::report;
 use state::{Snapshot, State};
 use tauri::Manager;
@@ -24,7 +30,25 @@ fn prepare_pet(app: tauri::AppHandle) -> Result<Snapshot, String> {
     native_input::ready(&app)?;
     Ok(state::snapshot(app))
 }
+
 fn main() {
+    #[cfg(target_os = "macos")]
+    {
+        // Applies to this process only. Crash diagnostics and privileged live
+        // memory inspection are separate OS facilities, not covered by RLIMIT_CORE.
+        let limit = libc::rlimit {
+            rlim_cur: 0,
+            rlim_max: 0,
+        };
+
+        if unsafe { libc::setrlimit(libc::RLIMIT_CORE, &limit) } != 0 {
+            panic!(
+                "Could not disable core dumps: {}",
+                std::io::Error::last_os_error()
+            );
+        }
+    }
+
     #[cfg(all(debug_assertions, target_os = "macos"))]
     if std::env::args().nth(1).as_deref() == Some("--window-spike-access") {
         println!(
@@ -33,13 +57,14 @@ fn main() {
         );
         return;
     }
+
     tauri::Builder::default()
         .manage(State::default())
         .manage(updates::Runtime::default())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(vision::Runtime::default())
         .manage(native_input::Runtime::default())
-        .plugin(tauri_plugin_single_instance::init(|app, args, _| {
+        .plugin(single_instance::init(|app, args, _| {
             actions::dispatch_action(app, actions::from_cli(args.get(1).map(String::as_str)));
         }))
         .plugin(shortcuts::plugin())
@@ -70,6 +95,7 @@ fn main() {
         .on_window_event(|w, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
+
                 if w.label() == "controls" {
                     let _ = w.hide();
                 } else {
@@ -81,14 +107,17 @@ fn main() {
         })
         .setup(|app| {
             native_input::Runtime::watch(app.handle().clone());
+
             // Protect even initially hidden controls before their first show.
             // Capture rechecks visible windows and fails closed on any error.
             #[cfg(target_os = "windows")]
             for window in app.webview_windows().values() {
                 let _ = window.set_content_protected(true);
             }
+
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+
             roommate::restore(app.handle());
             state::restore(app.handle());
             tray::install(app)?;
