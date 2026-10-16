@@ -5,6 +5,8 @@ import { scopeCapabilities } from "../capabilities.js";
 import { isPointOnScreen, beakOffsetX, SIZE, clamp } from "../geometry.js";
 import {
   isGag,
+  isGagKind,
+  gagKinds,
   type GagScene,
   type PostcardScene,
   type DepartureScene,
@@ -18,18 +20,29 @@ import type { SimulationView, BehaviorCapabilities } from "../capabilities.js";
 import type { SceneOwner } from "../routine.js";
 import type { Scene, GagScene as OwnedScene } from "../scenes.js";
 
-const automatic = [
-  "pretend_leave",
-  "cursor_egg",
-  "municipal_gull",
-  "postcards",
-] as const;
+const departureOutwardPhases: readonly DepartureScene["phase"][] = [
+  "depart",
+  "away",
+];
+const departureEdgePhases: readonly DepartureScene["phase"][] = [
+  ...departureOutwardPhases,
+  "peek",
+  "reenter",
+];
+
+const automaticGagKinds = gagKinds.filter((kind) => kind !== "apology");
+const walkingFrames = [
+  "idle",
+  "walkLeft",
+  "idle",
+  "walkRight",
+] as const satisfies readonly Pose[];
 const postcards = [
   { photo: "liberty", caption: dialogue.gullbert.gags.postcards.liberty },
   { photo: "giza", caption: dialogue.gullbert.gags.postcards.giza },
   { photo: "car", caption: dialogue.gullbert.gags.postcards.car },
   { photo: "eiffel", caption: dialogue.gullbert.gags.postcards.eiffel },
-] as const;
+] as const satisfies readonly Pick<PostcardScene, "photo" | "caption">[];
 export function gagPose(
   sim: Pick<SimulationView, "scene" | "motionTime">,
 ): Pose | null {
@@ -37,9 +50,8 @@ export function gagPose(
   if (!isGag(scene)) {
     return null;
   }
-  const walk = (["idle", "walkLeft", "idle", "walkRight"] as const)[
-    Math.floor(sim.motionTime * 10) % 4
-  ];
+  const walk =
+    walkingFrames[Math.floor(sim.motionTime * 10) % walkingFrames.length];
   if (scene.kind === "postcards") {
     if (scene.phase === "reach" || scene.phase === "pull") {
       return "nibble";
@@ -184,8 +196,8 @@ export class GagRoutine implements SceneOwner {
   #environment: Environment;
   #scene: OwnedScene | null = null;
   #identity: object = Object.freeze({});
-  #gagSchedule?: { at: number; level: number; last?: string };
-  #lastPostcard?: string;
+  #gagSchedule?: { at: number; level: number; last?: GagScene["kind"] };
+  #lastPostcard?: (typeof postcards)[number]["photo"];
   constructor(environment: Environment) {
     this.#environment = scopeCapabilities(environment, [
       "body",
@@ -268,14 +280,18 @@ export class GagRoutine implements SceneOwner {
       y: clamp(p.y, 36, sim.body.height),
     };
   }
-  #phase(name: GagScene["phase"], duration: number) {
+  #phase<S extends GagScene>(
+    scene: S,
+    name: NoInfer<S["phase"]>,
+    duration: number,
+  ): void {
     const sim = this.#environment;
-    if (!isGag(this.#scene)) {
+    if (scene !== this.#scene) {
       return;
     }
-    this.#scene.phase = name;
-    this.#scene.phaseStarted = sim.clock.now;
-    this.#scene.until = sim.clock.now + duration;
+    scene.phase = name;
+    scene.phaseStarted = sim.clock.now;
+    scene.until = sim.clock.now + duration;
     sim.body.resetMotion();
   }
   #finish(text?: string) {
@@ -309,7 +325,7 @@ export class GagRoutine implements SceneOwner {
   }
   #startGag(name: string) {
     const sim = this.#environment;
-    if (![...automatic, "apology"].includes(name)) {
+    if (!isGagKind(name)) {
       return false;
     }
     const clock = {
@@ -443,7 +459,7 @@ export class GagRoutine implements SceneOwner {
     ) {
       return false;
     }
-    const choices = automatic.filter((name) => {
+    const choices = automaticGagKinds.filter((name) => {
       return name !== this.#gagSchedule?.last;
     });
     sim.commands.action(
@@ -522,7 +538,7 @@ export class GagRoutine implements SceneOwner {
       scene.nest &&
       Math.hypot(point.x - scene.nest.x, point.y - scene.nest.y) > 24
     ) {
-      this.#phase("inspect", 1.3);
+      this.#phase(scene, "inspect", 1.3);
       sim.speech.say(dialogue.gullbert.gags.itHatched, 2.5);
     }
   }
@@ -567,13 +583,13 @@ export class GagRoutine implements SceneOwner {
       case "approach": {
         if (sim.body.moveToward({ x: edge, y: scene.target.y }, speed, dt)) {
           sim.movement.face(scene.side);
-          this.#phase("reach", 0.6);
+          this.#phase(scene, "reach", 0.6);
         }
         break;
       }
       case "reach": {
         if (sim.clock.now >= scene.until) {
-          this.#phase("pull", 0.9);
+          this.#phase(scene, "pull", 0.9);
           sim.speech.clear();
         }
         break;
@@ -592,7 +608,7 @@ export class GagRoutine implements SceneOwner {
         );
         sim.movement.face(scene.side);
         if (sim.clock.now >= scene.until) {
-          this.#phase("carry", 3);
+          this.#phase(scene, "carry", 3);
         }
         break;
       }
@@ -601,14 +617,14 @@ export class GagRoutine implements SceneOwner {
         // Back away with the photograph still held in his beak.
         sim.movement.face(scene.side);
         if (reached || sim.clock.now >= scene.until) {
-          this.#phase("show", 4.5);
+          this.#phase(scene, "show", 4.5);
           sim.speech.say(scene.caption, 4.5);
         }
         break;
       }
       case "show": {
         if (sim.clock.now >= scene.until) {
-          this.#phase("tuck", 0.6);
+          this.#phase(scene, "tuck", 0.6);
         }
         break;
       }
@@ -638,32 +654,32 @@ export class GagRoutine implements SceneOwner {
             dt,
           )
         ) {
-          this.#phase("depart", 0.7);
+          this.#phase(scene, "depart", 0.7);
         }
         break;
       }
       case "depart": {
         if (sim.clock.now >= scene.until) {
-          this.#phase("away", 2);
+          this.#phase(scene, "away", 2);
         }
         break;
       }
       case "away": {
         if (sim.clock.now >= scene.until) {
-          this.#phase("peek", 1.3);
+          this.#phase(scene, "peek", 1.3);
           sim.speech.say(dialogue.gullbert.gags.forgotSomething, 3);
         }
         break;
       }
       case "peek": {
         if (sim.clock.now >= scene.until) {
-          this.#phase("reenter", 0.5);
+          this.#phase(scene, "reenter", 0.5);
         }
         break;
       }
       case "reenter": {
         if (sim.clock.now >= scene.until) {
-          this.#phase("return", 4);
+          this.#phase(scene, "return", 4);
         }
         break;
       }
@@ -680,9 +696,9 @@ export class GagRoutine implements SceneOwner {
         break;
       }
     }
-    if (["depart", "away", "peek", "reenter"].includes(scene.phase)) {
+    if (departureEdgePhases.includes(scene.phase)) {
       sim.movement.moveTo({ x: edge, y: sim.body.y });
-      if (["depart", "away"].includes(scene.phase)) {
+      if (departureOutwardPhases.includes(scene.phase)) {
         sim.movement.face(scene.side as -1 | 1);
       } else {
         sim.movement.face(-scene.side as -1 | 1);
@@ -715,7 +731,7 @@ export class GagRoutine implements SceneOwner {
             sim.clock.now - scene.stableSince >= 1
           ) {
             scene.nest = { ...scene.pointer };
-            this.#phase("settle", 5);
+            this.#phase(scene, "settle", 5);
             sim.speech.say(dialogue.gullbert.gags.doNotDisturbParenting, 2.5);
           }
         }
@@ -749,7 +765,7 @@ export class GagRoutine implements SceneOwner {
           scene.placed += 1;
           scene.until = sim.clock.now + 0.45;
           if (scene.placed === 3) {
-            this.#phase("inspect", 1.5);
+            this.#phase(scene, "inspect", 1.5);
           }
         }
         break;
@@ -757,7 +773,7 @@ export class GagRoutine implements SceneOwner {
       case "inspect": {
         if (sim.clock.now >= scene.until) {
           scene.movedId = sim.objects.snapshot().cones[0]?.id ?? null;
-          this.#phase("retrieve", 2);
+          this.#phase(scene, "retrieve", 2);
         }
         break;
       }
@@ -770,7 +786,7 @@ export class GagRoutine implements SceneOwner {
           sim.body.moveToward({ x: cone.x - 48, y: cone.y - 78 }, 150, dt) ||
           sim.clock.now >= scene.until
         ) {
-          this.#phase("move", 2);
+          this.#phase(scene, "move", 2);
         }
         break;
       }
@@ -794,7 +810,7 @@ export class GagRoutine implements SceneOwner {
           );
         }
         if (reached || sim.clock.now >= scene.until) {
-          this.#phase("leave", 3);
+          this.#phase(scene, "leave", 3);
           sim.speech.say(dialogue.gullbert.gags.worksOngoing, 3);
         }
         break;
@@ -816,14 +832,14 @@ export class GagRoutine implements SceneOwner {
     switch (scene.phase) {
       case "carry": {
         if (sim.body.moveToward(scene.target, 120, dt)) {
-          this.#phase("offer", 2);
+          this.#phase(scene, "offer", 2);
           sim.speech.say(dialogue.gullbert.gags.forYou, 2);
         }
         break;
       }
       case "offer": {
         if (sim.clock.now >= scene.until) {
-          this.#phase("eat", 1);
+          this.#phase(scene, "eat", 1);
           sim.events.emit("munch");
         }
         break;
