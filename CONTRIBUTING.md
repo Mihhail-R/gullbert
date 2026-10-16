@@ -43,7 +43,7 @@ The simulation owns state and contains no browser or native dependencies. `Gullb
 
 Keep DOM, native calls, storage, audio, and wall-clock scheduling outside the simulation. `PetApplication` owns startup, shutdown, timers, subscriptions, persistence, and outstanding native work through explicitly supplied dependencies. `pet.ts` only assembles those dependencies. Renderers consume detached, read-only `PetPresentation` snapshots; they must not inspect the runtime or import behavior implementations. Use `inspect()` for diagnostic observations and behavioral assertions, never as a mutation interface.
 
-Durable belongings have one simulation writer and a separate `roommate.json` snapshot. Normalize new fields through `src/simulation/memory.ts`; never persist moods, in-flight rewards, or scene clocks. Failed native initialization must not overwrite unread belongings.
+Durable memory has one simulation writer and a local in-memory cache. Native persistence uses `memory.sqlite3`: a transaction saves learned state and the latest 200 structured experiences together. `memory_store.rs` imports the legacy `roommate.json` once without deleting it. Normalize new fields through `src/simulation/memory.ts`; record completed experiences with the injected wall clock and original display geometry, never moods, in-flight rewards, screen text, or scene clocks. Failed native initialization must not overwrite unread memory. The browser playground keeps the same snapshot in local storage.
 
 Public action identity, explicit launcher aliases, visibility, and Targeting preparation live in `src/actions/catalog.json`. Controls submit action names; preview and desktop routing own effect ordering. Keep labels and menu layout in presentation code, and keep private simulation commands and additional routines outside this catalog. TypeScript reads its action names directly; Cargo validates and generates Rust routing in `OUT_DIR` without a frontend build.
 
@@ -79,7 +79,7 @@ The Rust desktop shell uses responsibility-based modules within one binary crate
 | `vision.rs` / `vision/` / `native/vision.m` | Opt-in local screen OCR, throttling, permission and detection status         |
 | `caret.rs`                                  | Read-only caret geometry, Accessibility access, and coordinate normalization |
 | `state.rs`                                  | Application state, preference persistence, and control-room snapshots        |
-| `roommate.rs`                               | Belongings persistence and roommate status messages                          |
+| `roommate.rs`, `memory_store.rs`            | Local SQLite memory, legacy migration, and roommate status messages          |
 | `tray.rs`                                   | Tray menus, labels, and menu events                                          |
 | `shortcuts.rs`                              | Global shortcut registration and event routing                               |
 | `native_input/`                             | Input ownership, deadlines, OS effects, and serialized dispatch              |
@@ -132,7 +132,7 @@ Edit [`src/simulation/dialogue.json`](src/simulation/dialogue.json) for characte
 - `gullbert.greetings.treasure` uses `{item}` for the name of an actually owned treasure. Keep that placeholder in each alternative; other placeholders are not supported.
 - `guests.pigeon` and `guests.seagull` group conversations by scene beat. Each beat is an array of paired `{ "gullbert": "...", "visitor": "..." }` exchanges. Append a complete pair to add an alternative. An empty string means that speaker stays silent; at least one must speak. Keep replies together so the joke makes sense.
 
-Guest alternatives cycle by visit, separately for each species, starting with the first pair. The same visit index is used across beats, wrapping within each beat's array. For a linked conversation, add a matching alternative at the same index in every beat; standalone pairs can be added to just one beat. Rotation resets when the app restarts. Interruption still clears both bubbles.
+Guest alternatives cycle by visit, separately for each species, starting with the first pair. The same visit index is used across beats, wrapping within each beat's array. For a linked conversation, add a matching alternative at the same index in every beat; standalone pairs can be added to just one beat. Rotation survives restarts through saved visitor counts. Gullbert speaks first, then the visitor replies after a short pause; each line gets reading time based on its length. Interruption clears both bubbles and pending replies. Trick dialogue pools cycle using saved completed-performance counts.
 
 Keep lines short enough to read in the existing bubble duration. Gullbert is a territorial, self-important snack enthusiast; the pigeon is a dry, unimpressed visitor; the rival seagull is loudly competitive. For example, a pigeon exchange can be:
 

@@ -64,6 +64,9 @@ export interface BehaviorCapabilities extends RoutineCapabilities {
   readonly belongings: Pick<
     Belongings,
     | "snapshot"
+    | "remember"
+    | "performed"
+    | "visited"
     | "collect"
     | "placePerch"
     | "clearPerch"

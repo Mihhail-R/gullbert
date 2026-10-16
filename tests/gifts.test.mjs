@@ -117,12 +117,8 @@ test("hidden gift trips freeze, then resume a single delivery after resizing", (
     advance(sim, 20);
     assert.deepEqual(sim.inspect().memory.collection, { bottle_cap: 1 });
     assert.equal(sim.inspect().scene, null);
-    assert.ok(
-      sim.inspect().x >= 0 &&
-        sim.inspect().x <= 4 &&
-        sim.inspect().y >= 0 &&
-        sim.inspect().y <= 4,
-    );
+    assert.ok(sim.inspect().x >= 0 && sim.inspect().x <= 4);
+    assert.ok(sim.inspect().y >= 0 && sim.inspect().y <= 4);
   }
 });
 

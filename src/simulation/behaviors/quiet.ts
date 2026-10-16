@@ -40,13 +40,14 @@ export class QuietRoutine implements Routine {
   }
 
   start(name: string): boolean {
-    if (
-      name !== "nap" &&
-      name !== "preen" &&
-      name !== "tilt" &&
-      name !== "stretch"
-    ) {
-      return false;
+    switch (name) {
+      case "nap":
+      case "preen":
+      case "tilt":
+      case "stretch":
+        break;
+      default:
+        return false;
     }
     const now = this.#host.clock.now;
     let sleep = 0;

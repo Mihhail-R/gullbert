@@ -10,16 +10,21 @@ pub struct Rect {
 }
 impl Rect {
     pub fn valid(&self) -> bool {
-        [self.x, self.y, self.width, self.height]
+        if ![self.x, self.y, self.width, self.height]
             .iter()
             .all(|v| v.is_finite())
-            && self.width > 0.0
-            && self.height > 0.0
-            && self.width <= 160.0
-            && self.height <= 160.0
+        {
+            return false;
+        }
+        if self.width <= 0.0 || self.width > 160.0 {
+            return false;
+        }
+        self.height > 0.0 && self.height <= 160.0
     }
     fn contains(&self, x: f64, y: f64) -> bool {
-        x >= self.x && y >= self.y && x <= self.x + self.width && y <= self.y + self.height
+        let within_width = x >= self.x && x <= self.x + self.width;
+        let within_height = y >= self.y && y <= self.y + self.height;
+        within_width && within_height
     }
 }
 #[derive(Default)]

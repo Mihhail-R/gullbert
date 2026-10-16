@@ -30,26 +30,26 @@ fn local_cursor(
     scale: f64,
     cursor_scale: f64,
 ) -> Option<CursorPoint> {
-    if !cursor.0.is_finite()
-        || !cursor.1.is_finite()
-        || !scale.is_finite()
-        || scale <= 0.0
-        || !cursor_scale.is_finite()
-        || cursor_scale <= 0.0
-        || size.0 == 0
-        || size.1 == 0
-    {
+    if !cursor.0.is_finite() || !cursor.1.is_finite() {
+        return None;
+    }
+    if !scale.is_finite() || scale <= 0.0 {
+        return None;
+    }
+    if !cursor_scale.is_finite() || cursor_scale <= 0.0 {
+        return None;
+    }
+    if size.0 == 0 || size.1 == 0 {
         return None;
     }
     let x = cursor.0 / cursor_scale - f64::from(origin.0) / scale;
     let y = cursor.1 / cursor_scale - f64::from(origin.1) / scale;
+    let within_width = x >= 0.0 && x < f64::from(size.0) / scale;
+    let within_height = y >= 0.0 && y < f64::from(size.1) / scale;
     Some(CursorPoint {
         x,
         y,
-        inside: x >= 0.0
-            && y >= 0.0
-            && x < f64::from(size.0) / scale
-            && y < f64::from(size.1) / scale,
+        inside: within_width && within_height,
     })
 }
 #[tauri::command]

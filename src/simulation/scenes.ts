@@ -164,6 +164,8 @@ export interface GuestScene extends TheatreClock {
   hasSnack: boolean;
   chipTaken: boolean;
   guestText: string;
+  guestStarts: number;
+  guestUntil: number;
   departureOrigin: Point;
 }
 export interface DepartureScene extends TheatreClock {
@@ -257,11 +259,13 @@ export interface TypingScene extends TimedScene {
 export function isTheatre(
   scene: ReadonlyValue<Scene> | null,
 ): scene is ReadonlyValue<TheatreScene> {
-  return (
-    scene !== null &&
-    (scene.kind === "bubbles" ||
-      scene.kind === "bath" ||
-      scene.kind === "toss" ||
-      scene.kind === "baguette")
-  );
+  switch (scene?.kind) {
+    case "bubbles":
+    case "bath":
+    case "toss":
+    case "baguette":
+      return true;
+    default:
+      return false;
+  }
 }

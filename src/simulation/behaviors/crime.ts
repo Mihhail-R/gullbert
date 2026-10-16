@@ -348,39 +348,59 @@ export class CrimeRoutine implements SceneOwner {
     if (!sim.objects.snapshot().bag) {
       return;
     }
-    if (scene.phase === "inspect" && sim.clock.now >= scene.until) {
-      attachBag(sim);
-      this.#phase("trapped", 1.1);
-      sim.speech.say(dialogue.gullbert.crime.hello, 1.1);
-    } else if (scene.phase === "trapped" && sim.clock.now >= scene.until) {
-      this.#phase("panic", 4);
-      if (sim.body.x < (sim.body.width - 96) / 2) {
-        scene.direction = 1;
-      } else {
-        scene.direction = -1;
-      }
-      scene.target = this.#panicPoint(scene.direction);
-      sim.speech.say(dialogue.gullbert.crime.bagHasGull, 2);
-      sim.events.emit("squawk");
-    } else if (scene.phase === "panic") {
-      if (sim.body.moveToward(scene.target, 270, dt)) {
-        if (scene.direction === 1) {
-          scene.direction = -1;
-        } else {
-          scene.direction = 1;
+    switch (scene.phase) {
+      case "inspect": {
+        if (sim.clock.now >= scene.until) {
+          attachBag(sim);
+          this.#phase("trapped", 1.1);
+          sim.speech.say(dialogue.gullbert.crime.hello, 1.1);
         }
-        scene.target = this.#panicPoint(scene.direction);
+        break;
       }
-      if (sim.clock.now >= scene.until) {
-        this.#phase("shake", 1.5);
-        sim.speech.say(dialogue.gullbert.crime.releaseTheSeagull, 1.5);
+      case "trapped": {
+        if (sim.clock.now >= scene.until) {
+          this.#phase("panic", 4);
+          if (sim.body.x < (sim.body.width - 96) / 2) {
+            scene.direction = 1;
+          } else {
+            scene.direction = -1;
+          }
+          scene.target = this.#panicPoint(scene.direction);
+          sim.speech.say(dialogue.gullbert.crime.bagHasGull, 2);
+          sim.events.emit("squawk");
+        }
+        break;
       }
-    } else if (scene.phase === "shake" && sim.clock.now >= scene.until) {
-      sim.objects.releaseBag({ x: sim.body.facing * 36, y: 24 });
-      this.#phase("offended", 2.2);
-      sim.speech.say(dialogue.gullbert.crime.thatWasDeliberate, 2.5);
-    } else if (scene.phase === "offended" && sim.clock.now >= scene.until) {
-      this.#finish();
+      case "panic": {
+        if (sim.body.moveToward(scene.target, 270, dt)) {
+          if (scene.direction === 1) {
+            scene.direction = -1;
+          } else {
+            scene.direction = 1;
+          }
+          scene.target = this.#panicPoint(scene.direction);
+        }
+        if (sim.clock.now >= scene.until) {
+          this.#phase("shake", 1.5);
+          sim.speech.say(dialogue.gullbert.crime.releaseTheSeagull, 1.5);
+        }
+
+        break;
+      }
+      case "shake": {
+        if (sim.clock.now >= scene.until) {
+          sim.objects.releaseBag({ x: sim.body.facing * 36, y: 24 });
+          this.#phase("offended", 2.2);
+          sim.speech.say(dialogue.gullbert.crime.thatWasDeliberate, 2.5);
+        }
+        break;
+      }
+      case "offended": {
+        if (sim.clock.now >= scene.until) {
+          this.#finish();
+        }
+        break;
+      }
     }
   }
 }

@@ -33,11 +33,14 @@ impl Frame {
         .all(|n| n.abs() <= 1.0)
     }
     fn contains(self, other: Self, margin: f64) -> bool {
-        other.valid()
-            && other.x >= self.x + margin
-            && other.y >= self.y + margin
-            && other.x + other.width <= self.x + self.width - margin
-            && other.y + other.height <= self.y + self.height - margin
+        if !other.valid() {
+            return false;
+        }
+        let within_width =
+            other.x >= self.x + margin && other.x + other.width <= self.x + self.width - margin;
+        let within_height =
+            other.y >= self.y + margin && other.y + other.height <= self.y + self.height - margin;
+        within_width && within_height
     }
 }
 unsafe extern "C" {

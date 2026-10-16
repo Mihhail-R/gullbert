@@ -20,10 +20,10 @@ export class PetBrowser implements ApplicationBrowser {
   caret(): CaretSample | null {
     const editor = this.document.getElementById("typing-demo");
     const selection = this.window.getSelection();
+    if (!editor || editor.hidden || this.document.activeElement !== editor) {
+      return null;
+    }
     if (
-      !editor ||
-      editor.hidden ||
-      this.document.activeElement !== editor ||
       !selection?.isCollapsed ||
       !selection.rangeCount ||
       !editor.contains(selection.anchorNode)

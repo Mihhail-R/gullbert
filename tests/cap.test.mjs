@@ -160,8 +160,11 @@ test("three clicked exchanges end with him carrying the cap away and declaring v
   assert.equal(sim.inspect().wantsPointer, false);
   assert.deepEqual(sim.present().props, []);
   assert.equal(sim.inspect().bubble, "i win.");
-  assert.deepEqual(sim.exportMemory(), memory);
-  assert.equal(sim.inspect().memoryRevision, revision);
+  const saved = sim.exportMemory();
+  assert.equal(saved.episodes.at(-1).kind, "play");
+  assert.equal(saved.episodes.at(-1).detail, "cap");
+  assert.deepEqual({ ...saved, episodes: [] }, memory);
+  assert.ok(sim.inspect().memoryRevision > revision);
 });
 
 test("click side controls the flick and a kick at a screen edge rebounds inward", () => {

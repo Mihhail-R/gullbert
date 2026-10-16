@@ -59,9 +59,10 @@ pub(crate) async fn caret_position(app: tauri::AppHandle) -> Option<CaretSample>
             .await
             .ok()??
     };
-    if app.state::<State>().settings.lock().unwrap().vision != vision
-        || !enabled(&app)
-        || window.inner_position().ok()? != origin
+    if app.state::<State>().settings.lock().unwrap().vision != vision || !enabled(&app) {
+        return None;
+    }
+    if window.inner_position().ok()? != origin
         || window.inner_size().ok()? != size
         || window.scale_factor().ok()? != scale
     {
@@ -86,26 +87,25 @@ fn local(
     scale: f64,
     coordinate_scale: f64,
 ) -> Option<CaretSample> {
-    if !scale.is_finite()
-        || scale <= 0.0
-        || !coordinate_scale.is_finite()
-        || coordinate_scale <= 0.0
-    {
+    if !scale.is_finite() || scale <= 0.0 {
+        return None;
+    }
+    if !coordinate_scale.is_finite() || coordinate_scale <= 0.0 {
         return None;
     }
     let x = caret.x / coordinate_scale - f64::from(origin.0) / scale;
     let y = caret.y / coordinate_scale - f64::from(origin.1) / scale;
     let height = caret.height / coordinate_scale;
-    if !x.is_finite()
-        || !y.is_finite()
-        || !height.is_finite()
-        || height <= 0.0
-        || height > 160.0
-        || x < 0.0
-        || y < 0.0
-        || x >= f64::from(size.0) / scale
-        || y >= f64::from(size.1) / scale
-    {
+    if !x.is_finite() || !y.is_finite() {
+        return None;
+    }
+    if !height.is_finite() || height <= 0.0 || height > 160.0 {
+        return None;
+    }
+    if x < 0.0 || x >= f64::from(size.0) / scale {
+        return None;
+    }
+    if y < 0.0 || y >= f64::from(size.1) / scale {
         return None;
     }
     Some(CaretSample {

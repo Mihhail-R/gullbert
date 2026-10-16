@@ -36,9 +36,13 @@ export function validateDialogue(catalog) {
         for (const pair of value) {
           if (
             typeof pair?.gullbert !== "string" ||
-            typeof pair?.visitor !== "string" ||
-            !(pair.gullbert.trim() || pair.visitor.trim())
+            typeof pair?.visitor !== "string"
           ) {
+            throw new Error(
+              `Dialogue ${path}: each exchange needs both speakers and at least one line`,
+            );
+          }
+          if (!pair.gullbert.trim() && !pair.visitor.trim()) {
             throw new Error(
               `Dialogue ${path}: each exchange needs both speakers and at least one line`,
             );

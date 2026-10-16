@@ -545,9 +545,14 @@ export class TheatreRoutine implements SceneOwner {
     if (
       !sim.policy.visible() ||
       sim.policy.settings().paused ||
-      sim.policy.settings().mischief <= 0 ||
-      this.#scene ||
-      sim.activity.mode !== "idle" ||
+      sim.policy.settings().mischief <= 0
+    ) {
+      return false;
+    }
+    if (this.#scene || sim.activity.mode !== "idle") {
+      return false;
+    }
+    if (
       sim.clock.now < memory.nextAllowed ||
       sim.clock.now < memory.nextCheck
     ) {
@@ -795,71 +800,94 @@ export class TheatreRoutine implements SceneOwner {
       if (elapsed >= scene.arc.duration) {
         this.#landToss(false);
       }
-    } else if (scene.phase === "miss-flail") {
-      const t = clamp((sim.clock.now - scene.phaseStarted) / 0.45, 0, 1);
-      sim.body.place(
-        sim.body.safePoint({
-          x: scene.recoilFrom.x + sim.body.facing * 34 * t,
-          y: scene.recoilFrom.y - Math.sin(t * Math.PI) * 22,
-        }),
-      );
-      if (sim.clock.now >= scene.until) {
-        scene.landFrom = sim.body.y;
-        this.#phase("land", 0.65);
-      }
-    } else if (scene.phase === "land") {
-      const t = clamp((sim.clock.now - scene.phaseStarted) / 0.65, 0, 1);
-      const ground = sim.body.safePoint({ x: sim.body.x, y: scene.groundY }).y;
-      sim.body.place({
-        x: sim.body.x,
-        y: sim.body.safePoint({
-          x: sim.body.x,
-          y: scene.landFrom + (ground - scene.landFrom) * t,
-        }).y,
-      });
-      if (sim.clock.now >= scene.until) {
-        if (scene.caught) {
-          this.#phase("eat", 1.75);
-        } else {
-          this.#phase("miss", 1.1);
+    } else
+      switch (scene.phase) {
+        case "miss-flail": {
+          const t = clamp((sim.clock.now - scene.phaseStarted) / 0.45, 0, 1);
+          sim.body.place(
+            sim.body.safePoint({
+              x: scene.recoilFrom.x + sim.body.facing * 34 * t,
+              y: scene.recoilFrom.y - Math.sin(t * Math.PI) * 22,
+            }),
+          );
+          if (sim.clock.now >= scene.until) {
+            scene.landFrom = sim.body.y;
+            this.#phase("land", 0.65);
+          }
+
+          break;
+        }
+        case "land": {
+          const t = clamp((sim.clock.now - scene.phaseStarted) / 0.65, 0, 1);
+          const ground = sim.body.safePoint({
+            x: sim.body.x,
+            y: scene.groundY,
+          }).y;
+          sim.body.place({
+            x: sim.body.x,
+            y: sim.body.safePoint({
+              x: sim.body.x,
+              y: scene.landFrom + (ground - scene.landFrom) * t,
+            }).y,
+          });
+          if (sim.clock.now >= scene.until) {
+            if (scene.caught) {
+              this.#phase("eat", 1.75);
+            } else {
+              this.#phase("miss", 1.1);
+            }
+          }
+
+          break;
+        }
+        case "miss": {
+          if (sim.clock.now >= scene.until) {
+            this.#phase("retrieve", 8);
+            sim.speech.say(dialogue.gullbert.theatre.groundLunchIsStillLunch);
+          }
+          break;
+        }
+        case "retrieve": {
+          if (scene.chip) {
+            let facing;
+            if (scene.chip.x >= sim.body.x + 48) {
+              facing = 1;
+            } else {
+              facing = -1;
+            }
+            sim.body.moveToward(
+              {
+                x: scene.chip.x - beakOffsetX(facing),
+                y: scene.chip.y - 65,
+                facing,
+              },
+              180,
+              dt,
+            );
+            sim.body.face(facing as -1 | 1);
+            // A lowered peck reaches below the normal flying beak.
+            if (
+              Math.hypot(
+                sim.body.x + beakOffsetX(facing) - scene.chip.x,
+                sim.body.y + 65 - scene.chip.y,
+              ) <= 24
+            ) {
+              scene.chip = null;
+              sim.events.emit("munch");
+              this.#phase("eat", 1.75);
+            } else if (sim.clock.now >= scene.until) {
+              this.#finish(dialogue.gullbert.theatre.savingThatForLater);
+            }
+          }
+          break;
+        }
+        case "eat": {
+          if (sim.clock.now >= scene.until) {
+            this.#finish();
+          }
+          break;
         }
       }
-    } else if (scene.phase === "miss" && sim.clock.now >= scene.until) {
-      this.#phase("retrieve", 8);
-      sim.speech.say(dialogue.gullbert.theatre.groundLunchIsStillLunch);
-    } else if (scene.phase === "retrieve" && scene.chip) {
-      let facing;
-      if (scene.chip.x >= sim.body.x + 48) {
-        facing = 1;
-      } else {
-        facing = -1;
-      }
-      sim.body.moveToward(
-        {
-          x: scene.chip.x - beakOffsetX(facing),
-          y: scene.chip.y - 65,
-          facing,
-        },
-        180,
-        dt,
-      );
-      sim.body.face(facing as -1 | 1);
-      // A lowered peck reaches below the normal flying beak.
-      if (
-        Math.hypot(
-          sim.body.x + beakOffsetX(facing) - scene.chip.x,
-          sim.body.y + 65 - scene.chip.y,
-        ) <= 24
-      ) {
-        scene.chip = null;
-        sim.events.emit("munch");
-        this.#phase("eat", 1.75);
-      } else if (sim.clock.now >= scene.until) {
-        this.#finish(dialogue.gullbert.theatre.savingThatForLater);
-      }
-    } else if (scene.phase === "eat" && sim.clock.now >= scene.until) {
-      this.#finish();
-    }
   }
   #stepBaguette(dt: number) {
     const sim = this.#environment;
@@ -868,38 +896,61 @@ export class TheatreRoutine implements SceneOwner {
       return;
     }
     const speed = Math.max(70, sim.body.width / 9);
-    if (scene.phase === "entrance" && sim.clock.now >= scene.until) {
-      this.#phase("carry", 6);
-    } else if (scene.phase === "carry") {
-      if (
-        sim.body.moveToward(scene.target, speed, dt) ||
-        sim.clock.now >= scene.until
-      ) {
-        this.#phase("pause", 1.7);
+    switch (scene.phase) {
+      case "entrance": {
+        if (sim.clock.now >= scene.until) {
+          this.#phase("carry", 6);
+        }
+        break;
       }
-    } else if (scene.phase === "pause" && sim.clock.now >= scene.until) {
-      this.#phase("exit", 6);
-      let exitX;
-      if (scene.direction === 1) {
-        exitX = sim.body.width - 96;
-      } else {
-        exitX = 0;
+      case "carry": {
+        if (
+          sim.body.moveToward(scene.target, speed, dt) ||
+          sim.clock.now >= scene.until
+        ) {
+          this.#phase("pause", 1.7);
+        }
+
+        break;
       }
-      scene.target = sim.body.safePoint({
-        x: exitX,
-        y: sim.body.y,
-      });
-    } else if (scene.phase === "exit") {
-      if (
-        sim.body.moveToward(scene.target, speed, dt) ||
-        sim.clock.now >= scene.until
-      ) {
-        this.#phase("departure", 0.8);
+      case "pause": {
+        if (sim.clock.now >= scene.until) {
+          this.#phase("exit", 6);
+          let exitX;
+          if (scene.direction === 1) {
+            exitX = sim.body.width - 96;
+          } else {
+            exitX = 0;
+          }
+          scene.target = sim.body.safePoint({
+            x: exitX,
+            y: sim.body.y,
+          });
+        }
+        break;
       }
-    } else if (scene.phase === "departure" && sim.clock.now >= scene.until) {
-      this.#phase("gone", 0.4);
-    } else if (scene.phase === "gone" && sim.clock.now >= scene.until) {
-      this.#finish();
+      case "exit": {
+        if (
+          sim.body.moveToward(scene.target, speed, dt) ||
+          sim.clock.now >= scene.until
+        ) {
+          this.#phase("departure", 0.8);
+        }
+
+        break;
+      }
+      case "departure": {
+        if (sim.clock.now >= scene.until) {
+          this.#phase("gone", 0.4);
+        }
+        break;
+      }
+      case "gone": {
+        if (sim.clock.now >= scene.until) {
+          this.#finish();
+        }
+        break;
+      }
     }
     sim.body.face(scene.direction as -1 | 1);
   }

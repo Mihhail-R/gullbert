@@ -209,12 +209,16 @@ export class PerchRoutine implements SceneOwner {
   }
   maybeVisitPerch() {
     const sim = this.#environment;
+    if (!sim.policy.visible() || sim.policy.settings().paused) {
+      return false;
+    }
+    if (sim.activity.mode !== "idle" || this.#scene) {
+      return false;
+    }
+    if (!sim.belongings.snapshot().memory.perch) {
+      return false;
+    }
     if (
-      !sim.policy.visible() ||
-      sim.policy.settings().paused ||
-      sim.activity.mode !== "idle" ||
-      this.#scene ||
-      !sim.belongings.snapshot().memory.perch ||
       sim.clock.now < sim.activity.until ||
       sim.clock.now < sim.activity.calmUntil ||
       sim.clock.now < this.#nextPerchVisit

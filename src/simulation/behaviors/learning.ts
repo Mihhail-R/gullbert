@@ -96,13 +96,15 @@ export class LearningRoutine implements SceneOwner {
     const trick = this.#mealReward;
     this.#mealReward = null;
     if (trick) {
-      const lessons = sim.belongings.rewardTrick(trick);
-      let line = lines.reinforced;
+      const lessons = sim.belongings.rewardTrick(trick, point);
+      let bank = lines.reinforced;
       if (lessons === 3) {
-        line = lines.learned;
+        bank = lines.learned;
       } else if (lessons >= 6) {
-        line = lines.mastered;
+        bank = lines.mastered;
       }
+      const performed = sim.belongings.snapshot().memory.performances[trick];
+      const line = bank[(performed - 1) % bank.length];
       sim.speech.say(line, 4);
     }
     this.#nextHabit = Math.max(this.#nextHabit, sim.clock.now + 90);
@@ -125,6 +127,7 @@ export class LearningRoutine implements SceneOwner {
     }
     this.#playUntil = 0;
     sim.belongings.rememberScratchAfterPlay();
+    sim.belongings.remember("scratch", "after play", sim.body);
     if (sim.belongings.snapshot().memory.learned.scratchesAfterPlay === 3) {
       sim.speech.say(lines.scratchLearned, 4);
     }
@@ -147,9 +150,11 @@ export class LearningRoutine implements SceneOwner {
     if (
       !sim.policy.visible() ||
       sim.policy.settings().paused ||
-      sim.policy.tidying() ||
-      sim.clock.now < this.#nextHabit
+      sim.policy.tidying()
     ) {
+      return false;
+    }
+    if (sim.clock.now < this.#nextHabit) {
       return false;
     }
     const learned = sim.belongings.snapshot().memory.learned;
@@ -226,13 +231,16 @@ export class LearningRoutine implements SceneOwner {
     }
     this.#identity = Object.freeze({});
     sim.activity.beginRoutine(kind);
-    let line = lines.consider[chosen];
+    const performed = sim.belongings.snapshot().memory.performances[chosen];
+    let bank = lines.consider[chosen];
+    if (practiced) {
+      bank = lines.perform[chosen];
+    }
+    let line = bank[performed % bank.length];
     if (habit) {
       line = lines.checkSpot;
     } else if (this.#scene.unsolicited) {
       line = lines.showoff;
-    } else if (practiced) {
-      line = lines.perform[chosen];
     }
     sim.speech.say(line, 3);
     return true;
@@ -356,8 +364,11 @@ export class LearningRoutine implements SceneOwner {
       this.#phase("check", 3);
       sim.speech.say(lines.emptySpot, 3);
     } else {
+      const trick = this.#scene!.trick;
+      sim.belongings.performed(trick, sim.body);
+      const performed = sim.belongings.snapshot().memory.performances[trick];
       this.#phase("reward", 20);
-      sim.speech.say(lines.reward, 20);
+      sim.speech.say(lines.reward[(performed - 1) % lines.reward.length], 20);
     }
   }
   #finish(): void {

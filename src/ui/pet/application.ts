@@ -51,6 +51,7 @@ export class PetApplication {
   #savedRevision = -1;
   #statusKey = "";
   #storageError = "";
+  #memoryRetryTimer: ReturnType<typeof setTimeout> | undefined;
   #chewingToken: object | null = null;
   #cursorLeaseScene: CursorLeaseScene | null = null;
   #reactionLease: { token: object; id: number } | null = null;
@@ -211,7 +212,14 @@ export class PetApplication {
     if (this.#shutdown) {
       return this.#shutdown;
     }
+    // Retry the latest local snapshot once at shutdown even during retry backoff.
+    this.#dependencies.clock.cancel(this.#memoryRetryTimer);
+    this.#memoryRetryTimer = undefined;
+    this.#remember();
     this.#lifecycle = "disposed";
+    // A synchronous failure of the final save may have scheduled another retry.
+    this.#dependencies.clock.cancel(this.#memoryRetryTimer);
+    this.#memoryRetryTimer = undefined;
     this.#generation++;
     this.#targetGeneration++;
     this.#cancelTick();
@@ -479,9 +487,16 @@ export class PetApplication {
     if (!this.#running()) {
       return;
     }
+    this.#dependencies.clock.cancel(this.#memoryRetryTimer);
+    this.#memoryRetryTimer = undefined;
     if (error) {
       this.#storageError =
-        "Could not save Gullbert's belongings. They remain available for this session.";
+        "Could not save Gullbert's memories. They remain available for this session; retrying shortly.";
+      this.#savedRevision = -1;
+      this.#memoryRetryTimer = this.#dependencies.clock.schedule(() => {
+        this.#memoryRetryTimer = undefined;
+        this.#remember();
+      }, 5000);
     } else {
       this.#storageError = "";
     }
@@ -517,10 +532,12 @@ export class PetApplication {
   }
 
   #remember(): void {
+    if (!this.#running() || !this.#initialized) {
+      return;
+    }
     const revision = this.#dependencies.simulation.status().memoryRevision;
     if (
-      !this.#running() ||
-      !this.#initialized ||
+      this.#memoryRetryTimer !== undefined ||
       this.#savedRevision === revision
     ) {
       return;
@@ -577,13 +594,10 @@ export class PetApplication {
     const sim = this.#dependencies.simulation;
     const encounter = sim.cursorEncounter();
     let caughtPointer = null;
-    if (
-      !this.#dependencies.native &&
-      this.#visible &&
-      !this.#targeting &&
-      encounter?.phase === "chew"
-    ) {
-      caughtPointer = encounter.beak;
+    if (!this.#dependencies.native && this.#visible && !this.#targeting) {
+      if (encounter?.phase === "chew") {
+        caughtPointer = encounter.beak;
+      }
     }
     let grabbable = false;
     let interactiveHover = false;
@@ -744,12 +758,10 @@ export class PetApplication {
       return;
     }
     const sim = this.#dependencies.simulation;
-    if (
-      !this.#drag.active &&
-      !sim.cursorEncounter() &&
-      !(this.#pickupReaction && sim.currentReaction(this.#pickupReaction))
-    ) {
-      return;
+    if (!this.#drag.active && !sim.cursorEncounter()) {
+      if (!this.#pickupReaction || !sim.currentReaction(this.#pickupReaction)) {
+        return;
+      }
     }
     this.#cancelDrag();
     sim.action("cancel");
@@ -860,14 +872,15 @@ export class PetApplication {
       });
     } else {
       const size = this.#dependencies.browser.size();
-      if (
-        !Number.isFinite(point.x) ||
-        !Number.isFinite(point.y) ||
-        point.x < 0 ||
-        point.y < 0 ||
-        point.x >= size.width ||
-        point.y >= size.height
-      ) {
+      if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+        this.#targetNotice({ outcome: "abandoned", id });
+        return;
+      }
+      if (point.x < 0 || point.y < 0) {
+        this.#targetNotice({ outcome: "abandoned", id });
+        return;
+      }
+      if (point.x >= size.width || point.y >= size.height) {
         this.#targetNotice({ outcome: "abandoned", id });
         return;
       }
@@ -1019,12 +1032,8 @@ export class PetApplication {
       return;
     }
     this.#syncBite();
-    if (
-      this.#visible &&
-      !this.#targeting &&
-      !this.#drag.active &&
-      this.#dependencies.simulation.status().watchTyping
-    ) {
+    const canObserve = this.#visible && !this.#targeting && !this.#drag.active;
+    if (canObserve && this.#dependencies.simulation.status().watchTyping) {
       this.#caret.start();
     } else {
       this.#caret.stop();

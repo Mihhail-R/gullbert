@@ -67,7 +67,9 @@ test("postcards emerge from either edge, stay readable during the show, and leav
     assert.equal(sim.inspect().scene, null);
     assert.deepEqual(sim.present().props, []);
     assert.deepEqual(sim.inspect().splats, []);
-    assert.deepEqual(sim.exportMemory(), memory);
+    const saved = sim.exportMemory();
+    assert.equal(saved.episodes.at(-1).detail, "postcards");
+    assert.deepEqual({ ...saved, episodes: [] }, memory);
   }
 });
 
@@ -242,8 +244,10 @@ test("apology carries and offers one chip for two seconds then eats it without a
   advance(sim, 1.1);
   assert.equal(sim.inspect().scene, null);
   assert.equal(sim.inspect().bubble, "glad we resolved that.");
-  assert.deepEqual(sim.exportMemory(), memory);
-  assert.equal(sim.inspect().memoryRevision, revision);
+  const saved = sim.exportMemory();
+  assert.equal(saved.episodes.at(-1).detail, "apology");
+  assert.deepEqual({ ...saved, episodes: [] }, memory);
+  assert.ok(sim.inspect().memoryRevision > revision);
   assert.deepEqual(sim.inspect().events, ["munch"]);
 });
 
@@ -280,13 +284,10 @@ test("resize during each gag keeps all coordinates safe and pointer loss cancels
     for (let i = 0; i < 300; i++) {
       assert.ok(sim.inspect().x >= 0 && sim.inspect().x <= 4);
       assert.ok(sim.inspect().y >= 0 && sim.inspect().y <= 4);
-      assert.ok(
-        sim
-          .inspect()
-          .cones.every(
-            (c) => c.x >= 14 && c.x <= 86 && c.y >= 36 && c.y <= 100,
-          ),
-      );
+      for (const cone of sim.inspect().cones) {
+        assert.ok(cone.x >= 14 && cone.x <= 86);
+        assert.ok(cone.y >= 36 && cone.y <= 100);
+      }
       sim.step(0.05);
     }
     assert.equal(sim.inspect().scene, null, command);

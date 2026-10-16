@@ -1,3 +1,4 @@
+import { memoryDescription, memoryLocation } from "./memory-view.js";
 import type { ActionName } from "../../actions/catalog.js";
 import { setupUpdates } from "./updates.js";
 import { requiredElement } from "../dom.js";
@@ -179,6 +180,13 @@ function roommate(data: RoommateStatus) {
     if (count >= 3) {
       knownTricks += 1;
     }
+    const performed = memory?.performances?.[trick] ?? 0;
+    if (performed > 0) {
+      label += ` · ${performed} performed`;
+    }
+    if (performed > 0 && count === 0) {
+      label = `${performed} performed · no chip rewards yet`;
+    }
     $(`#lesson-${trick}`).textContent = label;
   }
   let summary = "Getting to know you";
@@ -207,6 +215,38 @@ function roommate(data: RoommateStatus) {
     scratch = `Learning your after-play ritual · ${scratches}/3 head scratches.`;
   }
   $("#scratch-ritual").textContent = scratch;
+  const episodes = memory?.episodes ?? [];
+  let memorySummary = "A fresh start";
+  if (episodes.length === 1) {
+    memorySummary = "1 recent memory";
+  } else if (episodes.length > 1) {
+    memorySummary = `${episodes.length} recent memories`;
+  }
+  $("#memory-summary").textContent = memorySummary;
+  $("#memory-empty").hidden = episodes.length > 0;
+  $("#memory-items").replaceChildren(
+    ...episodes
+      .slice(-12)
+      .reverse()
+      .map((event) => {
+        const li = document.createElement("li");
+        const label = document.createElement("strong");
+        const context = document.createElement("small");
+        const time = document.createElement("time");
+        label.textContent = memoryDescription(event);
+        const date = new Date(event.at);
+        time.dateTime = date.toISOString();
+        time.textContent = date.toLocaleString(undefined, {
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        context.append(time, ` · ${memoryLocation(event)}`);
+        li.append(label, context);
+        return li;
+      }),
+  );
   const entries = Object.entries(memory?.collection ?? {}).filter(
     (entry): entry is [Collectible, number] => {
       return isCollectible(entry[0]) && entry[1] > 0;

@@ -44,13 +44,20 @@ export function validateActions(catalog) {
       fields.push("purpose", "preparation");
       if (
         typeof action.purpose !== "string" ||
-        !/^[a-z_]+$/.test(action.purpose) ||
-        !["cancel", "prepare_chip", "tidy"].includes(action.preparation) ||
+        !/^[a-z_]+$/.test(action.purpose)
+      ) {
+        fail(name);
+      }
+      if (!["cancel", "prepare_chip", "tidy"].includes(action.preparation)) {
+        fail(name);
+      }
+      if (
         (action.purpose === "tidy") !== (action.preparation === "tidy") ||
         (action.purpose === "feed_here") !==
           (action.preparation === "prepare_chip")
-      )
+      ) {
         fail(name);
+      }
     } else if (
       ![
         "hide",

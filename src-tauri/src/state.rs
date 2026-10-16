@@ -31,7 +31,7 @@ pub(crate) struct State {
     pub(crate) settings: Mutex<Settings>,
     pub(crate) visible: AtomicBool,
     pub(crate) shortcut_errors: Mutex<Vec<String>>,
-    pub(crate) roommate: Mutex<serde_json::Value>,
+    pub(crate) roommate: Mutex<Result<serde_json::Value, String>>,
 }
 impl Default for State {
     fn default() -> Self {
@@ -39,7 +39,7 @@ impl Default for State {
             settings: Mutex::new(Settings::default()),
             visible: AtomicBool::new(true),
             shortcut_errors: Mutex::new(vec![]),
-            roommate: Mutex::new(serde_json::Value::Null),
+            roommate: Mutex::new(Err("Memory has not been loaded".into())),
         }
     }
 }

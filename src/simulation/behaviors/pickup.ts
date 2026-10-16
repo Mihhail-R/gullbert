@@ -77,12 +77,13 @@ export function pickupRect(
 export function canPickup(
   sim: Readonly<Pick<SimulationView, "visible" | "tidying" | "scene" | "time">>,
 ): boolean {
-  return (
-    sim.visible &&
-    !sim.tidying &&
-    !(sim.scene?.kind === "gift" && sim.scene.phase === "away") &&
-    theatreOffset(sim).opacity * gagOffset(sim).opacity > 0
-  );
+  if (!sim.visible || sim.tidying) {
+    return false;
+  }
+  if (sim.scene?.kind === "gift" && sim.scene.phase === "away") {
+    return false;
+  }
+  return theatreOffset(sim).opacity * gagOffset(sim).opacity > 0;
 }
 
 /** Owns each hold, rolling history, retaliation budget and relocation lifecycle. */
@@ -197,14 +198,13 @@ export class Pickup implements SceneOwner {
     const visual = context.visual();
     const rect = gullRect(context.body);
     rect.x += visual.x;
-    if (
-      !context.visible() ||
-      context.tidying() ||
-      visual.gone ||
-      !(visual.opacity > 0) ||
-      this.#state.held ||
-      !contains(rect, point)
-    ) {
+    if (!context.visible() || context.tidying()) {
+      return false;
+    }
+    if (visual.gone || !(visual.opacity > 0)) {
+      return false;
+    }
+    if (this.#state.held || !contains(rect, point)) {
       return false;
     }
     this.updateClock(now);

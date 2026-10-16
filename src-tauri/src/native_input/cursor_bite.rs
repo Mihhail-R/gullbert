@@ -36,7 +36,10 @@ impl CursorBite {
         self.caught.is_some()
     }
     pub fn update(&mut self, id: u64, now: Instant, point: (f64, f64)) -> bool {
-        if !self.movable || id != self.id || !point.0.is_finite() || !point.1.is_finite() {
+        if !self.movable || id != self.id {
+            return false;
+        }
+        if !point.0.is_finite() || !point.1.is_finite() {
             return false;
         }
         let Some(armed) = self.armed else {

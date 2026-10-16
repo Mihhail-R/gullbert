@@ -98,8 +98,8 @@ export class Gullbert {
     this.#visible = true;
     this.#body = new Body(width, height);
     this.#objects = new Props(width, height);
-    this.#belongings = new Belongings(width, height);
     this.#wallNow = options.now ?? Date.now;
+    this.#belongings = new Belongings(width, height, this.#wallNow);
     this.#moods = new Mood(
       () => {
         return this.#random();
@@ -318,7 +318,7 @@ export class Gullbert {
     return true;
   }
   exportMemory(): Memory {
-    return this.#belongings.snapshot().memory;
+    return this.#belongings.exportMemory();
   }
   restoreMemory(data: unknown) {
     this.#learning.cancelAssociations();
@@ -376,12 +376,11 @@ export class Gullbert {
     if (this.#visible && this.#registry.scene?.kind === "cursor_egg") {
       return true;
     }
-    return (
-      this.#visible &&
-      !this.#settings.paused &&
-      this.#registry.scene?.kind === "cursor" &&
-      this.#registry.scene.phase !== "chew"
-    );
+    if (!this.#visible || this.#settings.paused) {
+      return false;
+    }
+    const scene = this.#registry.scene;
+    return scene?.kind === "cursor" && scene.phase !== "chew";
   }
   pointer(point: PointerSample | null): void {
     this.#touch.pointer(point);
@@ -659,16 +658,19 @@ export class Gullbert {
     }
     if (
       this.#objects.snapshot().bag &&
-      this.#time >= this.#cleanup.snapshot().suppressUntil &&
-      this.#settings.mischief > 0 &&
-      this.#time >= this.#food.snapshot().nextCrime
+      this.#time >= this.#cleanup.snapshot().suppressUntil
     ) {
-      if (this.#random() < 0.55) {
-        this.action("steal_bag");
-      } else {
-        this.action("bag_caper");
+      if (
+        this.#settings.mischief > 0 &&
+        this.#time >= this.#food.snapshot().nextCrime
+      ) {
+        if (this.#random() < 0.55) {
+          this.action("steal_bag");
+        } else {
+          this.action("bag_caper");
+        }
+        return;
       }
-      return;
     }
     if (
       (this.#objects.snapshot().bag?.servings ?? 0) > 0 &&
@@ -763,15 +765,16 @@ export class Gullbert {
     if (settings.paused && this.#activity.mode === "walk") {
       this.#rest();
     }
-    if (
-      settings.paused &&
-      (this.#registry.scene?.kind === "cursor" ||
-        this.#registry.scene?.kind === "cap" ||
-        this.#registry.scene?.kind === "trick" ||
-        this.#registry.scene?.kind === "habit")
-    ) {
-      this.#cancelScene();
-      this.#rest();
+    if (settings.paused) {
+      switch (this.#registry.scene?.kind) {
+        case "cursor":
+        case "cap":
+        case "trick":
+        case "habit":
+          this.#cancelScene();
+          this.#rest();
+          break;
+      }
     }
     if (settings.paused || settings.mischief === 0) {
       this.#food.clearRequest();
@@ -785,13 +788,15 @@ export class Gullbert {
     this.#nextMischief = this.#time + mischiefDelay;
   }
   get moving() {
-    return (
-      Boolean(this.#pickup.snapshot().held?.dragged) ||
+    if (
+      this.#pickup.snapshot().held?.dragged ||
       this.#registry.active ||
-      Boolean(this.#activity.goal) ||
-      ["drop", "land", "nap", "preen", "tilt", "stretch"].includes(
-        this.#activity.mode,
-      )
+      this.#activity.goal
+    ) {
+      return true;
+    }
+    return ["drop", "land", "nap", "preen", "tilt", "stretch"].includes(
+      this.#activity.mode,
     );
   }
   get pose(): Pose {
@@ -1017,11 +1022,25 @@ export class Gullbert {
 
   #completeRoutine(): void {
     const scene = this.#registry.scene;
-    const played =
-      (scene?.kind === "cap" &&
-        scene.phase === "victory" &&
-        scene.rounds >= 3) ||
-      (scene?.kind === "toss" && scene.phase === "eat");
+    let played = false;
+    switch (scene?.kind) {
+      case "cap":
+        played = scene.phase === "victory" && scene.rounds >= 3;
+        break;
+      case "toss":
+        played = scene.phase === "eat";
+        break;
+    }
+    if (
+      scene &&
+      !["trick", "habit", "guest", "gift", "typing"].includes(scene.kind)
+    ) {
+      if (played) {
+        this.#belongings.remember("play", scene.kind, this.#body);
+      } else {
+        this.#belongings.remember("activity", scene.kind, this.#body);
+      }
+    }
     this.#objects.releaseBag();
     this.#registry.complete();
     if (played) {
@@ -1063,8 +1082,7 @@ export class Gullbert {
       animate:
         this.moving ||
         this.tidying ||
-        this.#activity.mode === "eat" ||
-        this.#activity.mode === "squawk",
+        ["eat", "squawk"].includes(this.#activity.mode),
       held: Boolean(this.#pickup.snapshot().held),
       dragged: Boolean(this.#pickup.snapshot().held?.dragged),
     });
@@ -1114,11 +1132,17 @@ export class Gullbert {
   }
   currentReaction(token: object): boolean {
     const scene = this.#registry.scene;
-    return (
-      token === this.#reactionToken &&
-      (scene?.kind === "relocation" ||
-        (scene?.kind === "cursor" && Boolean(scene.retaliation)))
-    );
+    if (token !== this.#reactionToken) {
+      return false;
+    }
+    switch (scene?.kind) {
+      case "relocation":
+        return true;
+      case "cursor":
+        return Boolean(scene.retaliation);
+      default:
+        return false;
+    }
   }
   armReaction(token: object, id: number): boolean {
     if (!Number.isFinite(id) || !this.currentReaction(token)) {

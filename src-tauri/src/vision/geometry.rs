@@ -18,7 +18,10 @@ impl Rect {
 }
 pub(super) fn crop(monitor: Rect, pointer: (i32, i32)) -> Option<Rect> {
     let (x, y) = pointer;
-    if x < monitor.left || x >= monitor.right || y < monitor.top || y >= monitor.bottom {
+    if x < monitor.left || x >= monitor.right {
+        return None;
+    }
+    if y < monitor.top || y >= monitor.bottom {
         return None;
     }
     // A fixed physical-pixel budget bounds allocation and OCR cost at every DPI.
@@ -50,13 +53,13 @@ impl Nearest {
         }
     }
     pub fn word(&mut self, rect: Rect, glyph: char) {
-        if rect.left < 0
-            || rect.top < 0
-            || rect.right > self.crop.width()
-            || rect.bottom > self.crop.height()
-            || rect.width() <= 0
-            || !(6..=100).contains(&rect.height())
-        {
+        if rect.left < 0 || rect.right > self.crop.width() {
+            return;
+        }
+        if rect.top < 0 || rect.bottom > self.crop.height() {
+            return;
+        }
+        if rect.width() <= 0 || !(6..=100).contains(&rect.height()) {
             return;
         }
         let left = f64::from(self.crop.left) + f64::from(rect.left);
