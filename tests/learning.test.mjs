@@ -467,6 +467,111 @@ test("a snack forgives immediately without waiting for the cooldown", () => {
   perform(sim);
 });
 
+test("a consumed bag serving settles snack debt and records exactly one meal", () => {
+  const sim = setup({ now: () => 1000 });
+  sim.restoreMemory({
+    unpaidTricks: 2,
+    trickRefusals: 2,
+    trickCooldownUntilMs: 121_000,
+  });
+  sim.action("place_bag", { x: 300, y: 300 });
+  assert.equal(sim.exportMemory().unpaidTricks, 2);
+  advance(sim, 15);
+  assert.equal(sim.inspect().bag.servings, 2);
+  const memory = sim.exportMemory();
+  assert.equal(memory.unpaidTricks, 0);
+  assert.equal(memory.trickRefusals, 0);
+  assert.equal(memory.trickCooldownUntilMs, null);
+  assert.equal(memory.episodes.filter((episode) => episode.kind === "meal").length, 1);
+  assert.equal(memory.learned.snackSpot.meals, 1);
+  assert.equal(sim.inspect().mood.name, "snack-minded");
+  perform(sim);
+});
+
+test("caught and retrieved tossed chips settle debt only when consumed", () => {
+  for (const caught of [true, false]) {
+    const width = caught ? 900 : 2400;
+    const random = caught ? 0.5 : 0.1;
+    const sim = new Gullbert(width, 650, () => random, { now: () => 1000 });
+    sim.configure({ paused: true, mischief: 0 });
+    sim.restoreMemory({ unpaidTricks: 2, trickRefusals: 2 });
+    const point = caught ? { x: 650, y: 480 } : { x: 2300, y: 500 };
+    sim.action("chip_toss", point);
+    assert.equal(sim.exportMemory().unpaidTricks, 2);
+
+    if (!caught) {
+      reach(sim, "retrieve");
+      assert.equal(sim.exportMemory().unpaidTricks, 2);
+    }
+
+    reach(sim, "eat");
+    assert.equal(sim.inspect().scene.caught, caught);
+    advance(sim, 3);
+    const memory = sim.exportMemory();
+    assert.equal(memory.unpaidTricks, 0);
+    assert.equal(memory.trickRefusals, 0);
+    assert.equal(memory.trickCooldownUntilMs, null);
+    assert.equal(memory.episodes.filter((episode) => episode.kind === "meal").length, 1);
+    assert.equal(memory.learned.snackSpot.meals, 1);
+  }
+});
+
+test("other chip meals settle debt without rewarding an interrupted trick", () => {
+  for (const command of ["place_bag", "chip_toss", "bring_gift", "apology"]) {
+    const sim = new Gullbert(900, 650, () => 0.95, { now: () => 1000 });
+    sim.configure({ paused: true, mischief: 0 });
+    perform(sim);
+    sim.action(command, { x: 650, y: 480 });
+    advance(sim, 20);
+    const memory = sim.exportMemory();
+    assert.equal(memory.unpaidTricks, 0, command);
+    assert.equal(memory.learned.tricks.spin, 0, command);
+    assert.equal(memory.learned.snackSpot.meals, 1, command);
+  }
+});
+
+test("bag meals teach a snack spot once per serving, and an empty bag earns no credit", () => {
+  const sim = setup({ now: () => 1000 });
+  sim.action("place_bag", { x: 300, y: 300 });
+  advance(sim, 10);
+
+  for (let serving = 0; serving < 2; serving++) {
+    sim.action("search_snack");
+    advance(sim, 10);
+  }
+
+  assert.equal(sim.inspect().bag.servings, 0);
+  assert.equal(sim.exportMemory().learned.snackSpot.meals, 3);
+  sim.restoreMemory({ ...sim.exportMemory(), unpaidTricks: 2 });
+  sim.action("search_snack");
+  advance(sim, 10);
+  assert.equal(sim.exportMemory().unpaidTricks, 2);
+  assert.equal(sim.exportMemory().learned.snackSpot.meals, 3);
+});
+
+test("cancelled chip meals and non-eating bag scenes leave snack debt unpaid", () => {
+  for (const command of ["place_bag", "chip_toss", "bring_gift", "apology"]) {
+    const sim = setup({ now: () => 1000 });
+    sim.restoreMemory({ unpaidTricks: 2 });
+    sim.action(command);
+    sim.action("cancel");
+    advance(sim, 20);
+    assert.equal(sim.exportMemory().unpaidTricks, 2, command);
+    assert.equal(sim.exportMemory().learned.snackSpot, null, command);
+  }
+
+  for (const command of ["steal_bag", "bag_caper", "invite_pigeon", "gull_argument"]) {
+    const sim = setup({ now: () => 1000 });
+    sim.restoreMemory({ unpaidTricks: 2 });
+    sim.action("place_bag");
+    sim.action(command);
+    advance(sim, 30);
+    assert.equal(sim.inspect().bag.servings, 3, command);
+    assert.equal(sim.exportMemory().unpaidTricks, 2, command);
+    assert.equal(sim.exportMemory().learned.snackSpot, null, command);
+  }
+});
+
 test("the second unpaid trick is deliberately slow and still earns a real reward", () => {
   for (const trick of ["come", "spin", "dead"]) {
     const sim = setup();

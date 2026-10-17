@@ -119,7 +119,7 @@ export class Gullbert {
         this.#sounds.push(sound);
       },
       ateChip: (point) => {
-        this.#learning.ateChip(point);
+        this.#learning.ateMeal(point);
       },
     });
     this.#food = new FoodPolicy(this.#random);
@@ -1040,6 +1040,11 @@ export class Gullbert {
       food: this.#food,
       belongings: this.#belongings,
       moods: this.#moods,
+      meals: Object.freeze({
+        consumed(point: Point) {
+          runtime.#learning.ateMeal(point);
+        },
+      }),
       destinations: Object.freeze({
         randomPoint() {
           return runtime.#randomPoint();

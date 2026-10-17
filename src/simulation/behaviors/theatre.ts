@@ -41,6 +41,7 @@ type Environment = Pick<
   | "commands"
   | "events"
   | "food"
+  | "meals"
 >;
 export class TheatreRoutine implements SceneOwner {
   #environment: Environment;
@@ -60,6 +61,7 @@ export class TheatreRoutine implements SceneOwner {
       "commands",
       "events",
       "food",
+      "meals",
     ]);
   }
   get scene(): ReadonlyValue<OwnedScene> | null {
@@ -568,6 +570,7 @@ export class TheatreRoutine implements SceneOwner {
       scene.chip = null;
       sim.events.emit("munch");
       sim.food.clearRequest();
+      sim.meals.consumed({ x: sim.body.x, y: sim.body.y });
       sim.speech.say(dialogue.gullbert.theatre.beakOfTheMatch);
     } else {
       sim.speech.say(dialogue.gullbert.theatre.theWindCheated, 2.5);
@@ -636,105 +639,109 @@ export class TheatreRoutine implements SceneOwner {
       if (elapsed >= scene.arc.duration) {
         this.#landToss(false);
       }
-    } else {
-      switch (scene.phase) {
-        case "miss-flail": {
-          const t = clamp((sim.clock.now - scene.phaseStarted) / 0.45, 0, 1);
-          sim.body.place(
-            sim.body.safePoint({
-              x: scene.recoilFrom.x + sim.body.facing * 34 * t,
-              y: scene.recoilFrom.y - Math.sin(t * Math.PI) * 22,
-            }),
+
+      return;
+    }
+
+    switch (scene.phase) {
+      case "miss-flail": {
+        const t = clamp((sim.clock.now - scene.phaseStarted) / 0.45, 0, 1);
+        sim.body.place(
+          sim.body.safePoint({
+            x: scene.recoilFrom.x + sim.body.facing * 34 * t,
+            y: scene.recoilFrom.y - Math.sin(t * Math.PI) * 22,
+          }),
+        );
+
+        if (sim.clock.now >= scene.until) {
+          scene.landFrom = sim.body.y;
+          this.#phase("land", 0.65);
+        }
+
+        break;
+      }
+
+      case "land": {
+        const t = clamp((sim.clock.now - scene.phaseStarted) / 0.65, 0, 1);
+        const ground = sim.body.safePoint({
+          x: sim.body.x,
+          y: scene.groundY,
+        }).y;
+        sim.body.place({
+          x: sim.body.x,
+          y: sim.body.safePoint({
+            x: sim.body.x,
+            y: scene.landFrom + (ground - scene.landFrom) * t,
+          }).y,
+        });
+
+        if (sim.clock.now >= scene.until) {
+          if (scene.caught) {
+            this.#phase("eat", 1.75);
+          } else {
+            this.#phase("miss", 1.1);
+          }
+        }
+
+        break;
+      }
+
+      case "miss": {
+        if (sim.clock.now >= scene.until) {
+          this.#phase("retrieve", 8);
+          sim.speech.say(dialogue.gullbert.theatre.groundLunchIsStillLunch);
+        }
+
+        break;
+      }
+
+      case "retrieve": {
+        if (scene.chip) {
+          let facing;
+
+          if (scene.chip.x >= sim.body.x + 48) {
+            facing = 1;
+          } else {
+            facing = -1;
+          }
+
+          sim.body.moveToward(
+            {
+              x: scene.chip.x - beakOffsetX(facing),
+              y: scene.chip.y - 65,
+              facing,
+            },
+            180,
+            dt,
           );
+          sim.body.face(facing as -1 | 1);
 
-          if (sim.clock.now >= scene.until) {
-            scene.landFrom = sim.body.y;
-            this.#phase("land", 0.65);
+          // A lowered peck reaches below the normal flying beak.
+          if (
+            Math.hypot(
+              sim.body.x + beakOffsetX(facing) - scene.chip.x,
+              sim.body.y + 65 - scene.chip.y,
+            ) <= 24
+          ) {
+            scene.chip = null;
+            sim.events.emit("munch");
+            sim.food.clearRequest();
+            sim.meals.consumed({ x: sim.body.x, y: sim.body.y });
+            this.#phase("eat", 1.75);
+          } else if (sim.clock.now >= scene.until) {
+            this.#finish(dialogue.gullbert.theatre.savingThatForLater);
           }
-
-          break;
         }
 
-        case "land": {
-          const t = clamp((sim.clock.now - scene.phaseStarted) / 0.65, 0, 1);
-          const ground = sim.body.safePoint({
-            x: sim.body.x,
-            y: scene.groundY,
-          }).y;
-          sim.body.place({
-            x: sim.body.x,
-            y: sim.body.safePoint({
-              x: sim.body.x,
-              y: scene.landFrom + (ground - scene.landFrom) * t,
-            }).y,
-          });
+        break;
+      }
 
-          if (sim.clock.now >= scene.until) {
-            if (scene.caught) {
-              this.#phase("eat", 1.75);
-            } else {
-              this.#phase("miss", 1.1);
-            }
-          }
-
-          break;
+      case "eat": {
+        if (sim.clock.now >= scene.until) {
+          this.#finish();
         }
 
-        case "miss": {
-          if (sim.clock.now >= scene.until) {
-            this.#phase("retrieve", 8);
-            sim.speech.say(dialogue.gullbert.theatre.groundLunchIsStillLunch);
-          }
-
-          break;
-        }
-
-        case "retrieve": {
-          if (scene.chip) {
-            let facing;
-
-            if (scene.chip.x >= sim.body.x + 48) {
-              facing = 1;
-            } else {
-              facing = -1;
-            }
-
-            sim.body.moveToward(
-              {
-                x: scene.chip.x - beakOffsetX(facing),
-                y: scene.chip.y - 65,
-                facing,
-              },
-              180,
-              dt,
-            );
-            sim.body.face(facing as -1 | 1);
-
-            // A lowered peck reaches below the normal flying beak.
-            if (
-              Math.hypot(
-                sim.body.x + beakOffsetX(facing) - scene.chip.x,
-                sim.body.y + 65 - scene.chip.y,
-              ) <= 24
-            ) {
-              scene.chip = null;
-              sim.events.emit("munch");
-              this.#phase("eat", 1.75);
-            } else if (sim.clock.now >= scene.until) {
-              this.#finish(dialogue.gullbert.theatre.savingThatForLater);
-            }
-          }
-
-          break;
-        }
-
-        case "eat": {
-          if (sim.clock.now >= scene.until) {
-            this.#finish();
-          }
-
-          break;
-        }
+        break;
       }
     }
   }

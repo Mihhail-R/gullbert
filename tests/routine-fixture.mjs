@@ -202,6 +202,11 @@ export function routineFixture(Routine, random = () => 0.5) {
   capabilities.objects = objects;
   capabilities.body = body;
   capabilities.belongings = new Belongings(sim.width, sim.height);
+  capabilities.meals = {
+    consumed(point) {
+      capabilities.belongings.rememberMeal(point);
+    },
+  };
   capabilities.random = () => sim.random();
   capabilities.clock = {
     get now() {

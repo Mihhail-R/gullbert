@@ -220,6 +220,7 @@ type Environment = Pick<
   | "commands"
   | "movement"
   | "events"
+  | "meals"
 >;
 export class GagRoutine implements SceneOwner {
   #environment: Environment;
@@ -240,6 +241,7 @@ export class GagRoutine implements SceneOwner {
       "commands",
       "movement",
       "events",
+      "meals",
     ]);
   }
   get scene(): ReadonlyValue<OwnedScene> | null {
@@ -987,6 +989,7 @@ export class GagRoutine implements SceneOwner {
         if (sim.clock.now >= scene.until) {
           this.#phase(scene, "eat", 1);
           sim.events.emit("munch");
+          sim.meals.consumed({ x: sim.body.x, y: sim.body.y });
         }
 
         break;

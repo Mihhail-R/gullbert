@@ -299,7 +299,10 @@ test("apology carries and offers one chip for two seconds then eats it without a
   assert.equal(sim.inspect().bubble, "glad we resolved that.");
   const saved = sim.exportMemory();
   assert.equal(saved.episodes.at(-1).detail, "apology");
-  assert.deepEqual({ ...saved, episodes: [] }, memory);
+  assert.equal(saved.episodes.filter((episode) => episode.kind === "meal").length, 1);
+  assert.equal(saved.learned.snackSpot.meals, 1);
+  assert.deepEqual(saved.learned.tricks, memory.learned.tricks);
+  assert.deepEqual({ ...saved, episodes: [], learned: memory.learned }, memory);
   assert.ok(sim.inspect().memoryRevision > revision);
   assert.deepEqual(sim.inspect().events, ["munch"]);
 });

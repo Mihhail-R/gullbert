@@ -77,6 +77,7 @@ export interface BehaviorCapabilities extends RoutineCapabilities {
     | "forgetLearning"
   >;
   readonly moods: Pick<Mood, "set" | "settleOffence">;
+  readonly meals: { consumed(point: Point): void };
   readonly destinations: { randomPoint(): Point };
   readonly policy: {
     settings(): Readonly<Settings>;

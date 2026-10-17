@@ -93,11 +93,13 @@ export class LearningRoutine implements SceneOwner {
     this.#playUntil = 0;
   }
 
-  ateChip(point: Point): void {
+  ateMeal(point: Point): void {
     const sim = this.#environment;
     const wasUnpaid = sim.belongings.snapshot().memory.unpaidTricks >= 2;
+
     sim.belongings.rememberMeal(point);
     sim.moods.settleOffence();
+
     const trick = this.#mealReward;
     this.#mealReward = null;
 
