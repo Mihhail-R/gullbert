@@ -10,7 +10,7 @@ Gullbert roams your desktop, demands chips, learns tricks, collects questionable
 
 ## Requirements and installation
 
-- **macOS 11+**, Apple Silicon (M-series). Download the `darwin-aarch64.dmg` and drag Gullbert into Applications. Intel Macs are not supported.
+- **macOS 11+**, Apple Silicon (M-series). Download the `darwin-aarch64.dmg` and drag Gullbert into Applications.
 - **Windows 10+**, x64, with WebView2. Download and run the `setup.exe`.
 
 Gullbert has been tested on the maintainers' Apple Silicon Mac and Windows PC. Testing does not yet cover every OS version or display configuration.
