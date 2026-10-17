@@ -15,13 +15,13 @@ function episode(id, kind, detail) {
   };
 }
 
-function selectionCounts(memory, mischief = 1) {
+function selectionCounts(memory, mischief = 1, motivation) {
   const counts = { habit_snack: 0, show_spin: 0, show_dead: 0, play_cap: 0, none: 0 };
 
   // Sweep the draw rather than relying on flaky random samples.
   for (let draw = 0; draw < 1000; draw++) {
     const habits = new Habits();
-    const command = habits.choose(memory, 90, mischief, () => draw / 1000);
+    const command = habits.choose(memory, 90, mischief, () => draw / 1000, motivation);
     counts[command ?? "none"] += 1;
   }
 
@@ -36,6 +36,36 @@ test("a first reward influences autonomy without guaranteeing a performance", ()
   assert.ok(first.show_spin > 0);
   assert.ok(practiced.show_spin > first.show_spin);
   assert.ok(practiced.none > 0);
+});
+
+test("energy and social interest change learned choices without overriding their evidence", () => {
+  const memory = normalizeMemory({ episodes: [episode(1, "play", "cap")] });
+  const neutral = { energy: 0.5, curiosity: 0.5, socialInterest: 0.5 };
+  const rested = selectionCounts(memory, 1, { ...neutral, energy: 0.8 });
+  const tired = selectionCounts(memory, 1, { ...neutral, energy: 0.2 });
+  const sociable = selectionCounts(memory, 1, { ...neutral, socialInterest: 0.8 });
+  assert.ok(rested.play_cap > tired.play_cap);
+  assert.ok(sociable.play_cap > selectionCounts(memory, 1, neutral).play_cap);
+  assert.ok(sociable.none > 0, "even a sociable gull can leave you alone");
+  assert.equal(selectionCounts(normalizeMemory(), 1, neutral).play_cap, 0);
+  assert.equal(selectionCounts(memory, 0, neutral).play_cap, 0);
+
+  const habits = new Habits();
+  assert.equal(habits.choose(memory, 90, 1, () => 0, neutral), "play_cap");
+  const eager = { energy: 0.8, curiosity: 0.8, socialInterest: 0.8 };
+  assert.equal(habits.choose(memory, 200, 1, () => 0, eager), null);
+});
+
+test("curiosity encourages checking familiar places", () => {
+  const memory = normalizeMemory({
+    learned: { snackSpot: { x: 100, y: 100, meals: 3 } },
+  });
+  const content = { energy: 0.5, curiosity: 0.2, socialInterest: 0.5 };
+  const curious = { ...content, curiosity: 0.8 };
+  assert.ok(
+    selectionCounts(memory, 0, curious).habit_snack >
+    selectionCounts(memory, 0, content).habit_snack,
+  );
 });
 
 test("recent reward outcomes outweigh older success even at equal mastery", () => {

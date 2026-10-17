@@ -146,3 +146,41 @@ test("autonomy respects cooldown, pause and no immediate repetition", () => {
   sim.settings.paused = true;
   assert.equal(sim.routine.choose(), null);
 });
+
+test("energy favors rest while curiosity favors inspecting and wandering", () => {
+  function choices(motivation) {
+    const counts = { nap: 0, preen: 0, tilt: 0, stretch: 0, walk: 0 };
+
+    for (let draw = 0; draw < 1000; draw++) {
+      const sim = bird(() => draw / 1000);
+      sim.routine.choose(motivation);
+      sim.time = 20;
+      counts[sim.routine.choose(motivation) ?? "walk"] += 1;
+    }
+
+    return counts;
+  }
+
+  const neutral = { energy: 0.5, curiosity: 0.5, socialInterest: 0.5 };
+  const tired = choices({ ...neutral, energy: 0.2 });
+  const rested = choices({ ...neutral, energy: 0.8 });
+  const curious = choices({ ...neutral, curiosity: 0.8 });
+  const content = choices({ ...neutral, curiosity: 0.2 });
+  assert.ok(tired.nap > rested.nap * 2);
+  assert.ok(curious.tilt > content.tilt);
+  assert.ok(curious.walk > content.walk);
+  assert.ok(tired.tilt > 0, "low energy is a preference, never a ban");
+});
+
+test("a curious walk consumes the quiet slot and does not bypass pause", () => {
+  const sim = bird(() => 0.99);
+  const curious = { energy: 0.8, curiosity: 0.8, socialInterest: 0.8 };
+  sim.routine.choose(curious);
+  sim.time = 20;
+  assert.equal(sim.routine.choose(curious), null);
+  assert.equal(sim.routine.snapshot().nextQuiet, 34);
+  sim.time = 34;
+  sim.settings.paused = true;
+  assert.equal(sim.routine.choose(curious), null);
+  assert.equal(sim.routine.snapshot().nextQuiet, 34);
+});
