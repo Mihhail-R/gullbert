@@ -4,6 +4,7 @@ import {
 } from "../capabilities.js";
 import { dialogue } from "../dialogue.js";
 import { beakOffsetX, clamp } from "../geometry.js";
+import { Habits } from "../habits.js";
 import type { Point, SceneProp, Trick } from "../model.js";
 import { observe } from "../observation.js";
 import type { Pose } from "../poses.js";
@@ -40,7 +41,7 @@ export class LearningRoutine implements SceneOwner {
   #identity: object = Object.freeze({});
   #mealReward: Trick | null = null;
   #playUntil = 0;
-  #nextHabit = 90;
+  #habits = new Habits();
 
   constructor(environment: Environment) {
     this.#environment = scopeCapabilities(environment, [
@@ -93,6 +94,10 @@ export class LearningRoutine implements SceneOwner {
     this.#playUntil = 0;
   }
 
+  resetHabits(): void {
+    this.#habits.reset(this.#environment.clock.now);
+  }
+
   ateChip(point: Point): void {
     const sim = this.#environment;
     const wasUnpaid = sim.belongings.snapshot().memory.unpaidTricks >= 2;
@@ -120,11 +125,12 @@ export class LearningRoutine implements SceneOwner {
       sim.speech.say(lines.settled, 4);
     }
 
-    this.#nextHabit = Math.max(this.#nextHabit, sim.clock.now + 90);
+    this.#habits.ate(sim.clock.now);
   }
 
   playCompleted(): void {
     const sim = this.#environment;
+    this.#habits.played(sim.clock.now);
     this.#playUntil = sim.clock.now + 18;
     // Leave a quiet, touchable moment after a game, including the first lesson.
     sim.activity.settleUntil(sim.clock.now + 12);
@@ -175,36 +181,17 @@ export class LearningRoutine implements SceneOwner {
       return false;
     }
 
-    if (sim.clock.now < this.#nextHabit) {
+    const command = this.#habits.choose(
+      sim.belongings.snapshot().memory,
+      sim.clock.now,
+      sim.policy.settings().mischief,
+      sim.random,
+    );
+
+    if (!command) {
       return false;
     }
 
-    const learned = sim.belongings.snapshot().memory.learned;
-    const choices: string[] = [];
-
-    if (learned.snackSpot && learned.snackSpot.meals >= 3) {
-      choices.push("habit_snack");
-    }
-
-    if (sim.policy.settings().mischief > 0) {
-      for (const trick of ["spin", "dead"] as const) {
-        const paid = sim.belongings.snapshot().memory.unpaidTricks < 2;
-
-        if (learned.tricks[trick] >= 3 && paid) {
-          choices.push(`show_${trick}`);
-        }
-      }
-    }
-
-    if (!choices.length) {
-      return false;
-    }
-
-    const command =
-      choices[
-        Math.min(choices.length - 1, Math.floor(sim.random() * choices.length))
-      ];
-    this.#nextHabit = sim.clock.now + 120 + sim.random() * 90;
     sim.commands.action(command);
     return true;
   }
@@ -214,13 +201,15 @@ export class LearningRoutine implements SceneOwner {
 
     if (name === "forget_learning") {
       this.cancelAssociations();
+      this.resetHabits();
       sim.belongings.forgetLearning();
       sim.lifecycle.rest(3);
       sim.speech.say(lines.forgotten, 3);
       return true;
     }
 
-    const snackSpot = sim.belongings.snapshot().memory.learned.snackSpot;
+    const memory = sim.belongings.snapshot().memory;
+    const snackSpot = memory.learned.snackSpot;
     const habit = name === "habit_snack" && snackSpot !== null;
     const trick = commands[name];
 
@@ -248,11 +237,9 @@ export class LearningRoutine implements SceneOwner {
       kind = "habit";
     }
 
-    const memory = sim.belongings.snapshot().memory;
     const requested = name.startsWith("trick_");
     const chosen = trick ?? "come";
-    const practiced =
-      sim.belongings.snapshot().memory.learned.tricks[chosen] >= 3;
+    const practiced = memory.learned.tricks[chosen] >= 3;
     this.#scene = {
       kind,
       trick: chosen,
