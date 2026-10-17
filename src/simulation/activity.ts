@@ -9,6 +9,7 @@ interface Effects {
   mood(name: MoodName): void;
   emit(sound: Sound): void;
   ateChip?(point: Point): void;
+  walked?(point: Point): void;
 }
 
 /** Owns ordinary travel and flight, including grounding on interruption. */
@@ -295,7 +296,12 @@ export class Activity {
           this.#mode = "drop";
           this.#until = now + 0.55;
         } else {
+          const walked = this.#mode === "walk";
           this.rest(now, 2 + this.#effects.random() * 4);
+
+          if (walked) {
+            this.#effects.walked?.({ x: this.#body.x, y: this.#body.y });
+          }
         }
       } else {
         this.#body.place({

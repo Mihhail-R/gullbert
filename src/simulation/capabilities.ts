@@ -71,6 +71,8 @@ export interface BehaviorCapabilities extends RoutineCapabilities {
     | "refuseTrick"
     | "visited"
     | "collect"
+    | "chooseGift"
+    | "favouriteTreasure"
     | "placePerch"
     | "clearPerch"
     | "rewardTrick"
