@@ -63,22 +63,42 @@ struct Input {
     interaction: interaction::Interaction,
     pickup: interaction::PickupLease,
     cursor: cursor_bite::CursorBite,
+    // None means an OS operation failed or capture has not yet been established.
+    capture: Option<bool>,
 }
 
 impl Input {
     fn ready(&mut self, effects: &impl Effects) -> Result<(), String> {
         self.replace_target(effects);
         effects.position_for_cursor()?;
-        effects.capture(false)?;
+        self.set_capture(effects, false)?;
         effects.all_workspaces()?;
         self.set_visible(effects, true)
+    }
+
+    fn set_capture(&mut self, effects: &impl Effects, capture: bool) -> Result<(), String> {
+        match effects.capture(capture) {
+            Ok(()) => {
+                self.capture = Some(capture);
+                Ok(())
+            }
+
+            Err(error) => {
+                self.capture = None;
+                self.interaction.rects.clear();
+                effects.emergency_hide(&error);
+                Err(error)
+            }
+        }
     }
 
     fn reconcile(&mut self, effects: &impl Effects, point: Option<&CursorPoint>) {
         if self.targeting.is_active() {
             return;
         }
+
         let mut capture = false;
+
         if effects.visible() && !self.cursor.holding() {
             capture = self.pickup.active(effects.now())
                 || self.interaction.hit(
@@ -86,17 +106,12 @@ impl Input {
                     effects.now(),
                 );
         }
-        if capture == self.interaction.capturing || !effects.window_exists() {
+
+        if self.capture == Some(capture) || !effects.window_exists() {
             return;
         }
-        match effects.capture(capture) {
-            Ok(()) => self.interaction.capturing = capture,
-            Err(error) => {
-                self.interaction.capturing = false;
-                self.interaction.rects.clear();
-                effects.emergency_hide(&error);
-            }
-        }
+
+        let _ = self.set_capture(effects, capture);
     }
 
     fn sync_interaction(
@@ -112,8 +127,10 @@ impl Input {
         };
         self.interaction.refreshed = Some(effects.now());
         let valid = pickup_id.is_none_or(|id| self.pickup.refresh(id, effects.now()));
+        self.expire_pickup(effects);
         let point = effects.pointer();
         self.reconcile(effects, point.as_ref());
+
         if valid {
             point
         } else {
@@ -223,12 +240,12 @@ impl Input {
         self.pickup.cancel();
         self.interaction = interaction::Interaction::default();
         self.cancel_cursor(effects);
+
         if effects.window_exists() {
-            if let Err(error) = effects.capture(false) {
-                effects.emergency_hide(&error);
-            }
+            let _ = self.set_capture(effects, false);
             let _ = effects.focusable(false);
         }
+
         effects.release_escape();
         Some((id, purpose))
     }
@@ -262,7 +279,11 @@ impl Input {
     fn set_visible(&mut self, effects: &impl Effects, visible: bool) -> Result<(), String> {
         if !visible {
             self.replace_target(effects);
+        } else if self.capture.is_none() {
+            // Hiding is a fallback, not proof that the OS released the desktop.
+            self.set_capture(effects, false)?;
         }
+
         effects.visibility(visible)
     }
 
@@ -286,24 +307,29 @@ impl Input {
             self.set_visible(effects, true)?;
             effects.target_notice(start.clone())?;
             announced = true;
+
             if !effects.window_exists() {
                 return Err("Pet window unavailable".into());
             }
+
             effects.escape(false)?;
             effects.focusable(true)?;
-            effects.capture(true)?;
+            self.set_capture(effects, true)?;
             effects.focus()?;
             effects.schedule(Deadline::Target(id), purpose.timeout());
             Ok(())
         })();
+
         if result.is_err() {
             if !announced {
                 // Even early acquisition failure must cancel this preparation.
                 // Repeating Started is safe if an earlier emission was delivered.
                 let _ = effects.target_notice(start);
             }
+
             self.abandon_target(effects);
         }
+
         result
     }
 
@@ -353,6 +379,8 @@ impl Input {
     }
 
     fn escape(&mut self, effects: &impl Effects) -> Result<(), String> {
+        self.expire_pickup(effects);
+
         if self.targeting.is_active() {
             self.finish_target(effects);
         } else if self.cursor.armed() || self.pickup.active(effects.now()) {
@@ -360,24 +388,35 @@ impl Input {
             self.replace_target(effects);
             effects.emit("cancel", None, None)?;
         }
+
         Ok(())
     }
 
     fn expired(&mut self, effects: &impl Effects, deadline: Deadline) {
         match deadline {
             Deadline::Target(id) if self.targeting.is_current(id) => self.finish_target(effects),
+
             Deadline::Pickup(id) if self.pickup.id == id => {
                 self.pickup.cancel();
                 self.reconcile(effects, None);
                 self.cancel_cursor(effects);
                 let _ = effects.emit("cancel", None, None);
             }
+
             Deadline::Cursor(id) => self.release_cursor(effects, id),
+
             _ => {}
         }
     }
 
     fn watch(&mut self, effects: &impl Effects) {
+        self.expire_pickup(effects);
         self.reconcile(effects, effects.pointer().as_ref());
+    }
+
+    fn expire_pickup(&mut self, effects: &impl Effects) {
+        if self.pickup.expired(effects.now()) {
+            self.expired(effects, Deadline::Pickup(self.pickup.id));
+        }
     }
 }

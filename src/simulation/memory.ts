@@ -1,6 +1,7 @@
 import type { Memory, MemoryEpisode } from "./model.js";
 import { ITEMS, isCollectible, type Collectible } from "./items.js";
 import { clamp, SIZE } from "./geometry.js";
+import { normalizePreferences } from "./preferences.js";
 
 // Completed experiences only. Scenes and animation clocks never enter the snapshot.
 export const MEMORY_LIMIT = 200;
@@ -236,6 +237,7 @@ export function normalizeMemory(
     },
     perch: point(source.perch),
     collection,
+    preferences: normalizePreferences(source.preferences),
     greetings: {
       seen: greetings.seen === true,
       lastAt,
