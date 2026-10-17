@@ -747,6 +747,7 @@ body.preview {
 .preview-title {
   padding: 28px;
 }
+.preview-title h1,
 .preview-title h2 {
   font-size: 30px;
   margin: 12px 0;
@@ -992,4 +993,8 @@ iframe {
 }
 .treasure-shelf:empty {
   display: none;
+}
+
+.playground-only #demo {
+  margin-top: 0;
 }

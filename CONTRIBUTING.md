@@ -42,7 +42,7 @@ Code contributions use MIT; artwork must declare its license. Do not submit thir
 | `tests/`                    | Behaviour and persistence tests                                  |
 | `art/`                      | Current editable artwork and source assets                       |
 
-The HTML entry points stay at `src/index.html` and `src/pet.html` so browser and Tauri URLs remain stable. Keep CSS beside its UI. CSS asset URLs are relative to the stylesheet; image URLs assigned to DOM nodes are relative to the page.
+The desktop control room uses `src/index.html`, the public browser playground uses `src/playground.html`, and both load `src/pet.html` for the bird. The Pages build publishes the playground as its root `index.html` without changing the desktop entry point. Keep CSS beside its UI. CSS asset URLs are relative to the stylesheet; image URLs assigned to DOM nodes are relative to the page.
 
 ## Implementation boundaries
 
@@ -174,11 +174,15 @@ npm run preview
 
 Open [http://127.0.0.1:4173](http://127.0.0.1:4173). The playground shares the app's simulation and rendering but does not create a desktop overlay or control the real pointer. Source edits rebuild automatically; refresh to see changes. Set `PORT` for a different playground port; native development expects port 4173.
 
+### Browser preview builds
+
+`npm run preview` opens the standalone playground at the local site root. For control-room development, open `/index.html` on that local server. `npm run build:pages` creates `pages-dist/` with the playground as its entry point; GitHub Pages publishes that folder. Native builds keep the desktop control room in `web-dist/index.html`.
+
 ## Build and release
 
 ### Publish the browser preview and downloads
 
-GitHub Pages hosts the browser playground; GitHub Releases hosts the desktop downloads. In the repository's **Settings → Pages → Build and deployment**, select **GitHub Actions** as the source. After merging to `main`, the [Pages workflow](.github/workflows/pages.yml) tests and publishes `web-dist/` at [mihhail-r.github.io/gullbert/](https://mihhail-r.github.io/gullbert/). You can also run **Publish browser preview** manually on `main`.
+GitHub Pages hosts the browser playground; GitHub Releases hosts the desktop downloads. In the repository's **Settings → Pages → Build and deployment**, select **GitHub Actions** as the source. After merging to `main`, the [Pages workflow](.github/workflows/pages.yml) tests and publishes `pages-dist/` at [mihhail-r.github.io/gullbert/](https://mihhail-r.github.io/gullbert/). You can also run **Publish browser preview** manually on `main`.
 
 To release desktop packages, push a new version tag such as `v0.3.0-beta.5`. The build workflow takes the app version from the tag and creates a draft release containing Apple Silicon and Intel Mac DMGs, a Windows x64 installer, and signed update packages. Test the downloaded packages, edit the release notes, and publish the draft. Preview tags are marked **pre-release** automatically. Draft releases are not public downloads.
 
