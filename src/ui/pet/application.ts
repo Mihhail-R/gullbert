@@ -30,6 +30,7 @@ export class PetApplication {
   #generation = 0;
   #startup: Promise<void> | null = null;
   #shutdown: Promise<void> | null = null;
+  readonly #startupCommands: (() => void)[] = [];
   readonly #unlisteners: (() => void)[] = [];
   #visible = true;
   readonly #targeting: Targeting;
@@ -241,6 +242,7 @@ export class PetApplication {
 
     this.#shutdown = this.#persistence.dispose();
     this.#lifecycle = "disposed";
+    this.#startupCommands.length = 0;
     this.#generation++;
     this.#cancelTick();
     this.#cancelRender();
@@ -319,6 +321,7 @@ export class PetApplication {
         return;
       }
 
+      this.#startupCommands.length = 0;
       this.#dependencies.reportError(error);
       this.#visible = false;
       this.#storageError =
@@ -346,6 +349,12 @@ export class PetApplication {
     this.#lifecycle = "running";
     this.#dependencies.simulation.setVisible(this.#visible);
     this.#dependencies.simulation.greet();
+
+    // Restore and greet before replaying input so neither can replace its effects.
+    // Native state is the startup baseline; delivered commands take precedence.
+    for (const command of this.#startupCommands.splice(0)) {
+      command();
+    }
 
     if (this.#initialized) {
       this.#persistence.start();
@@ -375,22 +384,30 @@ export class PetApplication {
       },
       () => {
         return native.listen("gullbert-action", (event) => {
-          this.#action(event.payload);
+          this.#receiveCommand(() => {
+            this.#action(event.payload);
+          });
         });
       },
       () => {
         return native.listen("gullbert-target", (event) => {
-          this.#targeting.notice(event.payload);
+          this.#receiveCommand(() => {
+            this.#targeting.notice(event.payload);
+          });
         });
       },
       () => {
         return native.listen("gullbert-settings", (event) => {
-          this.#configure(event.payload);
+          this.#receiveCommand(() => {
+            this.#configure(event.payload);
+          });
         });
       },
       () => {
         return native.listen("gullbert-visible", (event) => {
-          this.#changeVisibility(event.payload);
+          this.#receiveCommand(() => {
+            this.#changeVisibility(event.payload);
+          });
         });
       },
     ];
@@ -466,12 +483,25 @@ export class PetApplication {
     });
     this.#listen("message", (message) => {
       if (!this.#dependencies.native) {
-        this.#previewMessage(message);
+        this.#receiveCommand(() => {
+          this.#previewMessage(message);
+        });
       }
     });
     this.#listen("pagehide", () => {
       void this.dispose();
     });
+  }
+
+  #receiveCommand(command: () => void): void {
+    if (this.#lifecycle === "starting") {
+      this.#startupCommands.push(command);
+      return;
+    }
+
+    if (this.#running()) {
+      command();
+    }
   }
 
   #previewMessage(message: PreviewMessage): void {
