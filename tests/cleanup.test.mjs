@@ -276,6 +276,85 @@ test("Polite-ish never retaliates; Menace restores one empty bag after five seco
   assert.equal(sim.inspect().cleanup.retaliation, null);
 });
 
+test("repeated short cleanup sessions provoke a level-appropriate bounded reaction", () => {
+  for (const level of [0, 1, 2]) {
+    const sim = bird(level);
+    const removals = level === 2 ? 2 : 3;
+
+    for (let removal = 0; removal < removals; removal++) {
+      sim.splat({ x: 300, y: 100 });
+      sim.action("tidy");
+      pick(sim, "splat");
+      sim.action("tidy_done");
+    }
+
+    const expected = [null, "leave", "splat"][level];
+    assert.equal(sim.inspect().cleanup.retaliation?.kind ?? null, expected);
+    advance(sim, 5.1);
+
+    if (level === 1) {
+      assert.equal(sim.inspect().scene.kind, "pretend_leave");
+      assert.match(sim.inspect().bubble, /not appreciated/);
+    } else if (level === 2) {
+      assert.equal(sim.inspect().splats.length, 1);
+      assert.equal(sim.inspect().cleanup.retaliation, null);
+    }
+  }
+});
+
+test("cleanup history fades, and empty picks do not teach a grudge", () => {
+  const sim = cleanupFixture();
+
+  for (let removal = 0; removal < 3; removal++) {
+    sim.time = removal * 121;
+    sim.splats.push({ id: removal, x: 100, y: 100, born: sim.time });
+    sim.owner.begin();
+    sim.owner.pick({ x: 100, y: 100 });
+    sim.owner.pick({ x: 100, y: 100 });
+    sim.owner.finish();
+    assert.equal(sim.cleanup.retaliation, null);
+  }
+});
+
+test("more recent cleanup modestly raises the chance of a protest", () => {
+  const sim = bird(2, 0.64);
+
+  for (let removal = 0; removal < 3; removal++) {
+    sim.splat({ x: 300, y: 100 });
+    sim.action("tidy");
+    pick(sim, "splat");
+    sim.action("tidy_done");
+
+    if (removal < 2) {
+      assert.equal(sim.inspect().cleanup.retaliation, null);
+    }
+  }
+
+  assert.equal(sim.inspect().cleanup.retaliation.kind, "splat");
+  assert.ok(sim.inspect().cleanup.retaliationAllowedAt >= sim.inspect().time + 180);
+});
+
+test("bulk cleaning notices real repeated removals while preserving its quiet window", () => {
+  const sim = bird(1);
+
+  for (let click = 0; click < 5; click++) {
+    sim.action("clean");
+  }
+
+  assert.equal(sim.inspect().cleanup.retaliation, null);
+
+  for (let removal = 0; removal < 3; removal++) {
+    sim.splat({ x: 300, y: 100 });
+    sim.action("clean");
+  }
+
+  assert.equal(sim.inspect().cleanup.retaliation.kind, "leave");
+  assert.ok(sim.inspect().cleanup.retaliation.at > sim.inspect().cleanup.suppressUntil);
+  assert.equal(sim.inspect().splats.length, 0);
+  sim.action("cancel");
+  assert.equal(sim.inspect().cleanup.retaliation, null);
+});
+
 test(
   "retaliation probabilities have distinct thresholds and Public enemy can add one " +
   "splat",
@@ -466,7 +545,7 @@ test(
     removeTwo(sim);
     sim.action("tidy_done");
     assert.equal(sim.inspect().cleanup.retaliation, null);
-    advance(sim, 91);
+    advance(sim, cooldown - sim.inspect().time + 0.1);
     removeTwo(sim);
     sim.action("tidy_done");
     assert.equal(sim.inspect().cleanup.retaliation.kind, "bag");

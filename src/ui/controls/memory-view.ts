@@ -12,7 +12,8 @@ const activities: Record<string, string> = {
   snack: "Went looking for snacks",
   theft: "Investigated a chip bag",
   caper: "Got into a chip bag",
-  perch: "Visited his favourite spot",
+  perch: "Visited his placed perch",
+  hangout: "Rested at his own hangout",
   cap: "Played with a bottle cap",
   bubbles: "Played with bubbles",
   bath: "Splashed in the birdbath",
@@ -42,7 +43,7 @@ export function memoryDescription(event: MemoryEpisode): string {
       return "Got a head scratch after playing";
 
     case "perch":
-      return "Remembered a favourite spot";
+      return "Remembered a placed perch";
 
     case "gift":
       if (isCollectible(event.detail)) {
