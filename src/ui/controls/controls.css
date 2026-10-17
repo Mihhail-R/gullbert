@@ -26,7 +26,7 @@ select {
   border: 1px solid var(--line);
   background: var(--card);
   border-radius: 6px;
-  padding: 11px 13px;
+  padding: 9px 12px;
 }
 button {
   cursor: pointer;
@@ -53,9 +53,9 @@ figure {
   margin: 0;
 }
 h1 {
-  font: 650 32px/1.2 var(--font-ui);
+  font: 650 26px/1.2 var(--font-ui);
   letter-spacing: -0.8px;
-  margin: 12px 0;
+  margin: 0 0 18px;
 }
 h2 {
   font: 600 18px/1.35 var(--font-ui);
@@ -81,7 +81,7 @@ small {
   flex-direction: column;
   background: var(--sidebar);
   color: var(--sidebar-ink);
-  padding: 28px 14px;
+  padding: 22px 12px;
   min-height: 0;
 }
 .brand {
@@ -89,14 +89,9 @@ small {
   align-items: center;
   font: 650 24px/1.2 var(--font-ui);
   letter-spacing: -0.6px;
-  margin-bottom: 46px;
+  margin-bottom: 26px;
 }
-.brand small {
-  display: block;
-  color: var(--sidebar-muted);
-  font: 400 10px/2 var(--font-ui);
-  letter-spacing: 0;
-}
+
 .brand-bird {
   width: 36px;
   height: 36px;
@@ -104,11 +99,7 @@ small {
   background: url("../../assets/gullbert.png") 0 0 / auto 36px;
   image-rendering: pixelated;
 }
-.sidebar > .eyebrow {
-  font-size: 8px;
-  color: var(--sidebar-muted);
-  margin: 0 8px 16px;
-}
+
 .sidebar nav {
   display: grid;
   gap: 8px;
@@ -121,7 +112,7 @@ small {
   text-align: left;
   color: var(--sidebar-ink);
   background: transparent;
-  padding: 15px 12px;
+  padding: 12px;
 }
 .sidebar nav button:hover {
   background: var(--sidebar-selected);
@@ -130,28 +121,19 @@ small {
   background: var(--sidebar-selected);
   box-shadow: inset 2px 0 var(--rust);
 }
-.sidebar nav span {
-  font-size: 18px;
-  width: 20px;
-}
+
 .sidebar-bottom {
   margin: auto 8px 0;
   color: var(--sidebar-muted);
   padding-top: 20px;
 }
-.sidebar-bottom p {
-  font: 400 13px/1.6 var(--font-ui);
-  margin: 16px 0 24px;
-}
+
 .sidebar-bottom small {
   display: block;
   font-size: 9px;
   margin-top: 14px;
 }
-.sketch {
-  font: 400 48px/1 var(--font-ui);
-  color: var(--rust);
-}
+
 .room-main {
   display: flex;
   flex-direction: column;
@@ -163,7 +145,7 @@ small {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 30px 34px;
+  padding: 20px 26px;
 }
 .life-heading {
   display: flex;
@@ -177,24 +159,20 @@ small {
 }
 .life-intro {
   display: grid;
-  grid-template-columns: 1.3fr 0.9fr;
-  gap: 28px;
-  padding: 25px 0 30px;
+  grid-template-columns: minmax(0, 1fr) 144px;
+  gap: 20px;
+  align-items: center;
+  padding: 0 0 14px;
   border-bottom: 1px solid var(--line);
 }
-.life-welcome > p {
-  font-size: 12px;
-  color: var(--muted);
-  line-height: 1.9;
-  margin: 20px 0;
-}
+
 .presence {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  font-size: 10px;
-  margin: 18px 0;
+  font-size: 12px;
+  margin: 0 0 12px;
 }
 #status-dot {
   width: 6px;
@@ -230,21 +208,13 @@ small {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 18px 12px;
+  padding: 8px;
   background: var(--portrait);
   border: 1px solid var(--line);
-  box-shadow: 4px 5px 0 var(--tint);
-  transform: rotate(2deg);
-  margin: 0 3px;
+  border-radius: 8px;
+  margin: 0;
 }
-.portrait-number {
-  align-self: flex-start;
-  font:
-    7px ui-monospace,
-    monospace;
-  letter-spacing: 1px;
-  color: var(--muted);
-}
+
 .portrait-bird {
   position: relative;
   width: 96px;
@@ -258,25 +228,22 @@ small {
   position: absolute;
   image-rendering: pixelated;
 }
-.life-portrait figcaption {
-  font: 500 13px/1.5 var(--font-ui);
-  text-align: center;
-}
+
 .life-portrait small {
   color: var(--muted);
   margin-top: 8px;
-  font-size: 9px;
+  font-size: 11px;
 }
 .life-columns {
   display: grid;
   grid-template-columns: 1.2fr 1fr;
   gap: 24px;
-  padding: 24px 0;
+  padding: 14px 0;
   border-bottom: 1px solid var(--line);
 }
 .life-memories {
   border-right: 1px solid var(--line);
-  padding-right: 22px;
+  padding-right: 18px;
 }
 .subheading {
   display: flex;
@@ -293,10 +260,7 @@ small {
   font-size: 11px;
   text-align: left;
 }
-.star {
-  float: right;
-  color: var(--rust);
-}
+
 .memory-list,
 #memory-items {
   list-style: none;
@@ -304,7 +268,7 @@ small {
   margin: 8px 0 0;
 }
 :is(.memory-list, #memory-items) li {
-  padding: 16px 0;
+  padding: 10px 0;
   border-bottom: 1px solid var(--line);
   font-size: 12px;
 }
@@ -316,22 +280,22 @@ small {
 }
 :is(.memory-list, #memory-items) small {
   display: block;
-  margin-top: 6px;
+  margin-top: 4px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 :is(.memory-list, #memory-items) time {
   color: var(--rust);
 }
 .action-list {
-  margin-top: 12px;
+  margin-top: 8px;
 }
 .action-list button {
   display: flex;
   width: 100%;
   align-items: center;
   gap: 12px;
-  padding: 13px 0;
+  padding: 12px 0;
   text-align: left;
   border: 0;
   border-bottom: 1px solid var(--line);
@@ -341,46 +305,15 @@ small {
 .action-list button:hover {
   background: var(--hover);
 }
-.action-list button > span:first-child {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  background: var(--tint);
-  color: var(--rust);
-  font-size: 20px;
-}
-.action-list button > span:last-child {
-  margin-left: auto;
-  color: var(--rust);
-}
-.action-list strong {
-  display: block;
-  font-size: 12px;
-  font-weight: 500;
-}
-.action-list small {
-  display: block;
-  color: var(--muted);
-  font-size: 10px;
-}
-.life-aside {
-  font: 400 12px/1.5 var(--font-ui);
-  color: var(--muted);
-  margin-top: 14px;
-}
+
 .life-collection {
   display: grid;
   grid-template-columns: 1fr 1.3fr;
   gap: 20px;
   align-items: center;
-  padding-top: 24px;
+  padding-top: 14px;
 }
-.life-collection h2 {
-  margin-top: 10px;
-}
+
 .treasure-shelf {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -393,14 +326,14 @@ small {
   border: 1px dashed var(--line);
   border-radius: 5px;
   text-align: center;
-  padding: 12px 6px;
+  padding: 8px 6px;
   font-size: 10px;
 }
 .treasure-shelf img {
   display: block;
-  width: 38px;
-  height: 38px;
-  margin: 0 auto 8px;
+  width: 32px;
+  height: 32px;
+  margin: 0 auto 5px;
   image-rendering: pixelated;
 }
 .treasure-shelf strong {
@@ -419,7 +352,7 @@ small {
   flex-shrink: 0;
   gap: 6px;
   background: var(--tint);
-  padding: 10px 20px;
+  padding: 6px 16px;
 }
 .session-controls button {
   background: transparent;
@@ -452,7 +385,7 @@ small {
 .page-intro {
   color: var(--muted);
   line-height: 1.7;
-  margin: 16px 0 25px;
+  margin: 10px 0 16px;
 }
 .content-columns {
   display: grid;
@@ -460,7 +393,7 @@ small {
   gap: 18px;
 }
 .surface-card {
-  padding: 22px;
+  padding: 18px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--card);
@@ -827,10 +760,10 @@ iframe {
     font-size: 23px;
   }
   #pages {
-    padding: 25px;
+    padding: 20px;
   }
   h1 {
-    font-size: 30px;
+    font-size: 26px;
   }
   .life-intro {
     gap: 20px;
@@ -865,7 +798,6 @@ iframe {
   .brand {
     margin: 0 0 10px;
   }
-  .sidebar > .eyebrow,
   .sidebar-bottom {
     display: none;
   }
@@ -878,7 +810,7 @@ iframe {
     padding: 12px 10px;
     font-size: 12px;
   }
-  .sidebar nav span {
+  .sidebar nav .ui-icon {
     display: none;
   }
   .room-main {
@@ -893,25 +825,28 @@ iframe {
 }
 @media (max-width: 480px) {
   #pages {
-    padding: 22px 18px;
+    padding: 16px;
   }
   h1 {
-    font-size: 30px;
+    font-size: 26px;
   }
   .life-heading {
     flex-wrap: wrap;
     gap: 8px;
   }
-  .life-intro,
   .life-columns,
   .life-collection {
     grid-template-columns: 1fr;
   }
-  .life-portrait {
-    width: 90%;
-    max-width: 270px;
-    justify-self: center;
-    margin-top: 12px;
+  .life-intro {
+    grid-template-columns: minmax(0, 1fr) 110px;
+    gap: 12px;
+  }
+  .life-portrait small {
+    font-size: 10px;
+  }
+  .essentials {
+    flex-direction: column;
   }
   .life-memories {
     border: 0;
@@ -935,4 +870,59 @@ iframe {
     flex-wrap: wrap;
     gap: 6px;
   }
+}
+
+/* UI icons are local SVG geometry, separate from Gullbert's pixel artwork. */
+.ui-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.life-heading h1 {
+  margin: 0;
+}
+.life-heading {
+  margin-bottom: 12px;
+}
+.life-portrait .portrait-bird {
+  transform: none;
+  margin: 8px 0 0;
+}
+.life-portrait small {
+  margin-top: 0;
+  text-align: center;
+}
+.essentials .primary,
+.text-link,
+.download-link,
+#pause-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.text-link {
+  justify-content: flex-start;
+}
+.text-link .ui-icon,
+.download-link .ui-icon {
+  width: 14px;
+  height: 14px;
+}
+.action-list .ui-icon:first-child {
+  color: var(--rust);
+}
+.action-list .ui-icon:last-child {
+  margin-left: auto;
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+}
+.treasure-shelf:empty {
+  display: none;
 }

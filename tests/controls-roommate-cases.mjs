@@ -331,7 +331,7 @@ export function roommateRenderingTests(mode) {
       .click();
     assert.equal(document.querySelector('[data-destination="today"]').hidden, true);
     assert.equal(document.querySelector('[data-destination="play"]').hidden, false);
-    assert.equal(document.activeElement.textContent, "Play, learn, repeat.");
+    assert.equal(document.activeElement.textContent, "Play & learn");
 
     document.querySelector('[data-page="world"][data-world="treasures"]')
       .click();
@@ -413,7 +413,12 @@ export function roommateRenderingTests(mode) {
       return setImmediate(resolve)
     });
     assert.equal(element("paused").checked, true);
-    assert.equal(element("pause-toggle").textContent, "▷ Resume antics");
+    assert.equal(element("pause-label").textContent, "Resume antics");
+    assert.equal(
+      document.querySelector("#pause-toggle use")
+        .getAttribute("href"),
+      "ui/icons.svg#play"
+    );
     element("hat").value = "captain";
     element("hat")
       .dispatchEvent(new dom.window.Event("change"));

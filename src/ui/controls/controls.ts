@@ -83,7 +83,12 @@ function render() {
     soundLabel = "Sound off";
   }
 
-  $("#pause-toggle").textContent = settings.paused ? "▷ Resume antics" : "Ⅱ Pause antics";
+  $("#pause-label").textContent = settings.paused ? "Resume antics" : "Pause antics";
+  $("#pause-toggle use")
+    .setAttribute(
+      "href",
+      settings.paused ? "ui/icons.svg#play" : "ui/icons.svg#pause",
+    );
   $("#mischief-label").textContent = ["Polite-ish", "Menace", "Public enemy"][settings.mischief];
   renderPortraits();
   $("#preferences-summary").textContent = [

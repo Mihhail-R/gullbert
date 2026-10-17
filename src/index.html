@@ -11,24 +11,50 @@
       <aside class="sidebar">
         <div class="brand">
           <div class="brand-bird" aria-hidden="true"></div>
-          <div>Gullbert<small>A little life together.</small></div>
+          <div>Gullbert</div>
         </div>
-        <p class="eyebrow">Make yourself at home</p>
+
         <nav aria-label="Main navigation">
           <button data-page="today" aria-current="page">
-            <span aria-hidden="true">⌂</span>Today</button
+            <svg
+              class="ui-icon"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <use href="ui/icons.svg#home"></use></svg
+            >Today</button
           ><button data-page="play">
-            <span aria-hidden="true">◇</span>Play &amp; learn</button
+            <svg
+              class="ui-icon"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <use href="ui/icons.svg#play"></use></svg
+            >Play &amp; learn</button
           ><button data-page="world">
-            <span aria-hidden="true">▤</span>His world</button
+            <svg
+              class="ui-icon"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <use href="ui/icons.svg#world"></use></svg
+            >His world</button
           ><button data-page="settings">
-            <span aria-hidden="true">☷</span>Settings
+            <svg
+              class="ui-icon"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <use href="ui/icons.svg#settings"></use></svg
+            >Settings
           </button>
         </nav>
         <div class="sidebar-bottom">
-          <span class="sketch" aria-hidden="true">⌁</span>
-          <p>Small bird.<br />Considerable<br />personality.</p>
-          <small>● &nbsp; Happily offline</small
+          <small>Stored on this device</small
           ><small class="version">v__APP_VERSION__</small>
         </div>
       </aside>
@@ -36,16 +62,11 @@
         <main id="pages">
           <section data-destination="today" aria-label="Today">
             <div class="life-heading">
-              <p class="eyebrow">The everyday journal</p>
+              <h1 tabindex="-1">Today</h1>
               <time id="journal-date"></time>
             </div>
             <div class="life-intro">
               <div class="life-welcome">
-                <h1 tabindex="-1">A little life,<br />right beside yours.</h1>
-                <p>
-                  A few shared chips. A growing collection of rubbish.<br />A
-                  very good bad bird.
-                </p>
                 <div class="presence">
                   <i id="status-dot"></i
                   ><span id="status" role="status">Settling in…</span
@@ -53,12 +74,18 @@
                 </div>
                 <div class="essentials">
                   <button class="primary" data-action="summon">
-                    ↗ &nbsp; Summon Gullbert</button
+                    <svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#summon"></use></svg
+                    ><span>Summon Gullbert</span></button
                   ><button class="" data-action="feed">Offer a chip</button>
                 </div>
               </div>
               <figure class="life-portrait">
-                <span class="portrait-number">FIG. 01 / YOUR ROOMMATE</span>
                 <div
                   class="portrait-bird"
                   role="img"
@@ -66,73 +93,112 @@
                 >
                   <img class="portrait-hat" alt="" hidden="" />
                 </div>
-                <figcaption>“this is my desktop now.”</figcaption>
+
                 <small id="mood">Contentedly gull.</small>
               </figure>
             </div>
             <div class="life-columns">
               <section class="life-memories">
                 <div class="subheading">
-                  <h2>Little things, lately</h2>
+                  <h2>Recent memories</h2>
                   <button
                     class="text-link"
                     data-page="world"
                     data-world="memories"
                   >
-                    His memory book ↗
+                    View all<svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#arrow"></use>
+                    </svg>
                   </button>
                 </div>
                 <p id="today-memory-empty" class="hint">
-                  A little life starts here. Share a chip or play a game
-                  together.
+                  No memories yet. Share a chip or play a game.
                 </p>
                 <ol id="today-memories" class="memory-list"></ol>
               </section>
               <section>
-                <h2>
-                  A little time together
-                  <span class="star" aria-hidden="true">✧</span>
-                </h2>
+                <h2>Quick play</h2>
                 <div class="action-list">
                   <button data-action="play_cap">
-                    <span>◉</span
-                    ><span
-                      ><strong>Cap football</strong
-                      ><small>Three exchanges. He wins.</small></span
-                    ><span>↗</span></button
+                    <svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#cap"></use></svg
+                    ><span>Cap football</span
+                    ><svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#arrow"></use>
+                    </svg></button
                   ><button data-action="chip_toss">
-                    <span>⌁</span
-                    ><span
-                      ><strong>A little chip toss</strong
-                      ><small>A game with excellent snacks.</small></span
-                    ><span>↗</span></button
+                    <svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#toss"></use></svg
+                    ><span>Chip toss</span
+                    ><svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#arrow"></use>
+                    </svg></button
                   ><button data-page="play">
-                    <span>✧</span
-                    ><span
-                      ><strong>Teach him a trick</strong
-                      ><small>Paid exclusively in chips.</small></span
-                    ><span>→</span>
+                    <svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#learn"></use></svg
+                    ><span>Practice a trick</span
+                    ><svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#arrow"></use>
+                    </svg>
                   </button>
                 </div>
-                <p class="life-aside">
-                  No chores. No streaks. Just whenever you feel like it.
-                </p>
               </section>
             </div>
             <section class="life-collection">
               <div>
-                <p class="eyebrow">Things he definitely found</p>
-                <h2>Of questionable value.</h2>
+                <h2>Treasures</h2>
                 <button
                   class="text-link"
                   data-page="world"
                   data-world="treasures"
                 >
-                  Open his collection ↗
+                  View collection<svg
+                    class="ui-icon"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <use href="ui/icons.svg#arrow"></use>
+                  </svg>
                 </button>
               </div>
               <p id="today-collection-empty" class="hint">
-                Nothing collected yet. A promising lack of taste.
+                Nothing collected yet.
               </p>
               <ul id="today-collection" class="treasure-shelf"></ul>
             </section>
@@ -142,11 +208,8 @@
             aria-label="Play and learn"
             hidden=""
           >
-            <p class="eyebrow">Time together</p>
-            <h1 tabindex="-1">Play, learn, repeat.</h1>
-            <p class="page-intro">
-              No chores. No streaks. Just a bird who accepts bribes.
-            </p>
+            <h1 tabindex="-1">Play &amp; learn</h1>
+
             <div class="content-columns play-columns">
               <section class="surface-card">
                 <h2>Snacks &amp; games</h2>
@@ -223,11 +286,8 @@
             </div>
           </section>
           <section data-destination="world" aria-label="His world" hidden="">
-            <p class="eyebrow">A life of his own</p>
-            <h1 tabindex="-1">His little world.</h1>
-            <p class="page-intro">
-              Things he remembers. Things he absolutely found legally.
-            </p>
+            <h1 tabindex="-1">His world</h1>
+
             <nav class="subnav" aria-label="His world">
               <button data-world="memories" aria-current="page">Memories</button
               ><button data-world="treasures">Treasures</button
@@ -326,8 +386,7 @@
             </section>
           </section>
           <section data-destination="settings" aria-label="Settings" hidden="">
-            <p class="eyebrow">Living with a gull</p>
-            <h1 tabindex="-1">A few ground rules.</h1>
+            <h1 tabindex="-1">Settings</h1>
             <div class="setting appearance">
               <h2>Make yourself comfortable</h2>
               <div class="theme-control" role="group" aria-label="Appearance">
@@ -433,13 +492,21 @@
               </section>
             </details>
             <p class="privacy-note">
-              A local little life. No account, no analytics, no hunger chores.
-              Closing this window leaves him on your desktop.
+              Stored on this device. Closing this window leaves Gullbert
+              running.
             </p>
           </section>
         </main>
         <footer class="session-controls">
-          <button id="pause-toggle">Ⅱ Pause antics</button
+          <button id="pause-toggle">
+            <svg
+              class="ui-icon"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <use href="ui/icons.svg#pause"></use></svg
+            ><span id="pause-label">Pause antics</span></button
           ><button class="" data-action="cancel">Stop routine</button
           ><button id="visibility-toggle" data-action="hide">
             Send him away</button
@@ -466,8 +533,14 @@
           href="https://github.com/Mihhail-R/gullbert/releases"
           target="_blank"
           rel="noopener noreferrer"
-          >Download for macOS or Windows ↗</a
-        >
+          >Download for macOS or Windows<svg
+            class="ui-icon"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <use href="ui/icons.svg#summon"></use></svg
+        ></a>
       </header>
       <div class="preview-title">
         <p class="eyebrow">The browser playground</p>
