@@ -210,70 +210,213 @@
           >
             <h1 tabindex="-1">Play &amp; learn</h1>
 
-            <div class="content-columns play-columns">
-              <section class="surface-card">
-                <h2>Snacks &amp; games</h2>
-                <div class="action-stack" aria-label="Snacks">
-                  <button data-action="feed">Offer a chip</button>
-                  <button data-action="feed_here">Leave a chip here…</button>
-                  <button data-action="place_bag">Place chip bag…</button>
+            <section class="play-snacks" aria-labelledby="snacks-heading">
+              <h2 id="snacks-heading">Snacks</h2>
+              <div class="snack-actions">
+                <button data-action="feed">Offer a chip</button>
+                <button data-action="feed_here">Leave a chip here…</button>
+                <button data-action="place_bag">Place chip bag…</button>
+              </div>
+              <p class="hint">
+                Placed food: choose a desktop spot. Escape cancels.
+              </p>
+            </section>
+            <div class="play-columns">
+              <section class="play-games" aria-labelledby="games-heading">
+                <h2 id="games-heading">Games &amp; company</h2>
+                <div class="action-list">
+                  <button data-action="chip_toss">
+                    <svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#toss"></use></svg
+                    ><span>Chip toss…</span
+                    ><svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#arrow"></use>
+                    </svg>
+                  </button>
+                  <button data-action="play_cap">
+                    <svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#cap"></use></svg
+                    ><span>Cap football</span
+                    ><svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#arrow"></use>
+                    </svg>
+                  </button>
+                  <button data-action="blow_bubbles">
+                    <svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#bubbles"></use></svg
+                    ><span>Blow bubbles</span
+                    ><svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#arrow"></use>
+                    </svg>
+                  </button>
+                  <button data-action="bath_time">
+                    <svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#bath"></use></svg
+                    ><span>Bath time</span
+                    ><svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#arrow"></use>
+                    </svg>
+                  </button>
+                  <button data-action="invite_pigeon">
+                    <svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#bird"></use></svg
+                    ><span>Invite pigeon</span
+                    ><svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#arrow"></use>
+                    </svg>
+                  </button>
                 </div>
-                <p class="hint">
-                  Placed food: choose a desktop spot. Escape cancels.
-                </p>
-                <h3 class="group-heading">Games &amp; company</h3>
-                <div class="button-grid games-grid">
-                  <button data-action="chip_toss">Chip toss…</button>
-                  <button data-action="play_cap">Cap football</button>
-                  <button data-action="blow_bubbles">Blow bubbles</button>
-                  <button data-action="bath_time">Bath time</button>
-                  <button data-action="invite_pigeon">Invite pigeon</button>
-                </div>
-                <p class="hint">
+                <p class="hint play-touch-tip">
                   Hover to scratch. Click to poke. Hold and drag to pick up.
                 </p>
               </section>
-              <section id="learning" class="surface-card">
-                <h2>Tricks &amp; rewards</h2>
-                <p id="learning-summary" class="tag">No tricks learned yet</p>
-                <p class="hint">
-                  Reward him within 20 seconds of finishing a trick.
-                </p>
-                <div class="action-stack trick-actions" aria-label="Tricks">
+              <section id="learning" aria-labelledby="tricks-heading">
+                <div class="subheading">
+                  <h2 id="tricks-heading">Tricks</h2>
+                  <p id="learning-summary">No tricks learned yet</p>
+                </div>
+                <div class="action-list trick-actions" aria-label="Tricks">
                   <button
                     data-action="trick_come"
                     aria-labelledby="trick-name-come"
+                    aria-describedby="lesson-come"
                   >
-                    <strong id="trick-name-come">Come here…</strong>
-                    <span id="lesson-come">New trick</span>
+                    <span class="trick-copy"
+                      ><strong id="trick-name-come">Come here…</strong
+                      ><span id="lesson-come" class="trick-progress"
+                        >New trick</span
+                      ></span
+                    ><svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#play"></use>
+                    </svg>
                   </button>
                   <button
                     data-action="trick_spin"
                     aria-labelledby="trick-name-spin"
+                    aria-describedby="lesson-spin"
                   >
-                    <strong id="trick-name-spin">Spin</strong>
-                    <span id="lesson-spin">New trick</span>
+                    <span class="trick-copy"
+                      ><strong id="trick-name-spin">Spin</strong
+                      ><span id="lesson-spin" class="trick-progress"
+                        >New trick</span
+                      ></span
+                    ><svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#play"></use>
+                    </svg>
                   </button>
                   <button
                     data-action="trick_dead"
                     aria-labelledby="trick-name-dead"
+                    aria-describedby="lesson-dead"
                   >
-                    <strong id="trick-name-dead">Play dead</strong>
-                    <span id="lesson-dead">New trick</span>
+                    <span class="trick-copy"
+                      ><strong id="trick-name-dead">Play dead</strong
+                      ><span id="lesson-dead" class="trick-progress"
+                        >New trick</span
+                      ></span
+                    ><svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#play"></use>
+                    </svg>
                   </button>
                 </div>
-                <div class="action-stack reward-actions" aria-label="Rewards">
+                <div class="reward-actions">
                   <button class="primary" data-action="feed">
                     Reward with a chip
                   </button>
-                  <button data-action="feed_here">Leave a chip here…</button>
+                  <p class="hint">
+                    Reward within 20 seconds. 3 rewards: learned; 6: practiced.
+                  </p>
                 </div>
-                <p class="hint">3 rewards: learned. 6: practiced.</p>
               </section>
             </div>
             <div class="tidy-line">
-              <button class="" data-action="clean">Clean the evidence</button
-              ><button class="" data-action="tidy">Focused tidy mode…</button>
+              <button class="text-link" data-action="clean">
+                Clean the evidence
+                <svg
+                  class="ui-icon"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <use href="ui/icons.svg#arrow"></use>
+                </svg>
+              </button>
+              <button class="text-link" data-action="tidy">
+                Focused tidy mode…
+                <svg
+                  class="ui-icon"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <use href="ui/icons.svg#arrow"></use>
+                </svg>
+              </button>
             </div>
           </section>
           <section data-destination="world" aria-label="His world" hidden="">

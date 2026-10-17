@@ -432,50 +432,75 @@ small {
   text-align: left;
   font-size: 12px;
 }
-.action-stack {
+.play-snacks {
+  padding: 2px 0 18px;
+  border-bottom: 1px solid var(--line);
+}
+.snack-actions {
   display: grid;
-  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
 }
-.action-stack button {
-  width: 100%;
-  min-height: 38px;
+.snack-actions button {
+  min-height: 40px;
   text-align: left;
-  line-height: 1.4;
 }
-.group-heading {
-  margin: 16px 0 8px;
-  font-size: 13px;
-  font-weight: 600;
+.play-snacks .hint {
+  margin: 10px 0 0;
 }
-.games-grid button {
-  min-height: 38px;
-  line-height: 1.4;
+.play-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 28px;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--line);
 }
-.games-grid button:last-child {
-  grid-column: 1 / -1;
+.play-games {
+  padding-right: 28px;
+  border-right: 1px solid var(--line);
+}
+.play-columns .action-list {
+  margin-top: 14px;
+}
+.play-columns .action-list button {
+  min-height: 48px;
+}
+.play-touch-tip {
+  max-width: 30ch;
+  margin: 16px 0 0;
 }
 #learning-summary {
-  display: inline-block;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: right;
 }
-.trick-actions button {
-  padding: 9px 12px;
+.trick-copy {
+  flex: 1;
+  min-width: 0;
 }
 .trick-actions strong {
   display: block;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
 }
-.trick-actions span {
+.trick-progress {
   display: block;
-  margin-top: 3px;
+  margin-top: 4px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.5;
 }
 .reward-actions {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
+  margin-top: 16px;
+}
+.reward-actions button {
+  width: 100%;
+  min-height: 40px;
+  text-align: left;
+}
+.reward-actions .hint {
+  margin: 10px 0 0;
 }
 .ritual-notes {
   border-left: 2px solid var(--amber);
@@ -489,8 +514,8 @@ small {
 .tidy-line {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 24px;
+  padding-top: 12px;
 }
 .subnav {
   display: flex;
@@ -800,6 +825,18 @@ iframe {
   }
 }
 @media (max-width: 850px) {
+  .play-columns {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .play-games {
+    padding: 0 0 20px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .play-touch-tip {
+    max-width: none;
+  }
   .content-columns {
     grid-template-columns: 1fr;
   }
@@ -848,6 +885,9 @@ iframe {
   }
 }
 @media (max-width: 480px) {
+  .snack-actions {
+    grid-template-columns: 1fr;
+  }
   #pages {
     padding: 16px;
   }

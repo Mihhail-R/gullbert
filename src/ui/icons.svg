@@ -42,4 +42,20 @@
     <path d="m2 9 10-5 10 5-10 5Zm4 2v6c4 3 8 3 12 0v-6m4-2v8" />
   </symbol>
   <symbol id="pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14" /></symbol>
+  <symbol id="bubbles" viewBox="0 0 24 24">
+    <circle cx="8" cy="15" r="5" />
+    <circle cx="17" cy="7" r="4" />
+    <circle cx="19" cy="18" r="2" />
+  </symbol>
+  <symbol id="bath" viewBox="0 0 24 24">
+    <path
+      d="M2 12h20M4 12v4a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4v-4M6 20v2m12-2v2M5 12V5a3 3 0 0 1 6 0v1M9 6h4"
+    />
+  </symbol>
+  <symbol id="bird" viewBox="0 0 24 24">
+    <path
+      d="M3 13h5l3-7a4 4 0 0 1 8 1l3 2-3 1v3a6 6 0 0 1-6 6H8a5 5 0 0 1-5-6Zm5 0 5 1 2-3M10 19v3m5-3v3"
+    />
+    <circle cx="16" cy="6" r=".7" fill="currentColor" stroke="none" />
+  </symbol>
 </svg>
