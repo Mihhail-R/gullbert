@@ -1,7 +1,8 @@
 @import url("../theme.css");
 
 :root {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font-ui);
   font-synthesis: none;
 }
 * {
@@ -52,21 +53,13 @@ figure {
   margin: 0;
 }
 h1 {
-  font:
-    40px/1.12 Georgia,
-    serif;
-  letter-spacing: -1.3px;
+  font: 650 32px/1.2 var(--font-ui);
+  letter-spacing: -0.8px;
   margin: 12px 0;
 }
-h1 em {
-  color: var(--rust);
-  font-weight: 400;
-}
 h2 {
-  font:
-    22px/1.25 Georgia,
-    serif;
-  letter-spacing: -0.4px;
+  font: 600 18px/1.35 var(--font-ui);
+  letter-spacing: -0.3px;
 }
 small {
   font-size: 11px;
@@ -74,10 +67,8 @@ small {
 }
 .eyebrow {
   color: var(--rust);
-  font:
-    9px/1.5 ui-monospace,
-    monospace;
-  letter-spacing: 1.8px;
+  font: 600 10px/1.5 var(--font-ui);
+  letter-spacing: 1.2px;
   text-transform: uppercase;
 }
 .room {
@@ -96,15 +87,15 @@ small {
 .brand {
   display: flex;
   align-items: center;
-  font:
-    26px Georgia,
-    serif;
+  font: 650 24px/1.2 var(--font-ui);
+  letter-spacing: -0.6px;
   margin-bottom: 46px;
 }
 .brand small {
   display: block;
   color: var(--sidebar-muted);
-  font: 9px/2 sans-serif;
+  font: 400 10px/2 var(--font-ui);
+  letter-spacing: 0;
 }
 .brand-bird {
   width: 36px;
@@ -149,9 +140,7 @@ small {
   padding-top: 20px;
 }
 .sidebar-bottom p {
-  font:
-    italic 18px/1.5 Georgia,
-    serif;
+  font: 400 13px/1.6 var(--font-ui);
   margin: 16px 0 24px;
 }
 .sidebar-bottom small {
@@ -160,9 +149,7 @@ small {
   margin-top: 14px;
 }
 .sketch {
-  font:
-    60px/1 Georgia,
-    serif;
+  font: 400 48px/1 var(--font-ui);
   color: var(--rust);
 }
 .room-main {
@@ -185,9 +172,7 @@ small {
   align-items: center;
 }
 #journal-date {
-  font:
-    italic 12px Georgia,
-    serif;
+  font: 400 12px/1.5 var(--font-ui);
   color: var(--muted);
 }
 .life-intro {
@@ -274,9 +259,7 @@ small {
   image-rendering: pixelated;
 }
 .life-portrait figcaption {
-  font:
-    italic 17px Georgia,
-    serif;
+  font: 500 13px/1.5 var(--font-ui);
   text-align: center;
 }
 .life-portrait small {
@@ -384,9 +367,7 @@ small {
   font-size: 10px;
 }
 .life-aside {
-  font:
-    italic 12px/1.5 Georgia,
-    serif;
+  font: 400 12px/1.5 var(--font-ui);
   color: var(--muted);
   margin-top: 14px;
 }
@@ -501,26 +482,58 @@ small {
   gap: 8px;
   margin: 12px 0;
 }
-.pair:empty {
-  display: none;
-}
 .button-grid button,
 .pair button {
   text-align: left;
   font-size: 12px;
 }
-.trick-row {
-  display: grid;
-  grid-template-columns: 100px 1fr;
-  gap: 12px;
-  align-items: center;
-  padding: 13px 0;
-  border-bottom: 1px solid var(--line);
+.play-columns {
+  align-items: start;
 }
-.trick-row span {
+.action-stack {
+  display: grid;
+  gap: 8px;
+}
+.action-stack button {
+  width: 100%;
+  min-height: 42px;
+  text-align: left;
+  line-height: 1.4;
+}
+.group-heading {
+  margin: 24px 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.games-grid button {
+  min-height: 42px;
+  line-height: 1.4;
+}
+.games-grid button:last-child {
+  grid-column: 1 / -1;
+}
+#learning-summary {
+  display: inline-block;
+}
+.trick-actions button {
+  padding: 12px 14px;
+}
+.trick-actions strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+}
+.trick-actions span {
+  display: block;
+  margin-top: 5px;
   color: var(--muted);
-  font-size: 11px;
-  line-height: 1.6;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.reward-actions {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
 }
 .ritual-notes {
   border-left: 2px solid var(--amber);
@@ -533,6 +546,7 @@ small {
 }
 .tidy-line {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-top: 24px;
 }
@@ -734,9 +748,8 @@ body.preview {
   border-bottom: 1px solid var(--line);
 }
 .website-header strong {
-  font:
-    26px Georgia,
-    serif;
+  font: 650 24px/1.2 var(--font-ui);
+  letter-spacing: -0.6px;
 }
 .website-header span {
   display: block;
@@ -756,7 +769,7 @@ body.preview {
   padding: 28px;
 }
 .preview-title h2 {
-  font-size: 34px;
+  font-size: 30px;
   margin: 12px 0;
 }
 .preview-title p:last-child {
@@ -817,16 +830,13 @@ iframe {
     padding: 25px;
   }
   h1 {
-    font-size: 35px;
+    font-size: 30px;
   }
   .life-intro {
     gap: 20px;
   }
   .life-columns {
     gap: 18px;
-  }
-  .life-portrait figcaption {
-    font-size: 15px;
   }
   .essentials {
     flex-wrap: wrap;
@@ -886,7 +896,7 @@ iframe {
     padding: 22px 18px;
   }
   h1 {
-    font-size: 34px;
+    font-size: 30px;
   }
   .life-heading {
     flex-wrap: wrap;

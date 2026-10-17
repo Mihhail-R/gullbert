@@ -41,9 +41,7 @@
             </div>
             <div class="life-intro">
               <div class="life-welcome">
-                <h1 tabindex="-1">
-                  A little life,<br /><em>right beside yours.</em>
-                </h1>
+                <h1 tabindex="-1">A little life,<br />right beside yours.</h1>
                 <p>
                   A few shared chips. A growing collection of rubbish.<br />A
                   very good bad bird.
@@ -149,69 +147,73 @@
             <p class="page-intro">
               No chores. No streaks. Just a bird who accepts bribes.
             </p>
-            <div class="content-columns">
+            <div class="content-columns play-columns">
               <section class="surface-card">
                 <h2>Snacks &amp; games</h2>
-                <button data-action="feed_here">Leave a chip here…</button>
-                <div class="pair">
-                  <button data-action="feed"><span>▰</span> Offer a chip</button
-                  ><button data-action="place_bag">
-                    <span>▤</span> Place chip bag…
-                  </button>
-                </div>
-                <div class="pair"></div>
-                <p class="hint">
-                  Offer a chip feeds him where he is. Leave one in a chosen
-                  spot, or press Ctrl + Alt + F at your pointer in the desktop
-                  app. Repeated meals teach him where to check.
-                </p>
-                <div class="button-grid">
-                  <button class="" data-action="chip_toss">Chip toss…</button
-                  ><button class="" data-action="play_cap">Cap football</button
-                  ><button class="" data-action="blow_bubbles">
-                    Blow bubbles</button
-                  ><button class="" data-action="bath_time">Bath time</button
-                  ><button class="" data-action="invite_pigeon">
-                    Invite pigeon
-                  </button>
+                <div class="action-stack" aria-label="Snacks">
+                  <button data-action="feed">Offer a chip</button>
+                  <button data-action="feed_here">Leave a chip here…</button>
+                  <button data-action="place_bag">Place chip bag…</button>
                 </div>
                 <p class="hint">
-                  Hover over his head to scratch. Click to poke; hold and drag
-                  to pick him up.
+                  Feed him where he is, or choose a spot. Repeated meals teach
+                  him where to check.
+                </p>
+                <h3 class="group-heading">Games &amp; company</h3>
+                <div class="button-grid games-grid">
+                  <button data-action="chip_toss">Chip toss…</button>
+                  <button data-action="play_cap">Cap football</button>
+                  <button data-action="blow_bubbles">Blow bubbles</button>
+                  <button data-action="bath_time">Bath time</button>
+                  <button data-action="invite_pigeon">Invite pigeon</button>
+                </div>
+                <p class="hint">
+                  Hover to scratch his head. Click to poke; hold and drag to
+                  pick him up.
                 </p>
                 <p class="hint">
-                  Placement opens a desktop target. Escape cancels.
+                  For placement, choose a spot on your desktop. Escape cancels.
                 </p>
               </section>
               <section id="learning" class="surface-card">
-                <h2>A surprisingly teachable nuisance</h2>
+                <h2>Tricks &amp; rewards</h2>
                 <p id="learning-summary" class="tag">Getting to know you</p>
                 <p class="hint">
-                  Ask for a trick, wait for him to finish and ask for a chip,
-                  then reward him within 20 seconds. Three rewarded performances
-                  make it familiar. Six make him insufferable.
+                  Ask for a trick. When he finishes and asks for a chip, reward
+                  him within 20 seconds.
                 </p>
-                <div class="trick-row">
-                  <button data-action="trick_come">Come here…</button
-                  ><span id="lesson-come">New trick</span>
+                <div class="action-stack trick-actions" aria-label="Tricks">
+                  <button
+                    data-action="trick_come"
+                    aria-labelledby="trick-name-come"
+                  >
+                    <strong id="trick-name-come">Come here…</strong>
+                    <span id="lesson-come">New trick</span>
+                  </button>
+                  <button
+                    data-action="trick_spin"
+                    aria-labelledby="trick-name-spin"
+                  >
+                    <strong id="trick-name-spin">Spin</strong>
+                    <span id="lesson-spin">New trick</span>
+                  </button>
+                  <button
+                    data-action="trick_dead"
+                    aria-labelledby="trick-name-dead"
+                  >
+                    <strong id="trick-name-dead">Play dead</strong>
+                    <span id="lesson-dead">New trick</span>
+                  </button>
                 </div>
-                <div class="trick-row">
-                  <button data-action="trick_spin">Spin</button
-                  ><span id="lesson-spin">New trick</span>
-                </div>
-                <div class="trick-row">
-                  <button data-action="trick_dead">Play dead</button
-                  ><span id="lesson-dead">New trick</span>
-                </div>
-                <div class="pair">
+                <div class="action-stack reward-actions" aria-label="Rewards">
                   <button class="primary" data-action="feed">
-                    Reward with a chip</button
-                  ><button data-action="feed_here">Leave a chip here…</button>
+                    Reward with a chip
+                  </button>
+                  <button data-action="feed_here">Leave a chip here…</button>
                 </div>
-
                 <p class="hint">
-                  He remembers every completed performance. Chip rewards teach
-                  him the routine. His lessons stay between visits.
+                  Three rewards make a trick familiar; six make it practiced.
+                  Lessons stay between visits.
                 </p>
               </section>
             </div>
