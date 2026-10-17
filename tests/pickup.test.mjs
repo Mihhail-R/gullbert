@@ -96,23 +96,49 @@ test(
     assert.equal(sim.inspect().rubbish.length, 0);
   }
 );
-test("Public enemy escalates chase, trail, then giant poop or rubbish", () => {
-  for (const [random, revenge] of [
-    [0, "big"],
-    [0.9, "trash"],
-  ]) {
+test("Public enemy keeps every reaction available as repeated handling increases mess", () => {
+  const outcomes = [];
+
+  for (const pickupCount of [1, 3, 8]) {
+    const counts = { chase: 0, trail: 0, big: 0, trash: 0 };
+
+    for (let sample = 0; sample < 100; sample++) {
+      const sim = bird(2, (sample + 0.5) / 100);
+
+      for (let pickup = 0; pickup < pickupCount; pickup++) {
+        drag(sim, pickup * 500, { x: 200 + (pickup % 2) * 200, y: 250 });
+      }
+
+      counts[sim.inspect().scene.revenge]++;
+    }
+
+    for (const [reaction, count] of Object.entries(counts)) {
+      assert.ok(count > 0, `${reaction} stays available after ${pickupCount} pickups`);
+    }
+
+    assert.ok(counts.chase + counts.trail > 50, "cursor encounters remain the majority");
+    outcomes.push(counts);
+  }
+
+  assert.ok(outcomes[2].big + outcomes[2].trash > outcomes[0].big + outcomes[0].trash);
+});
+
+test("Public enemy speech follows the chosen reaction and giant poop stays cleanable", () => {
+  const reactions = [
+    [0, "chase", /Your turn/i],
+    [0.65, "trail", /personal/i],
+    [0.85, "big", /redecorate/i],
+    [0.95, "trash", /redecorate/i],
+  ];
+
+  for (const [random, revenge, speech] of reactions) {
     const sim = bird(2, random);
     drag(sim, 0);
-    assert.equal(sim.inspect().scene.revenge, "chase");
-    drag(sim, 1000, { x: 400, y: 200 });
-    assert.equal(sim.inspect().scene.revenge, "trail");
-    drag(sim, 2000, { x: 250, y: 200 });
-    assert.equal(sim.inspect().scene.revenge, "trail");
-    drag(sim, 3000, { x: 400, y: 200 });
     assert.equal(sim.inspect().scene.revenge, revenge);
-    advance(sim, 1);
+    assert.match(sim.inspect().bubble, speech);
 
     if (revenge === "big") {
+      advance(sim, 1);
       assert.equal(sim.inspect().splats[0].scale, 2.5);
       const s = sim.inspect().splats[0];
       assert.equal(sim.present({ x: s.x + 55, y: s.y }).highlight.id, s.id);
@@ -129,24 +155,31 @@ test("regrabbing does not renew revenge and a short cooldown stops endless bouts
   assert.notEqual(sim.inspect().scene?.kind, "cursor");
   drag(sim, 12000, { x: 250, y: 200 });
   assert.equal(sim.inspect().scene.revenge, "none");
+  assert.match(sim.inspect().bubble, /not furniture/i);
   drag(sim, 22000, { x: 400, y: 200 });
   assert.ok(sim.inspect().pickup.revengeUntil > deadline);
 });
 test("chase catches only near beak, tugs briefly, and has a ten-second overall deadline", () => {
-  const sim = bird();
-  drag(sim, 0);
-  advance(sim, 0.75);
-  assert.equal(sim.inspect().scene.kind, "cursor");
-  sim.pointer({ x: sim.inspect().x + 78, y: sim.inspect().y + 48 });
-  advance(sim, 1.1);
-  assert.equal(sim.inspect().scene.phase, "chew");
-  advance(sim, 1.3);
-  assert.notEqual(sim.inspect().scene?.phase, "chew");
-  advance(sim, 8);
-  assert.notEqual(sim.inspect().scene?.kind, "cursor");
+  for (const pickupCount of [1, 8]) {
+    const sim = bird(2, 0);
+
+    for (let pickup = 0; pickup < pickupCount; pickup++) {
+      drag(sim, pickup * 500, { x: 200 + (pickup % 2) * 200, y: 250 });
+    }
+
+    advance(sim, 0.75);
+    assert.equal(sim.inspect().scene.kind, "cursor");
+    sim.pointer({ x: sim.inspect().x + 78, y: sim.inspect().y + 48 });
+    advance(sim, 1.1);
+    assert.equal(sim.inspect().scene.phase, "chew");
+    advance(sim, 1.3);
+    assert.notEqual(sim.inspect().scene?.phase, "chew");
+    advance(sim, 8);
+    assert.notEqual(sim.inspect().scene?.kind, "cursor");
+  }
 });
 test("trail has at most three splats and ends with its chase", () => {
-  const sim = bird();
+  const sim = bird(2, 0.65);
   drag(sim, 0);
   drag(sim, 1000, { x: 400, y: 200 });
 

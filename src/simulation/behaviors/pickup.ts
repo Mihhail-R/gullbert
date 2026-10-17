@@ -88,6 +88,42 @@ export function canPickup(
   return theatreOffset(sim).opacity * gagOffset(sim).opacity > 0;
 }
 
+const PUBLIC_ENEMY_REPLIES: Record<RelocationScene["revenge"], string> = {
+  none: dialogue.gullbert.pickup.iAmNotFurniture,
+  chase: dialogue.gullbert.pickup.yourTurn,
+  trail: dialogue.gullbert.pickup.thisIsNowPersonal,
+  big: dialogue.gullbert.pickup.iWillRedecorate,
+  trash: dialogue.gullbert.pickup.iWillRedecorate,
+};
+
+function choosePublicEnemyRevenge(
+  pickupCount: number,
+  random: () => number,
+): RelocationScene["revenge"] {
+  // Repeated handling favors mess, but cursor encounters always remain the majority.
+  const annoyance = Math.min(pickupCount - 1, 3);
+  const choices: [RelocationScene["revenge"], number][] = [
+    ["chase", 6],
+    ["trail", 2 + annoyance],
+    ["big", 1 + annoyance],
+    ["trash", 1 + annoyance],
+  ];
+  const totalWeight = choices.reduce((total, [, weight]) => {
+    return total + weight;
+  }, 0);
+  let draw = random() * totalWeight;
+
+  for (const [reaction, weight] of choices) {
+    draw -= weight;
+
+    if (draw < 0) {
+      return reaction;
+    }
+  }
+
+  return "trash";
+}
+
 /** Owns each hold, rolling history, retaliation budget and relocation lifecycle. */
 export class Pickup implements SceneOwner {
   readonly #context: PickupContext;
@@ -329,37 +365,28 @@ export class Pickup implements SceneOwner {
     context.offend();
     context.events.emit("squawk");
 
-    if (level === 1) {
-      if (count === 1) {
-        context.speech.say(dialogue.gullbert.pickup.youCouldHaveAsked, 3);
-      } else {
-        context.speech.say(dialogue.gullbert.pickup.iAmNotFurniture, 3);
+    switch (level) {
+      case 1: {
+        if (count === 1) {
+          context.speech.say(dialogue.gullbert.pickup.youCouldHaveAsked, 3);
+        } else {
+          context.speech.say(dialogue.gullbert.pickup.iAmNotFurniture, 3);
+        }
+
+        if (count === 1 && context.random() < 0.35) {
+          this.#mess(0.55);
+        }
+
+        if (count >= 3 && !settings.paused) {
+          installed.revenge = "trash";
+        }
+
+        break;
       }
 
-      if (count === 1 && context.random() < 0.35) {
-        this.#mess(0.55);
-      }
-
-      if (count >= 3 && !settings.paused) {
-        installed.revenge = "trash";
-      }
-    } else {
-      if (count === 1) {
-        installed.revenge = "chase";
-      } else if (count < 4) {
-        installed.revenge = "trail";
-      } else if (context.random() < 0.5) {
-        installed.revenge = "big";
-      } else {
-        installed.revenge = "trash";
-      }
-
-      if (count === 1) {
-        context.speech.say(dialogue.gullbert.pickup.yourTurn, 3);
-      } else if (count < 4) {
-        context.speech.say(dialogue.gullbert.pickup.thisIsNowPersonal, 3);
-      } else {
-        context.speech.say(dialogue.gullbert.pickup.iWillRedecorate, 3);
+      case 2: {
+        installed.revenge = choosePublicEnemyRevenge(count, context.random);
+        break;
       }
     }
 
@@ -378,6 +405,10 @@ export class Pickup implements SceneOwner {
       }
     } else {
       installed.revenge = "none";
+    }
+
+    if (level === 2) {
+      context.speech.say(PUBLIC_ENEMY_REPLIES[installed.revenge], 3);
     }
   }
 
