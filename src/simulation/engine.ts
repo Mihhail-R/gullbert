@@ -19,6 +19,7 @@ import type { BehaviorCapabilities, SimulationView } from "./capabilities.js";
 import {
   projectPresentation,
   type PetPresentation,
+  type PresentationObservation,
   type ReadonlyValue,
 } from "./presentation.js";
 import { interactionRects } from "./interaction.js";
@@ -149,7 +150,11 @@ export class Gullbert {
     this.#work = new WorkRoutine(this.#capabilities);
     this.#cleanup = new Cleanup({
       observe: () => {
-        return this.#baseObservation();
+        return {
+          ...this.#geometryObservation(),
+          flight: this.#activity.flight,
+          settings: { ...this.#settings },
+        };
       },
       body: this.#body,
       objects: this.#objects,
@@ -178,7 +183,16 @@ export class Gullbert {
       clock: this.#capabilities.clock,
       speech: this.#capabilities.speech,
       available: () => {
-        return canTouch(this.#baseObservation());
+        return canTouch({
+          visible: this.#visible,
+          pickup: this.#pickup.snapshot(),
+          scene: this.#registry.scene,
+          flight: this.#activity.flight,
+          tidying: this.tidying,
+          cleanup: this.#cleanup.snapshot(),
+          time: this.#time,
+          mode: this.#activity.mode,
+        });
       },
       sleeping: () => {
         return this.#activity.mode === "nap";
@@ -207,7 +221,7 @@ export class Gullbert {
         return this.tidying;
       },
       visual: () => {
-        const view = this.#observe();
+        const view = { scene: this.#registry.scene, time: this.#time };
         const theatre = theatreOffset(view);
         const gag = gagOffset(view);
         return {
@@ -1190,6 +1204,41 @@ export class Gullbert {
     const pose = this.pose;
     return { ...this.#baseObservation(), pose, frame: frameFor(pose) };
   }
+  #geometryObservation() {
+    return {
+      ...this.#body.snapshot(),
+      ...this.#objects.snapshot(),
+      scene: this.#registry.scene,
+      time: this.#time,
+      visible: this.#visible,
+      tidying: this.tidying,
+      mode: this.#activity.mode,
+    };
+  }
+  #presentationObservation(): PresentationObservation {
+    const geometry = this.#geometryObservation();
+    const scene = geometry.scene;
+    const pose = this.pose;
+    let carriedItem = null;
+
+    if (scene?.kind === "gift" && scene.carrying) {
+      carriedItem = scene.item;
+    }
+
+    return {
+      ...geometry,
+      ...this.#speech.snapshot(),
+      ...this.#moods.snapshot(),
+      settings: { ...this.#settings },
+      until: this.#activity.until,
+      memory: this.#belongings.snapshot().memory,
+      touch: this.#touch.snapshot(),
+      pickup: this.#pickup.snapshot(),
+      carriedItem,
+      pose,
+      frame: frameFor(pose),
+    };
+  }
   #baseObservation(): SimulationView {
     const pose: Pose = "idle";
     const belongings = this.#belongings.snapshot();
@@ -1293,7 +1342,7 @@ export class Gullbert {
 
     const presentation = { ...routine, props };
     return freezeObservation(
-      projectPresentation(this.#observe(), pointer, interactive, presentation),
+      projectPresentation(this.#presentationObservation(), pointer, interactive, presentation),
     );
   }
   status() {
@@ -1318,16 +1367,21 @@ export class Gullbert {
     return sounds;
   }
   interactionRects(interactive = true) {
-    return interactionRects(this.#observe(), interactive);
+    return interactionRects(this.#geometryObservation(), interactive);
   }
   pickupRect() {
-    return pickupRect(this.#observe());
+    return pickupRect({ ...this.#body.snapshot(), scene: this.#registry.scene, time: this.#time });
   }
   canPickup(): boolean {
-    return canPickup(this.#observe());
+    return canPickup({
+      visible: this.#visible,
+      tidying: this.tidying,
+      scene: this.#registry.scene,
+      time: this.#time,
+    });
   }
   directCleanupAt(point: Point): boolean {
-    return directCleanupTarget(this.#observe(), point) !== null;
+    return directCleanupTarget(this.#geometryObservation(), point) !== null;
   }
   flickCap(point: Point): boolean {
     if (!this.#visible || this.tidying) {
