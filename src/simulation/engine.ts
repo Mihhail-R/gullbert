@@ -24,7 +24,6 @@ export { SIZE, clamp } from "./geometry.js";
 import { POSES, type Pose } from "./poses.js";
 export { POSES } from "./poses.js";
 import type {
-  CaretSample,
   Point,
   PointerSample,
   Settings,
@@ -46,7 +45,6 @@ import { GiftRoutine } from "./behaviors/gifts.js";
 import { PerchRoutine } from "./behaviors/perch.js";
 import { CrimeRoutine } from "./behaviors/crime.js";
 import { CursorRoutine, cursorBeak } from "./behaviors/cursor.js";
-import { TypingRoutine } from "./behaviors/typing.js";
 import { SnackRoutine } from "./behaviors/snacks.js";
 import { CapRoutine } from "./behaviors/cap.js";
 import { LearningRoutine } from "./behaviors/learning.js";
@@ -67,7 +65,6 @@ export class Gullbert {
   #crime: CrimeRoutine;
   #cursor: CursorRoutine;
   #snacks: SnackRoutine;
-  #typing: TypingRoutine;
   #cap: CapRoutine;
   #learning: LearningRoutine;
   #random: () => number;
@@ -132,7 +129,6 @@ export class Gullbert {
     this.#crime = new CrimeRoutine(this.#capabilities);
     this.#cursor = new CursorRoutine(this.#capabilities);
     this.#snacks = new SnackRoutine(this.#capabilities);
-    this.#typing = new TypingRoutine(this.#capabilities);
     this.#cap = new CapRoutine(this.#capabilities);
     this.#learning = new LearningRoutine(this.#capabilities);
     this.#cleanup = new Cleanup({
@@ -279,7 +275,6 @@ export class Gullbert {
     owners.set("caper", this.#crime);
     owners.set("cursor", this.#cursor);
     owners.set("snack", this.#snacks);
-    owners.set("typing", this.#typing);
     owners.set("cap", this.#cap);
     owners.set("trick", this.#learning);
     owners.set("habit", this.#learning);
@@ -298,7 +293,6 @@ export class Gullbert {
         this.#crime,
         this.#cursor,
         this.#snacks,
-        this.#typing,
         this.#cap,
         this.#learning,
         this.#quiet,
@@ -397,11 +391,7 @@ export class Gullbert {
     this.#touch.pointer(point);
     this.#gags.gagPointer(point);
     this.#cursor.pointerSample(point);
-    this.#typing.pointer(point);
     this.#cap.pointerSample(point);
-  }
-  caret(sample: CaretSample | null): void {
-    this.#typing.sample(sample);
   }
   setVisible(visible: boolean): void {
     this.#visible = visible;
@@ -409,7 +399,6 @@ export class Gullbert {
 
     if (!visible) {
       this.#learning.cancelAssociations();
-      this.#typing.resetSensing();
       this.#pickup.cancel();
       this.#touch.reset();
       this.#cleanup.cancel();
@@ -467,7 +456,6 @@ export class Gullbert {
   }
   clean() {
     this.#learning.cancelAssociations();
-    this.#typing.cleanNest();
     this.#objects.clear();
     this.#pickup.cancel();
     this.#cleanup.cancel();
@@ -696,10 +684,6 @@ export class Gullbert {
       return;
     }
 
-    if (this.#typing.maybeStart()) {
-      return;
-    }
-
     if (this.#gags.maybeGag()) {
       return;
     }
@@ -790,8 +774,6 @@ export class Gullbert {
   }
   configure(settings: Partial<Settings>) {
     const previousHat = this.#settings.hat;
-    const previousMischief = this.#settings.mischief;
-    const previousVision = this.#settings.vision;
 
     if (
       settings.paused ||
@@ -817,19 +799,6 @@ export class Gullbert {
       hat: normalizeHat(settings.hat ?? this.#settings.hat),
     };
     this.#cleanup.configure();
-
-    if (
-      settings.paused ||
-      this.#settings.mischief !== previousMischief ||
-      this.#settings.vision !== previousVision
-    ) {
-      this.#typing.resetSensing();
-
-      if (this.#registry.scene?.kind === "typing") {
-        this.#cancelScene();
-        this.#rest();
-      }
-    }
 
     if (this.#settings.hat !== previousHat) {
       const remark = hatRemark({ ...this.#observe(), random: this.#random });
@@ -1138,7 +1107,7 @@ export class Gullbert {
 
     if (
       scene &&
-      !["trick", "habit", "guest", "gift", "typing"].includes(scene.kind)
+      !["trick", "habit", "guest", "gift"].includes(scene.kind)
     ) {
       if (played) {
         this.#belongings.remember("play", scene.kind, this.#body);
@@ -1174,7 +1143,7 @@ export class Gullbert {
     let props = [...(routine.props ?? [])];
 
     if (this.#visible) {
-      props = [...props, ...this.#routineProps, ...this.#typing.nestProps()];
+      props = [...props, ...this.#routineProps];
     }
 
     const presentation = { ...routine, props };
@@ -1184,7 +1153,6 @@ export class Gullbert {
   }
   status() {
     return Object.freeze({
-      watchTyping: this.#typing.enabled(),
       memoryRevision: this.#belongings.snapshot().revision,
       mood: this.#moods.snapshot().mood?.name ?? "",
       sound: this.#settings.sound,

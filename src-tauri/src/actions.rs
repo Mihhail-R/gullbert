@@ -29,10 +29,6 @@ enum Route {
     Visibility,
     Controls,
     Quit,
-    #[cfg(all(debug_assertions, target_os = "macos"))]
-    WindowProbe,
-    #[cfg(all(debug_assertions, target_os = "macos"))]
-    WindowSpike,
 }
 include!(concat!(env!("OUT_DIR"), "/actions.rs"));
 
@@ -48,50 +44,58 @@ pub(crate) trait Effects {
     fn cursor(&mut self) -> Result<(), String>;
     fn controls(&mut self);
     fn quit(&mut self);
-    #[cfg(all(debug_assertions, target_os = "macos"))]
-    fn window_probe(&mut self, spike: bool) -> Result<(), String>;
 }
 impl Action {
     pub(crate) fn perform(self, effects: &mut impl Effects) -> Result<(), String> {
         let (visibility, route, preparation) = self.routing();
         effects.interrupt();
         effects.replace_target();
+
         // Targeting and Cursor position and acquire through their native owner.
         match route {
             Route::Target(purpose, preparation) => return effects.target(purpose, preparation),
+
             Route::Cursor => return effects.cursor(),
+
             _ => {}
         }
+
         if let Some(command) = preparation {
             effects.command(command, None)?;
         }
+
         let point = match route {
             Route::Pointer(_) => Some(effects.position()?),
+
             Route::Command(_) if matches!(visibility, Visibility::Show) && !effects.visible() => {
                 effects.position()?;
                 None
             }
+
             _ => None,
         };
+
         match visibility {
             Visibility::Show => effects.visibility(true)?,
+
             Visibility::Hide => effects.visibility(false)?,
+
             Visibility::Preserve => {}
         }
+
         match route {
             Route::Command(command) | Route::Pointer(command) => effects.command(command, point),
+
             Route::Controls => {
                 effects.controls();
                 Ok(())
             }
+
             Route::Quit => {
                 effects.quit();
                 Ok(())
             }
-            #[cfg(all(debug_assertions, target_os = "macos"))]
-            Route::WindowProbe => effects.window_probe(false),
-            #[cfg(all(debug_assertions, target_os = "macos"))]
-            Route::WindowSpike => effects.window_probe(true),
+
             _ => Ok(()),
         }
     }
@@ -127,15 +131,7 @@ impl Effects for Desktop<'_> {
         controls(self.0);
     }
     fn quit(&mut self) {
-        #[cfg(all(debug_assertions, target_os = "macos"))]
-        if native_input::window_spike::quit() {
-            return;
-        }
         self.0.exit(0);
-    }
-    #[cfg(all(debug_assertions, target_os = "macos"))]
-    fn window_probe(&mut self, spike: bool) -> Result<(), String> {
-        native_input::window_spike::start(self.0, spike)
     }
 }
 
@@ -199,14 +195,14 @@ mod tests {
     }
 
     #[test]
-    fn debug_actions_are_only_accepted_in_debug_macos_builds() {
-        let available = cfg!(all(debug_assertions, target_os = "macos"));
+    fn removed_window_actions_are_rejected_in_every_build() {
         for name in ["window_probe", "window_spike"] {
-            assert_eq!(Action::named(name).is_some(), available);
-            assert_eq!(
-                serde_json::from_value::<Action>(serde_json::json!(name)).is_ok(),
-                available
-            );
+            assert!(Action::named(name).is_none());
+            assert!(serde_json::from_value::<Action>(serde_json::json!(name)).is_err());
+        }
+
+        for flag in ["--window-probe", "--window-spike"] {
+            assert_eq!(from_cli(Some(flag)), Action::Controls);
         }
     }
 
@@ -214,6 +210,7 @@ mod tests {
     fn malformed_definitions_fail_generation() {
         let source = include_str!("../../src/actions/catalog.json");
         action_catalog::generate(source).unwrap();
+
         for mutation in [
             "alias",
             "purpose",
@@ -221,24 +218,34 @@ mod tests {
             "visibility",
             "extra",
             "variant",
-            "debug",
+            "availability",
         ] {
             let mut catalog: serde_json::Value = serde_json::from_str(source).unwrap();
+
             match mutation {
                 "alias" => catalog["feed"]["aliases"] = serde_json::json!(["--place-chip"]),
+
                 "purpose" => catalog["feed_here"]["purpose"] = serde_json::json!("tidy"),
+
                 "preparation" => catalog["feed_here"]["preparation"] = serde_json::json!("cancel"),
+
                 "visibility" => catalog["feed_here"]["visibility"] = serde_json::json!("preserve"),
+
                 "extra" => catalog["feed"]["purpose"] = serde_json::json!("tidy"),
+
                 "variant" => catalog["feed"]["variant"] = serde_json::json!("Quit"),
-                "debug" => catalog["window_probe"]["availability"] = serde_json::json!("all"),
+
+                "availability" => catalog["feed"]["availability"] = serde_json::json!("unknown"),
+
                 _ => unreachable!(),
             }
+
             assert!(
                 action_catalog::generate(&catalog.to_string()).is_err(),
                 "{mutation}"
             );
         }
+
         for source in ["null", "[]", "{}", "{", r#"{"feed":3}"#] {
             assert!(action_catalog::generate(source).is_err());
         }

@@ -130,9 +130,6 @@ jobs:
       - name: Build frontend for native tests
         if: matrix.task == 'test'
         run: npm run build:web
-      - name: Prepare Windows OCR models for native tests
-        if: matrix.task == 'test' && runner.os == 'Windows'
-        run: npm run prepare:vision
       - name: Run native lifecycle tests
         if: matrix.task == 'test'
         run: cargo test --manifest-path src-tauri/Cargo.toml --locked --target ${{ matrix.target }}

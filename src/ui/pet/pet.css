@@ -504,63 +504,6 @@ body.gull-dragging {
   z-index: 1;
 }
 
-.theatre-prop[data-asset="letter"] {
-  color: #3b3026;
-  font:
-    bold 25px/28px ui-monospace,
-    monospace;
-  text-align: center;
-  text-shadow:
-    -1px -1px 0 #fff5d9,
-    1px -1px 0 #fff5d9,
-    -1px 1px 0 #fff5d9,
-    1px 1px 0 #fff5d9;
-}
-
-#typing-playground {
-  position: absolute;
-  top: 38%;
-  left: 10%;
-  width: 80%;
-  max-width: 520px;
-  padding: 18px;
-  border: 1px solid #b5b4a3;
-  border-radius: 12px;
-  background: #fffdf3;
-}
-#typing-playground label {
-  display: block;
-  font-size: 12px;
-  margin-bottom: 12px;
-}
-#typing-demo {
-  min-height: 72px;
-  padding: 12px;
-  background: white;
-  border: 1px solid #c9c6b7;
-  border-radius: 5px;
-  font:
-    16px/1.6 ui-monospace,
-    monospace;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  user-select: text;
-}
-#typing-playground small {
-  display: block;
-  margin-top: 10px;
-  color: #6c705f;
-  font:
-    11px/1.5 system-ui,
-    sans-serif;
-}
-#gull.typing[data-phase="pounce"] #bird {
-  animation: peck 0.2s steps(1, end) infinite;
-}
-#gull.typing[data-phase="innocent"] #bird {
-  transform: rotate(-4deg);
-}
-
 .theatre-prop[data-asset="snack-invoice"] {
   box-sizing: border-box;
   padding: 5px 2px;
@@ -574,19 +517,6 @@ body.gull-dragging {
 }
 
 /* Browser chrome follows the control room's appearance; the overlay stays transparent. */
-body[data-theme] #typing-playground {
-  color: var(--ink);
-  background: var(--paper);
-  border-color: var(--line);
-}
-body[data-theme] #typing-demo {
-  color: var(--ink);
-  background: var(--card);
-  border-color: var(--line);
-}
-body[data-theme] #typing-playground small {
-  color: var(--muted);
-}
 body[data-theme] :is(#speech, #guest-speech, #target-banner) {
   color: var(--ink);
   background: var(--card);

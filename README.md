@@ -12,22 +12,10 @@ Gullbert roams your desktop, demands chips, learns tricks, collects questionable
 
 - **macOS 11+**, Apple Silicon or Intel. Download the matching `.dmg` and drag Gullbert into Applications.
 - **Windows 10+**, x64, with WebView2. Download and run the `setup.exe`.
-- Optional local vision needs **macOS 14+** or **Windows 10 version 2004+**.
 
 This is an early preview. Apple Silicon Macs have had local testing; Intel Macs and Windows still need hands-on testing. Builds are unsigned or ad-hoc signed and not notarized, so you may see system security prompts.
 
 Use the control room or menu bar / system tray to play, adjust behaviour, or hide him. Closing the control room leaves him running; choose **Quit** to exit. He does not start automatically at login.
-
-## Permissions
-
-Screen and typing access are optional; Gullbert can roam and play without them. Enable these features in **Settings**.
-
-| Access                                          | What he uses it for                                                                                                                                                                                                                               |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Accessibility** on macOS                      | Finds the text cursor in supported apps so he can pretend to steal letters while you type. Reads cursor position and focused-field identity, not document text or keystrokes. Windows uses the system caret without a separate permission prompt. |
-| **Screen Recording** on macOS, for local vision | Reads text in a small screen region around your pointer so he can carry away a cosmetic copy of a character. Recognition runs entirely on your device. Windows supports the same feature without a separate permission prompt or OCR download.    |
-
-Neither feature changes text in your apps. Screen captures and recognized text are processed in memory, never saved or sent anywhere. Local vision does not need Accessibility access. You can turn these features off in Settings and revoke macOS permissions in System Settings.
 
 ## Offline and private
 

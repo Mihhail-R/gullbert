@@ -4,7 +4,6 @@ import type { ActionMessage, PreviewMessage } from "../../platform/bridge.js";
 import { createPickupDrag } from "../../platform/pickup-drag.js";
 import { createCursorBiteBridge } from "../../platform/cursor-bite.js";
 import { MemoryPersistence } from "../../platform/roommate-store.js";
-import { CaretTracker } from "../../platform/caret.js";
 import { createPointerTracker } from "../../platform/pointer.js";
 import { contains } from "../../simulation/behaviors/touch.js";
 import type { Point, PointerSample, Settings } from "../../simulation/model.js";
@@ -49,7 +48,6 @@ export class PetApplication {
   readonly #persistence: MemoryPersistence;
   readonly #drag: ReturnType<typeof createPickupDrag>;
   readonly #bite: ReturnType<typeof createCursorBiteBridge>;
-  readonly #caret: CaretTracker;
   readonly #pointer: ReturnType<typeof createPointerTracker>;
 
   readonly #dependencies: ApplicationDependencies;
@@ -62,7 +60,6 @@ export class PetApplication {
       action: (action, point) => dependencies.simulation.action(action, point),
       running: () => this.#running(),
       prepare: () => {
-        this.#caret.stop();
         this.#cancelDrag();
       },
       cancelDrag: () => this.#cancelDrag(),
@@ -183,22 +180,6 @@ export class PetApplication {
         this.#syncPointer();
       },
     });
-    this.#caret = new CaretTracker({
-      read: () => {
-        const native = this.#dependencies.native;
-
-        if (native) {
-          return native.invoke("caret_position");
-        }
-
-        return Promise.resolve(this.#dependencies.browser.caret?.() ?? null);
-      },
-      sample: (sample) => {
-        this.#dependencies.simulation.caret(sample);
-      },
-      schedule: this.#dependencies.clock.schedule,
-      cancel: this.#dependencies.clock.cancel,
-    });
     let read = null;
 
     if (this.#dependencies.native) {
@@ -256,7 +237,6 @@ export class PetApplication {
     this.#cancelDrag();
     this.#dependencies.simulation.setVisible(false);
     this.#pointer.stop();
-    this.#caret.stop();
     this.#releaseInteraction();
     this.#bite.stop();
 
@@ -534,7 +514,6 @@ export class PetApplication {
     }
 
     this.#cancelDrag();
-    this.#caret.stop();
     this.#dependencies.simulation.configure(settings);
     this.#wake();
   }
@@ -809,7 +788,6 @@ export class PetApplication {
     }
 
     const sim = this.#dependencies.simulation;
-    this.#caret.stop();
     this.#cancelDrag();
     this.#targeting.replace();
     this.#resizeSimulation();
@@ -1027,14 +1005,6 @@ export class PetApplication {
     }
 
     this.#syncBite();
-    const canObserve =
-      this.#visible && !this.#targeting.active && !this.#drag.active;
-
-    if (canObserve && this.#dependencies.simulation.status().watchTyping) {
-      this.#caret.start();
-    } else {
-      this.#caret.stop();
-    }
 
     if (this.#visible && !this.#targeting.active) {
       this.#pointer.start();
@@ -1125,8 +1095,6 @@ export class PetApplication {
   }
 
   #resizeSimulation(): void {
-    this.#caret.stop();
-    this.#dependencies.simulation.caret(null);
     const size = this.#dependencies.browser.size();
     this.#dependencies.simulation.resize(size.width, size.height);
   }

@@ -50,12 +50,6 @@ export function roommateRenderingTests(mode) {
               case "snapshot":
                 return { settings, visible: true, shortcut_errors: [] };
 
-              case "caret_access":
-                return { available: false, platform: "test" };
-
-              case "vision_status":
-                return { supported: false, granted: false, state: "unsupported" };
-
               case "app_version":
                 return "0.0.0";
 

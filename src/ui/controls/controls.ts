@@ -31,7 +31,7 @@ const preferencesKey = "gullbert.preferences.v1";
 const $ = requiredElement;
 const frame = $<HTMLIFrameElement>("iframe");
 const settingInputs = document.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
-  "#paused, #vision, #sound, #mischief, #hat",
+  "#paused, #sound, #mischief, #hat",
 );
 setupAppearance();
 setupNavigation();
@@ -42,7 +42,6 @@ function error(message: string) {
 }
 function render() {
   $<HTMLInputElement>("#paused").checked = settings.paused;
-  $<HTMLInputElement>("#vision").checked = settings.vision === true;
   $<HTMLInputElement>("#sound").checked = settings.sound;
   $<HTMLSelectElement>("#mischief").value = String(settings.mischief);
   $<HTMLSelectElement>("#hat").value = normalizeHat(settings.hat);
@@ -156,12 +155,10 @@ async function save() {
   $<HTMLButtonElement>("#pause-toggle").disabled = true;
   const next = {
     paused: $<HTMLInputElement>("#paused").checked,
-    vision: $<HTMLInputElement>("#vision").checked,
     sound: $<HTMLInputElement>("#sound").checked,
     mischief: Number($<HTMLSelectElement>("#mischief").value),
     hat: normalizeHat($<HTMLSelectElement>("#hat").value),
   };
-  const enablingVision = next.vision && !settings.vision;
 
   for (const el of settingInputs) {
     el.disabled = true;
@@ -170,10 +167,6 @@ async function save() {
   try {
     if (native) {
       await invoke("update_settings", { settings: next });
-
-      if (enablingVision) {
-        await visionStatus(true);
-      }
     } else {
       localStorage.setItem(preferencesKey, JSON.stringify(next));
       post({ type: "settings", settings: next });
@@ -192,7 +185,6 @@ async function save() {
     }
 
     render();
-    void visionStatus();
   }
 }
 
@@ -523,97 +515,5 @@ document.addEventListener("keydown", (event) => {
 
   void cancelPlacement();
 });
-
-async function caretAccess(prompt = false): Promise<void> {
-  const label = $("#caret-status");
-  const button = $<HTMLButtonElement>("#caret-access");
-
-  if (!native) {
-    label.textContent = "Try typing in the playground. Your text stays intact.";
-    return;
-  }
-
-  try {
-    const access = await invoke("caret_access", { prompt });
-    button.hidden = access.available || access.platform !== "macos";
-
-    if (access.available) {
-      label.textContent =
-        "Ready in supported text fields. Polite-ish switches it off.";
-    } else if (access.platform === "macos") {
-      label.textContent =
-        "Allow Gullbert in System Settings → Privacy & Security → Accessibility. " +
-        "No screen recording needed.";
-    } else {
-      label.textContent = "Caret sensing is unavailable on this platform.";
-    }
-  } catch {
-    label.textContent = "Could not check caret access.";
-  }
-}
-$("#caret-access")
-  .addEventListener("click", () => {
-    void caretAccess(true);
-  });
-window.addEventListener("focus", () => {
-  void caretAccess();
-});
-void caretAccess();
-
-async function visionStatus(prompt = false): Promise<void> {
-  const label = $("#vision-status");
-  const button = $("#vision-access");
-  const toggle = $<HTMLInputElement>("#vision");
-  $("#vision-setting").hidden = !native;
-
-  if (!native) {
-    return;
-  }
-
-  label.hidden = false;
-
-  try {
-    const status = await invoke("vision_status", { prompt });
-    toggle.disabled = !status.supported || saving;
-    button.hidden = !status.supported || status.granted || !settings.vision;
-    const messages: Record<string, string> = {
-      unsupported:
-        "Local vision needs macOS 14+ or Windows 10 version 2004+. Caret sensing " +
-        "is still available.",
-      off: "Vision is off. Enable it to hunt visible words, including chat messages.",
-      permission:
-        "Allow Gullbert in System Settings → Privacy & Security → Screen & " +
-        "System Audio Recording, then restart him if macOS asks.",
-      paused: "Vision is paused while hidden, paused, or Polite-ish.",
-      waiting: "Waiting to look. Point near some text on Gullbert’s display.",
-      scanning: "Looking for nearby words…",
-      text_found:
-        "Text spotted! He’ll investigate when free. Move the mouse away once he approaches.",
-      no_text: "No text spotted near the mouse. Try pointing beside a word.",
-      failed:
-        "Screen capture or local OCR failed. Protected screens may be " +
-        "unavailable; Gullbert will retry.",
-    };
-    label.textContent = messages[status.state] ?? "Waiting for vision status.";
-  } catch {
-    label.textContent = "Could not read vision status.";
-  }
-}
-$("#vision-access")
-  .addEventListener("click", () => {
-    void visionStatus(true);
-  });
-window.addEventListener("focus", () => {
-  void visionStatus();
-});
-const visionStatusTimer = window.setInterval(() => {
-  if (!document.hidden) {
-    void visionStatus();
-  }
-}, 1500);
-window.addEventListener("pagehide", () => {
-  clearInterval(visionStatusTimer);
-});
-void visionStatus();
 
 setupUpdates();

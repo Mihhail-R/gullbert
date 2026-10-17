@@ -17,9 +17,6 @@
     "format:check": "prettier --check src tests scripts .github package.json README.md CONTRIBUTING.md tsconfig.json src-tauri/tauri.conf.json src-tauri/capabilities",
     "build:web": "node scripts/build.mjs",
     "watch:web": "node scripts/build.mjs --watch",
-    "prepare:vision": "node scripts/prepare-vision.mjs",
-    "predev": "node scripts/prepare-vision.mjs --if-windows",
-    "prebuild": "node scripts/prepare-vision.mjs --if-windows",
     "lint": "eslint src scripts tests eslint.config.mjs",
     "lint:fix": "npm run lint -- --fix",
     "build:pages": "npm run build:web && node scripts/build-pages.mjs"

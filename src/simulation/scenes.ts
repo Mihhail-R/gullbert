@@ -235,7 +235,6 @@ export interface RelocationScene extends TimedScene {
   target: Point;
 }
 export type Scene =
-  | TypingScene
   | RelocationScene
   | CursorScene
   | SnackScene
@@ -247,19 +246,6 @@ export type Scene =
   | TheatreScene
   | GuestScene
   | GagScene;
-export interface TypingScene extends TimedScene {
-  kind: "typing";
-  visual?: boolean;
-  source: string;
-  phase: "approach" | "watch" | "pounce" | "carry" | "deposit" | "innocent";
-  resume: "approach" | "watch" | "pounce" | "carry" | "deposit";
-  deadline: number;
-  target: Point;
-  glyph: string;
-  carrying: boolean;
-  steal: boolean;
-  buildNest: boolean;
-}
 export function isTheatre(
   scene: ReadonlyValue<Scene> | null,
 ): scene is ReadonlyValue<TheatreScene> {

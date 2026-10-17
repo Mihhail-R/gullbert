@@ -518,56 +518,27 @@
             </div>
             <p id="theme-error" role="alert" hidden=""></p>
             <p id="preferences-summary" class="hint">Menace · Sound off</p>
-            <section class="settings-columns">
-              <section class="settings-section settings-behaviour">
-                <h2>Behaviour</h2>
-                <div class="setting">
-                  <div>
-                    <label for="mischief">Mischief level</label
-                    ><small>Cursor and typing mischief.</small>
-                  </div>
-                  <select id="mischief">
-                    <option value="0">Polite-ish</option>
-                    <option value="1" selected="">Menace</option>
-                    <option value="2">Public enemy</option>
-                  </select>
+            <section class="settings-section">
+              <h2>Behaviour</h2>
+              <div class="setting">
+                <div>
+                  <label for="mischief">Mischief level</label
+                  ><small>Cursor and desktop mischief.</small>
                 </div>
-                <div class="setting">
-                  <label for="paused">Pause antics</label
-                  ><input id="paused" type="checkbox" role="switch" />
-                </div>
-                <div class="setting">
-                  <label for="sound">Sound effects</label
-                  ><input id="sound" type="checkbox" role="switch" />
-                </div>
-              </section>
-              <section class="settings-section">
-                <h2>Screen &amp; typing access</h2>
-
-                <div class="setting">
-                  <div>
-                    <span>Caret fishing</span
-                    ><small id="caret-status">Checking caret access…</small>
-                  </div>
-                  <button id="caret-access" type="button" hidden="">
-                    Enable access
-                  </button>
-                </div>
-                <div class="setting" id="vision-setting">
-                  <div>
-                    <label for="vision">Local vision</label
-                    ><small
-                      >Read words near the pointer. Processed locally; never
-                      saved or sent.</small
-                    >
-                  </div>
-                  <input id="vision" type="checkbox" role="switch" />
-                </div>
-                <p id="vision-status" role="status" hidden=""></p>
-                <button id="vision-access" type="button" hidden="">
-                  Allow screen access
-                </button>
-              </section>
+                <select id="mischief">
+                  <option value="0">Polite-ish</option>
+                  <option value="1" selected="">Menace</option>
+                  <option value="2">Public enemy</option>
+                </select>
+              </div>
+              <div class="setting">
+                <label for="paused">Pause antics</label
+                ><input id="paused" type="checkbox" role="switch" />
+              </div>
+              <div class="setting">
+                <label for="sound">Sound effects</label
+                ><input id="sound" type="checkbox" role="switch" />
+              </div>
             </section>
             <details class="settings-detail">
               <summary>Keyboard shortcuts</summary>
@@ -727,14 +698,6 @@
                 Invite pigeon
               </button>
             </div>
-          </details>
-          <details>
-            <summary>Typing mischief</summary>
-            <p class="hint">
-              Type in the playground. Choose Menace for caret fishing or Public
-              enemy for a punctuation nest. Your text stays intact. Local vision
-              requires the installed app.
-            </p>
           </details>
           <p class="hint">
             Pointer catches are pretend here. Escape cancels placement and

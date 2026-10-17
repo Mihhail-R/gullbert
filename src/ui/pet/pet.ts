@@ -62,12 +62,4 @@ const application = new PetApplication({
   },
 });
 
-if (!native) {
-  const playground = document.getElementById("typing-playground");
-
-  if (playground) {
-    playground.hidden = false;
-  }
-}
-
 await application.start();

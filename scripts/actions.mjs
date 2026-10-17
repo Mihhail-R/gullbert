@@ -33,7 +33,7 @@ export function validateActions(catalog) {
 
     variants.add(action.variant);
 
-    if (!["all", "debug_macos"].includes(action.availability)) {
+    if (action.availability !== "all") {
       fail(name);
     }
 
@@ -50,55 +50,62 @@ export function validateActions(catalog) {
     ];
     const route = action.route;
 
-    if (route === "command" || route === "pointer") {
-      fields.push("command");
+    switch (route) {
+      case "command":
+      case "pointer": {
+        fields.push("command");
 
-      if (
-        typeof action.command !== "string" ||
+        if (
+          typeof action.command !== "string" ||
         !/^[a-z_]+$/.test(action.command)
-      ) {
-        fail(name);
-      }
-    } else if (route === "target") {
-      fields.push("purpose", "preparation");
+        ) {
+          fail(name);
+        }
 
-      if (
-        typeof action.purpose !== "string" ||
+        break;
+      }
+
+      case "target": {
+        fields.push("purpose", "preparation");
+
+        if (
+          typeof action.purpose !== "string" ||
         !/^[a-z_]+$/.test(action.purpose)
-      ) {
-        fail(name);
+        ) {
+          fail(name);
+        }
+
+        if (!["cancel", "prepare_chip", "tidy"].includes(action.preparation)) {
+          fail(name);
+        }
+
+        if ((action.purpose === "tidy") !== (action.preparation === "tidy")) {
+          fail(name);
+        }
+
+        if ((action.purpose === "feed_here") !== (action.preparation === "prepare_chip")) {
+          fail(name);
+        }
+
+        break;
       }
 
-      if (!["cancel", "prepare_chip", "tidy"].includes(action.preparation)) {
-        fail(name);
-      }
+      case "hide":
+      case "show":
+      case "controls":
+      case "quit":
+      case "cursor":
+        break;
 
-      if (
-        (action.purpose === "tidy") !== (action.preparation === "tidy") ||
-        (action.purpose === "feed_here") !==
-          (action.preparation === "prepare_chip")
-      ) {
+      default:
         fail(name);
-      }
-    } else if (
-      ![
-        "hide",
-        "show",
-        "controls",
-        "quit",
-        "cursor",
-        "window_probe",
-        "window_spike",
-      ].includes(route)
-    ) {
-      fail(name);
     }
 
     if (route !== "target" && "preparation" in action) {
       fields.push("preparation");
 
       if (
-        !["show", "controls", "window_probe", "window_spike"].includes(route) ||
+        !["show", "controls"].includes(route) ||
         action.preparation !== "tidy_cancel"
       ) {
         fail(name);
@@ -107,19 +114,23 @@ export function validateActions(catalog) {
 
     let visibility = "show";
 
-    if (route === "hide") {
-      visibility = "hide";
-    } else if (
-      ["controls", "quit", "window_probe", "window_spike"].includes(route)
-    ) {
-      visibility = "preserve";
-    } else if (route === "command") {
-      visibility = action.visibility;
+    switch (route) {
+      case "hide":
+        visibility = "hide";
+        break;
+
+      case "controls":
+      case "quit":
+        visibility = "preserve";
+        break;
+
+      case "command":
+        visibility = action.visibility;
+        break;
     }
 
     if (
       visibility !== action.visibility ||
-      route.startsWith("window_") !== (action.availability === "debug_macos") ||
       Object.keys(action)
         .some((key) => !fields.includes(key))
     ) {
