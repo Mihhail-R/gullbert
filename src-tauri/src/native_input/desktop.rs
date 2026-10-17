@@ -229,18 +229,21 @@ impl Runtime {
     pub(crate) fn watch(app: tauri::AppHandle) {
         std::thread::spawn(move || loop {
             std::thread::sleep(Duration::from_millis(50));
-            let capturing = app
+            let needs_reconciliation = app
                 .state::<Runtime>()
                 .input
                 .lock()
                 .unwrap()
                 .as_ref()
-                .is_some_and(|input| input.interaction.capturing);
-            if !capturing {
+                .is_some_and(|input| input.capture != Some(false));
+
+            if !needs_reconciliation {
                 continue;
             }
+
             // At most one outstanding watcher tick, even if the UI is stalled.
             let (done, wait) = std::sync::mpsc::channel();
+
             if dispatch(&app, move |app| {
                 with_input(app, |input, effects| input.watch(effects));
                 let _ = done.send(());

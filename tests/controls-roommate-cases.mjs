@@ -261,6 +261,35 @@ export function roommateRenderingTests(mode) {
     assert.equal(element("collection-empty").hidden, false);
   });
 
+  test(`${mode}: earned favourites appear on the shelf and clear with missing items`, () => {
+    deliver({ memory: {
+      collection: { sock: 2, bottle_cap: 1 },
+      preferences: { seed: 123, treasureAffection: { sock: 4 } },
+    } });
+    assert.match(element("collection-items").textContent, /Gullbert’s favourite/);
+    assert.match(element("today-collection").textContent, /Gullbert’s favourite/);
+    assert.equal(element("collection-count").textContent, "3");
+    deliver({ memory: {
+      collection: { bottle_cap: 1 },
+      preferences: { seed: 123, treasureAffection: { sock: 4 } },
+    } });
+    assert.doesNotMatch(element("collection-items").textContent, /Gullbert’s favourite/);
+  });
+
+  test(`${mode}: his own hangout is shown independently of the placed perch`, () => {
+    deliver({ memory: {
+      preferences: { seed: 123, hangout: { x: 0.3, y: 0.6, visits: 1 } },
+    } });
+    assert.match(element("hangout-summary").textContent, /found himself/);
+    assert.equal(element("perch-summary").textContent, "Not chosen yet");
+    deliver({ memory: {
+      preferences: { seed: 123, hangout: { x: 0.3, y: 0.6, visits: 3 } },
+    } });
+    assert.match(element("hangout-summary").textContent, /own favourite hangout/);
+    deliver({});
+    assert.match(element("hangout-summary").textContent, /Still exploring/);
+  });
+
   test(`${mode}: storage errors appear and clear after section updates`, () => {
     deliver({});
     const observer = new dom.window.MutationObserver(() => {});
@@ -307,6 +336,7 @@ export function roommateRenderingTests(mode) {
       "collection-items",
       "today-collection-empty",
       "today-collection",
+      "hangout-summary",
       "perch-summary",
       "visitor-summary",
       "storage-error",

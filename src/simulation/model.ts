@@ -1,4 +1,5 @@
 import type { Collectible } from "./items.js";
+import type { Preferences } from "./preferences.js";
 
 export interface Point {
   x: number;
@@ -47,6 +48,7 @@ export interface Memory {
   learned: LearnedHabits;
   perch: Point | null;
   collection: Partial<Record<Collectible, number>>;
+  preferences: Preferences;
   greetings: {
     seen: boolean;
     lastAt: number;
