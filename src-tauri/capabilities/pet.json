@@ -1,0 +1,19 @@
+{
+  "identifier": "pet",
+  "description": "Simulation sensing, interaction leases, and local memory.",
+  "windows": ["pet"],
+  "permissions": [
+    "allow-pet-ready",
+    "allow-target-picked",
+    "allow-sync-interaction",
+    "allow-begin-pickup",
+    "allow-end-pickup",
+    "allow-tug-cursor",
+    "allow-release-cursor",
+    "allow-load-roommate",
+    "allow-save-roommate",
+    "allow-publish-roommate",
+    "allow-work-activity",
+    "allow-stop-work-activity"
+  ]
+}

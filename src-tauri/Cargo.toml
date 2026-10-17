@@ -15,7 +15,6 @@ serde_json = "1"
 rusqlite = { version = "0.40", features = ["bundled"] }
 tauri = { version = "2", features = ["tray-icon", "macos-private-api", "image-png"] }
 tauri-plugin-global-shortcut = "2"
-tauri-plugin-single-instance = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri-plugin-updater = "2"
@@ -39,3 +38,11 @@ lto = true
 opt-level = "s"
 strip = true
 panic = "abort"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+libc = "0.2"
+tokio = { version = "1", features = ["net", "io-util", "time", "sync", "rt"] }
+tracing = "0.1"
+
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+tauri-plugin-single-instance = "2.5.4"

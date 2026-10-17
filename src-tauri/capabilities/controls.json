@@ -1,0 +1,14 @@
+{
+  "identifier": "controls",
+  "description": "Preferences, user commands, and signed updates.",
+  "windows": ["controls"],
+  "permissions": [
+    "allow-snapshot",
+    "allow-app-version",
+    "allow-check-update",
+    "allow-install-update",
+    "allow-update-settings",
+    "allow-act",
+    "allow-request-roommate"
+  ]
+}

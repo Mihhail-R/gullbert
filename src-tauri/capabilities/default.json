@@ -1,6 +1,10 @@
 {
   "identifier": "local-ui",
-  "description": "Only local windows can listen for Gullbert events.",
+  "description": "Shared local UI events and cancellation only.",
   "windows": ["pet", "controls"],
-  "permissions": ["core:event:allow-listen", "core:event:allow-unlisten"]
+  "permissions": [
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "allow-cancel-targeting"
+  ]
 }

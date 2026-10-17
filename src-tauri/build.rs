@@ -1,4 +1,5 @@
 mod action_catalog;
+mod ipc_commands;
 use std::{env, path::PathBuf, process::Command};
 
 fn main() {
@@ -16,7 +17,12 @@ fn main() {
         build_work_activity();
     }
 
-    tauri_build::build();
+    println!("cargo:rerun-if-changed=ipc_commands.rs");
+    tauri_build::try_build(
+        tauri_build::Attributes::new()
+            .app_manifest(tauri_build::AppManifest::new().commands(ipc_commands::COMMANDS)),
+    )
+    .expect("Could not build application permissions");
 }
 
 fn build_work_activity() {
