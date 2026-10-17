@@ -1,6 +1,6 @@
 # Contributing to Gullbert
 
-Small, funny, local. Start with `npm ci` and `npm run preview` to work in the browser playground. For the desktop app, follow the [README's source setup](README.md#run-from-source) and run `npm run dev`.
+Small, funny, local. Start with `npm ci` and `npm run preview` to work in the browser playground. For the desktop app, follow the [source setup below](#run-from-source) and run `npm run dev`.
 
 ## Before submitting
 
@@ -153,3 +153,59 @@ Keep lines short enough to read in the existing bubble duration. Gullbert is a t
 ```
 
 Run `npm test` and `npm run check` after editing. The build rejects empty pools, blank speech, duplicate alternatives, and invalid placeholders with a catalog path. Type checking catches missing or incompatible entries used by the behaviors. Behavior timings, poses, and sound effects stay in TypeScript.
+
+## Run from source
+
+Install Node.js 22+, the current stable Rust toolchain (at least 1.90), and the [Tauri platform prerequisites](https://v2.tauri.app/start/prerequisites/): Xcode Command Line Tools on macOS; Microsoft C++ Build Tools with the desktop C++ workload and WebView2 on Windows. Windows `npm run dev` and `npm run build` prepare checksum-pinned OCR models before compilation (about 12 MB, downloaded once and reusable offline). For direct Cargo commands or cross-compilation, first run `npm run prepare:vision`. These build-time downloads are never performed by the installed app. Model attribution and licenses are in `src-tauri/models/NOTICE.txt` and included in Windows bundles.
+
+The macOS build also needs an SDK with the macOS 14 ScreenCaptureKit APIs, even when building for an older macOS version.
+
+```sh
+npm ci
+npm run dev
+```
+
+For the browser playground, only Node.js is needed:
+
+```sh
+npm ci
+npm run preview
+```
+
+Open [http://127.0.0.1:4173](http://127.0.0.1:4173). The playground shares the app's simulation and rendering but does not create a desktop overlay or control the real pointer. Source edits rebuild automatically; refresh to see changes. Set `PORT` for a different playground port; native development expects port 4173.
+
+## Build and release
+
+### Publish the browser preview and downloads
+
+GitHub Pages hosts the browser playground; GitHub Releases hosts the desktop downloads. In the repository's **Settings → Pages → Build and deployment**, select **GitHub Actions** as the source. After merging to `main`, the [Pages workflow](.github/workflows/pages.yml) tests and publishes `web-dist/` at [mihhail-r.github.io/gullbert/](https://mihhail-r.github.io/gullbert/). You can also run **Publish browser preview** manually on `main`.
+
+To release desktop packages, push a new version tag such as `v0.3.0-beta.5`. The build workflow takes the app version from the tag and creates a draft release containing Apple Silicon and Intel Mac DMGs, a Windows x64 installer, and signed update packages. Test the downloaded packages, edit the release notes, and publish the draft. Preview tags are marked **pre-release** automatically. Draft releases are not public downloads.
+
+The playground's download button opens [all releases](https://github.com/Mihhail-R/gullbert/releases), so preview releases remain discoverable without relying on GitHub's latest stable release redirect. Pages updates on `main` independently of desktop releases; publish a new tag when you want updated installers.
+
+### Build desktop packages locally
+
+```sh
+# macOS, for the current machine's architecture
+npm run build -- --bundles app,dmg
+
+# Windows, on Windows
+npm run build -- --bundles nsis
+```
+
+These commands write packages to `src-tauri/target/release/bundle/` unless you override the target directory. Passing `--target <triple>` adds that target beneath `src-tauri/target/`, as in CI. Quit any running Gullbert before testing a new build: a second launch communicates with the existing instance.
+
+The [GitHub Actions workflow](.github/workflows/build.yml) checks the frontend on pushes and pull requests. On `main`, it also builds native binaries without installers and runs native tests on Apple Silicon, Intel Mac, and Windows x64. These jobs refresh separate release and test dependency caches that future tags can restore. CI pins Rust with `RUST_TOOLCHAIN` in the workflow; upgrade it deliberately and let a `main` build finish to warm the new caches before releasing. Tags restore caches without saving tag-specific copies.
+
+Version-tag pushes build signed packages and run native tests in parallel on all three platforms. The draft release waits for every packaging and test job to pass. CI sets every embedded version from the tag before checking and building, including the npm and Cargo lockfiles. This only changes the runner's checkout; no version-bump commit is needed. Branch checks still require the checked-in versions to agree. For a local version change, run `node scripts/release.mjs prepare v0.3.0-beta.5`, then `node scripts/release.mjs check`. The visible version is generated from this metadata; native builds display the running app's version.
+
+To retry a failed release without creating or moving a tag, open **Actions → Build Gullbert → Run workflow**, select `main`, and enter the existing tag (for example `v0.3.0-beta.5`) in **release_tag**. The workflow checks out that tag's exact source, applies the selected branch's release tooling, and shares the validated version metadata across all builds and the release manifest. It uploads packages to the same release. New releases are drafts for review; an already-published release stays published, so its uploaded packages become public immediately. Leaving **release_tag** empty runs frontend checks, unsigned native builds, and native tests without creating a release; on `main`, this also refreshes the shared caches. Use a retry when release tooling failed; an application source fix needs a new release tag.
+
+Release builds require the `TAURI_SIGNING_PRIVATE_KEY` GitHub Actions secret. The matching public key is embedded in `tauri.conf.json`. Back up the private key securely outside the repository: losing it prevents updates to existing installations. Local release builds also need `TAURI_SIGNING_PRIVATE_KEY` (key contents or file path) and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` if the key is encrypted. For a local build without update artifacts, pass `--config '{"bundle":{"createUpdaterArtifacts":false}}'` to Tauri.
+
+Push a tag such as `v0.3.0-beta.1` only after merging the intended source. CI produces a **draft GitHub Release** containing versioned Mac DMGs, a Windows installer, signed update packages, and a combined `latest.json` manifest with all three platforms. Tags containing a hyphen are marked prerelease. Review and publish the draft to make it discoverable by the app; drafts are never offered. The updater discovers published releases through GitHub's API, so beta releases do not depend on GitHub's stable-only `/latest` redirect. Mac code signing happens before update archives are generated; do not modify packaged binaries after signing.
+
+Before publishing the first updater release, test a signed upgrade between two distinct versions on each supported platform, including a rejected signature, an interrupted download, and preserved settings. GitHub API rate limits, connectivity failures, and missing update assets surface as errors rather than an “up to date” result.
+
+The macOS deployment target is 11.0; local vision requires 14.0 or newer. Linux desktop builds are not part of the supported build matrix. Before a stable release, test downloaded packages on each target platform, including installation, click-through, dragging, targeting, Escape, physical shortcuts, sound, permissions, and multiple displays. Browser tests and native unit tests do not establish desktop compatibility. Exclusive fullscreen apps and some virtual desktop configurations may hide the overlay. macOS transparency uses Tauri's private API option; distribution targets direct downloads rather than the Mac App Store.
