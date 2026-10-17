@@ -36,7 +36,7 @@ Everything happens locally. There are no hunger chores, streaks, or penalties fo
 
 ## Controls
 
-The control room has four homes: **Today** for recent memories and shared activities, **Play & learn** for snacks, games, training and tidying, **His world** for memories, treasures, hats and favourite places, and **Settings** for behaviour, screen access and updates. Choose **Light** or **Dark** in Settings; appearance is saved locally for the control room and browser playground, independently of his learned memories. The window is resizable, with compact navigation at narrower widths.
+The control room has four pages: **Home** for recent memories and shared activities, **Play & learn** for snacks, games, training and tidying, **His world** for memories, treasures, hats and favourite places, and **Settings** for behaviour, screen access and updates. Appearance defaults to **System**, following your device’s light or dark mode as it changes. Choose **Light** or **Dark** in Settings to override it. Your choice is saved locally for the control room and browser playground, independently of his learned memories. The window is resizable, with compact navigation at narrower widths.
 
 Ordinary bird routines, petty crimes and surprise scenes happen naturally in the installed app. Their demonstration buttons live in the website playground below the control-room preview. The tray and existing keyboard shortcuts remain available. **Reset scene** in the playground stops the routine, clears loose mess and summons him; it keeps his memories and collection.
 

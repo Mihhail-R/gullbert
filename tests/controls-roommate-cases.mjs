@@ -17,6 +17,9 @@ export function roommateRenderingTests(mode) {
     const html = await readFile(new URL("../web-dist/index.html", import.meta.url), "utf8");
     dom = new JSDOM(html, { url: "https://gullbert.test/" });
     document = dom.window.document;
+    dom.window.matchMedia = () => {
+      return Object.assign(new dom.window.EventTarget(), { matches: false });
+    };
     dom.window.localStorage.setItem("gullbert.appearance.v1", "dark");
     Object.assign(globalThis, {
       window: dom.window,

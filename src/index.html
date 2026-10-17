@@ -428,7 +428,7 @@
               ><button data-world="wardrobe">Wardrobe</button
               ><button data-world="rituals">Rituals &amp; places</button>
             </nav>
-            <section data-world-panel="memories" class="surface-card">
+            <section data-world-panel="memories" class="world-panel">
               <h2 id="memory-summary">No memories yet</h2>
               <p class="hint">Latest 12 memories. Saved on this device.</p>
               <p id="memory-empty" class="hint">
@@ -437,11 +437,7 @@
               <ol id="memory-items" aria-live="polite"></ol>
               <p id="visitor-summary" class="hint">No familiar visitors yet.</p>
             </section>
-            <section
-              data-world-panel="treasures"
-              class="surface-card"
-              hidden=""
-            >
+            <section data-world-panel="treasures" class="world-panel" hidden="">
               <h2>Treasures <span id="collection-count">0</span></h2>
               <p id="collection-empty">Nothing collected yet.</p>
               <ul id="collection-items"></ul>
@@ -450,7 +446,27 @@
                 Bring me something
               </button>
             </section>
-            <section data-world-panel="wardrobe" class="surface-card" hidden="">
+            <section
+              data-world-panel="wardrobe"
+              class="world-panel wardrobe-panel"
+              hidden=""
+            >
+              <div>
+                <h2>Wardrobe</h2>
+                <div class="setting">
+                  <div>
+                    <label for="hat">Hat</label>
+                  </div>
+                  <select id="hat">
+                    <option value="none">None</option>
+                    <option value="captain">Captain</option>
+                    <option value="beanie">Fisherman’s beanie</option>
+                    <option value="paper-crown">Paper crown</option>
+                    <option value="fried-egg">Fried egg</option>
+                    <option value="cone">Traffic cone</option>
+                  </select>
+                </div>
+              </div>
               <div class="wardrobe-preview">
                 <div
                   class="portrait-bird"
@@ -460,21 +476,8 @@
                   <img class="portrait-hat" alt="" hidden="" />
                 </div>
               </div>
-              <div class="setting">
-                <div>
-                  <label for="hat">Hat</label>
-                </div>
-                <select id="hat">
-                  <option value="none">None</option>
-                  <option value="captain">Captain</option>
-                  <option value="beanie">Fisherman’s beanie</option>
-                  <option value="paper-crown">Paper crown</option>
-                  <option value="fried-egg">Fried egg</option>
-                  <option value="cone">Traffic cone</option>
-                </select>
-              </div>
             </section>
-            <section data-world-panel="rituals" class="surface-card" hidden="">
+            <section data-world-panel="rituals" class="world-panel" hidden="">
               <h2>Habits &amp; favourite spot</h2>
               <div class="ritual-notes" aria-live="polite">
                 <p id="snack-ritual">
@@ -491,10 +494,10 @@
                 </div>
                 <button class="" data-action="place_perch">Choose spot…</button>
               </div>
-              <div class="button-grid">
-                <button class="" data-action="clear_perch">
+              <div class="tidy-line">
+                <button class="text-link" data-action="clear_perch">
                   Clear favourite spot</button
-                ><button class="" data-action="forget_learning">
+                ><button class="text-link" data-action="forget_learning">
                   Forget tricks &amp; rituals
                 </button>
               </div>
@@ -508,14 +511,15 @@
             <div class="setting appearance">
               <h2>Appearance</h2>
               <div class="theme-control" role="group" aria-label="Appearance">
-                <button data-theme="light" aria-pressed="true">Light</button
+                <button data-theme="system" aria-pressed="true">System</button>
+                <button data-theme="light" aria-pressed="false">Light</button
                 ><button data-theme="dark" aria-pressed="false">Dark</button>
               </div>
             </div>
             <p id="theme-error" role="alert" hidden=""></p>
             <p id="preferences-summary" class="hint">Menace · Sound off</p>
-            <section class="content-columns">
-              <section class="surface-card">
+            <section class="settings-columns">
+              <section class="settings-section settings-behaviour">
                 <h2>Behaviour</h2>
                 <div class="setting">
                   <div>
@@ -537,7 +541,7 @@
                   ><input id="sound" type="checkbox" role="switch" />
                 </div>
               </section>
-              <section class="surface-card">
+              <section class="settings-section">
                 <h2>Screen &amp; typing access</h2>
 
                 <div class="setting">

@@ -391,26 +391,16 @@ small {
   justify-content: space-between;
   gap: 16px;
 }
-.content-columns {
-  display: grid;
-  align-items: start;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 12px;
+.world-panel {
+  padding: 8px 0 20px;
 }
-.surface-card {
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--card);
-  min-width: 0;
-}
-.surface-card h2 {
+.world-panel h2 {
   margin-bottom: 12px;
 }
-.surface-card > :last-child {
-  margin-bottom: 0;
+.settings-section {
+  min-width: 0;
 }
-.surface-card > .setting:last-child {
+.settings-section > .setting:last-child {
   padding-bottom: 0;
   border-bottom: 0;
 }
@@ -449,14 +439,16 @@ small {
 .play-snacks .hint {
   margin: 10px 0 0;
 }
-.play-columns {
+.play-columns,
+.settings-columns {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 28px;
   padding: 22px 0;
   border-bottom: 1px solid var(--line);
 }
-.play-games {
+.play-games,
+.settings-behaviour {
   padding-right: 28px;
   border-right: 1px solid var(--line);
 }
@@ -503,13 +495,12 @@ small {
   margin: 10px 0 0;
 }
 .ritual-notes {
-  border-left: 2px solid var(--amber);
-  padding-left: 12px;
   color: var(--muted);
   line-height: 1.5;
 }
-.ritual-notes p + p {
-  margin-top: 8px;
+.ritual-notes p {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
 }
 .tidy-line {
   display: flex;
@@ -568,13 +559,19 @@ small {
   transform: none;
   margin: 0;
 }
+.wardrobe-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 144px;
+  gap: 28px;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+}
+.wardrobe-panel .setting {
+  border-bottom: 0;
+}
 .wardrobe-preview {
   display: flex;
   justify-content: center;
-  padding: 12px 0;
-  background: var(--portrait);
-  border-radius: 6px;
-  margin-bottom: 12px;
 }
 .setting {
   display: flex;
@@ -825,20 +822,19 @@ iframe {
   }
 }
 @media (max-width: 850px) {
-  .play-columns {
+  .play-columns,
+  .settings-columns {
     grid-template-columns: 1fr;
     gap: 24px;
   }
-  .play-games {
+  .play-games,
+  .settings-behaviour {
     padding: 0 0 20px;
     border-right: 0;
     border-bottom: 1px solid var(--line);
   }
   .play-touch-tip {
     max-width: none;
-  }
-  .content-columns {
-    grid-template-columns: 1fr;
   }
 }
 @media (max-width: 700px) {
@@ -927,8 +923,15 @@ iframe {
   .appearance {
     flex-wrap: wrap;
   }
-  .surface-card {
-    padding: 16px;
+  .wardrobe-panel {
+    grid-template-columns: minmax(0, 1fr) 96px;
+    gap: 16px;
+  }
+  .wardrobe-panel .setting {
+    flex-wrap: wrap;
+  }
+  .wardrobe-panel select {
+    max-width: 100%;
   }
   .shortcut-list > div {
     flex-wrap: wrap;
