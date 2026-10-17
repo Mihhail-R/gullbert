@@ -1,5 +1,10 @@
 {
   "gullbert": {
+    "pettiness": {
+      "ignoredExit": "fine. my audience is elsewhere.",
+      "ignoredMess": "perhaps this will receive a response.",
+      "cleanupExit": "apparently my work is not appreciated."
+    },
     "work": {
       "arrival": "i'll supervise.",
       "chips": "excellent work. my fee is chips.",
