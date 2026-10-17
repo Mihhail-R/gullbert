@@ -4,6 +4,7 @@ import type { Pose } from "../poses.js";
 import type { Routine, RoutineCapabilities } from "../routine.js";
 import type { Mood } from "./moods.js";
 import { NEUTRAL_MOTIVATION, type MotivationState } from "../motivation.js";
+import { FRESH_INTEREST, type BoredomState } from "../boredom.js";
 
 const routines: QuietName[] = ["nap", "preen", "tilt", "stretch"];
 const durations = { preen: 3.8, tilt: 2.4, stretch: 3.2 };
@@ -165,7 +166,10 @@ export class QuietRoutine implements Routine {
     return {};
   }
 
-  choose(motivation: Readonly<MotivationState> = NEUTRAL_MOTIVATION): QuietName | null {
+  choose(
+    motivation: Readonly<MotivationState> = NEUTRAL_MOTIVATION,
+    boredom: BoredomState = FRESH_INTEREST,
+  ): QuietName | null {
     const now = this.#host.clock.now;
 
     if (
@@ -195,7 +199,8 @@ export class QuietRoutine implements Routine {
     const weighted = choices.map((name) => {
       return { name, weight: quietWeight(name, motivation) };
     });
-    const wanderWeight = Math.max(0, motivation.curiosity - 0.5) * 8 * motivation.energy;
+    const wanderInterest = Math.max(0, motivation.curiosity - 0.5) * 8 + boredom.level * 3;
+    const wanderWeight = wanderInterest * motivation.energy;
     const total = weighted.reduce((sum, choice) => sum + choice.weight, wanderWeight);
     let draw = this.#host.random() * total;
 

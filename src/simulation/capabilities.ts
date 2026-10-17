@@ -7,6 +7,7 @@ import type { Mood } from "./behaviors/moods.js";
 import type { RoutineCapabilities } from "./routine.js";
 import type { Cleanup } from "./behaviors/cleanup.js";
 import type { MotivationState } from "./motivation.js";
+import type { BoredomState } from "./boredom.js";
 
 /** Operation groups for builtins; they cannot configure, resize or access native input. */
 export interface BehaviorCapabilities extends RoutineCapabilities {
@@ -160,6 +161,7 @@ export interface SimulationView extends Readonly<Point> {
   readonly nextCrime: number;
   readonly memoryRevision: number;
   readonly motivation: Readonly<MotivationState>;
+  readonly boredom: BoredomState;
   readonly memory: ReadonlyValue<Memory>;
   readonly nextPerchVisit: number;
   readonly calmUntil: number;

@@ -7,6 +7,7 @@ import { FoodPolicy } from "./food-policy.js";
 import { Belongings } from "./belongings.js";
 import { Motivation } from "./motivation.js";
 import { Pettiness } from "./pettiness.js";
+import { Boredom } from "./boredom.js";
 import { RoutineRegistry } from "./registry.js";
 import { ScopedRoutine } from "./scoped-routine.js";
 import type {
@@ -88,6 +89,7 @@ export class Gullbert {
   #moods: Mood;
   #motivation = new Motivation();
   #pettiness = new Pettiness();
+  #boredom = new Boredom();
   constructor(
     width = 1200,
     height = 800,
@@ -343,6 +345,7 @@ export class Gullbert {
     this.#rest();
     this.#belongings.restore(data);
     this.#learning.resetHabits();
+    this.#boredom.reset(this.#belongings.snapshot().memory.episodes);
   }
   resize(width: number, height: number): void {
     this.#work.reset();
@@ -579,6 +582,10 @@ export class Gullbert {
     this.#replaceActivity();
 
     if (this.#startRoutine(name, point)) {
+      if (name === "forget_learning") {
+        this.#boredom.reset(this.#belongings.snapshot().memory.episodes);
+      }
+
       return;
     }
 
@@ -665,9 +672,11 @@ export class Gullbert {
     const dt = clamp(delta, 0, 0.1);
     this.#time += dt;
     this.#expireTransientState();
+    this.#boredom.observe(this.#belongings.snapshot().memory.episodes);
 
     if (!this.#settings.paused) {
       this.#motivation.update(dt, this.#activity.mode);
+      this.#boredom.update(dt, this.#activity.mode);
     }
 
     if (this.#stepActiveRoutine(dt)) {
@@ -718,12 +727,13 @@ export class Gullbert {
     }
 
     const motivation = this.#motivation.snapshot();
+    const boredom = this.#boredom.snapshot();
 
     if (this.#stepPettyReaction()) {
       return;
     }
 
-    if (this.#learning.maybeStart(motivation)) {
+    if (this.#learning.maybeStart(motivation, boredom)) {
       const kind = this.#registry.scene?.kind;
 
       if (kind === "trick" || kind === "cap") {
@@ -815,7 +825,7 @@ export class Gullbert {
         this.action("squawk");
       }
     } else if (this.#time >= this.#activity.until) {
-      const quiet = this.#quiet.choose(motivation);
+      const quiet = this.#quiet.choose(motivation, boredom);
 
       if (quiet) {
         this.#registry.start(quiet);
@@ -1159,6 +1169,7 @@ export class Gullbert {
       memory: belongings.memory,
       memoryRevision: belongings.revision,
       motivation: this.#motivation.snapshot(),
+      boredom: this.#boredom.snapshot(),
       nextPerchVisit: this.#perch.nextPerchVisit,
       cleanup: this.#cleanup.snapshot(),
       touch: this.#touch.snapshot(),
