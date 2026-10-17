@@ -22,9 +22,39 @@ export type PetPresentation = ReadonlyValue<
   ReturnType<typeof projectPresentation>
 >;
 
+export type PresentationObservation = Pick<
+  SimulationView,
+  | "x"
+  | "y"
+  | "width"
+  | "height"
+  | "facing"
+  | "mode"
+  | "until"
+  | "time"
+  | "visible"
+  | "scene"
+  | "settings"
+  | "memory"
+  | "mood"
+  | "bubble"
+  | "bag"
+  | "crumb"
+  | "splats"
+  | "rubbish"
+  | "looseChips"
+  | "cones"
+  | "touch"
+  | "pickup"
+  | "carriedItem"
+  | "tidying"
+  | "pose"
+  | "frame"
+>;
+
 /** Internal projection; the runtime supplies its owned state at this seam. */
 export function projectPresentation(
-  sim: SimulationView,
+  sim: PresentationObservation,
   pointer: Point | null = null,
   interactive = true,
   routine: RoutinePresentation = {},

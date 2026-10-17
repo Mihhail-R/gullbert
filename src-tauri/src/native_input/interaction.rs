@@ -31,7 +31,6 @@ impl Rect {
 pub struct Interaction {
     pub rects: Vec<Rect>,
     pub refreshed: Option<Instant>,
-    pub capturing: bool,
 }
 impl Interaction {
     pub fn hit(&self, point: Option<(f64, f64)>, now: Instant) -> bool {
@@ -54,7 +53,6 @@ mod tests {
                 height: 30.0,
             }],
             refreshed: Some(now),
-            capturing: false,
         };
         assert!(state.hit(Some((25.0, 25.0)), now));
         assert!(!state.hit(Some((0.0, 0.0)), now));
@@ -100,6 +98,9 @@ impl PickupLease {
             && self
                 .refreshed
                 .is_some_and(|at| now.duration_since(at) < Duration::from_millis(350))
+    }
+    pub fn expired(&self, now: Instant) -> bool {
+        self.started.is_some() && !self.active(now)
     }
     pub fn refresh(&mut self, id: u64, now: Instant) -> bool {
         if id != self.id {

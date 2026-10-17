@@ -506,6 +506,8 @@ test("caught and retrieved tossed chips settle debt only when consumed", () => {
 
     reach(sim, "eat");
     assert.equal(sim.inspect().scene.caught, caught);
+    assert.ok(sim.inspect().motivation.energy > 0.5);
+    assert.ok(sim.inspect().motivation.socialInterest > 0.5);
     advance(sim, 3);
     const memory = sim.exportMemory();
     assert.equal(memory.unpaidTricks, 0);
@@ -542,11 +544,13 @@ test("bag meals teach a snack spot once per serving, and an empty bag earns no c
 
   assert.equal(sim.inspect().bag.servings, 0);
   assert.equal(sim.exportMemory().learned.snackSpot.meals, 3);
+  const motivation = sim.inspect().motivation;
   sim.restoreMemory({ ...sim.exportMemory(), unpaidTricks: 2 });
   sim.action("search_snack");
   advance(sim, 10);
   assert.equal(sim.exportMemory().unpaidTricks, 2);
   assert.equal(sim.exportMemory().learned.snackSpot.meals, 3);
+  assert.deepEqual(sim.inspect().motivation, motivation);
 });
 
 test("cancelled chip meals and non-eating bag scenes leave snack debt unpaid", () => {

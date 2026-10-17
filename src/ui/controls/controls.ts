@@ -2,6 +2,7 @@ import { setupAppearance } from "./appearance.js";
 import { setupNavigation } from "./navigation.js";
 import { portraitPresentation } from "../../simulation/presentation.js";
 import { memoryDescription, memoryLocation } from "./memory-view.js";
+import { favouriteTreasure, normalizePreferences } from "../../simulation/preferences.js";
 import type { ActionName } from "../../actions/catalog.js";
 import { setupUpdates } from "./updates.js";
 import { requiredElement } from "../dom.js";
@@ -284,8 +285,24 @@ function roommate(data: RoommateStatus) {
   $("#scratch-ritual").textContent = scratch;
 
   renderMemories(memory?.episodes ?? []);
-  renderCollection(memory?.collection ?? {});
+  const preferences = normalizePreferences(memory?.preferences);
+  const favourite = favouriteTreasure(
+    preferences,
+    memory?.collection ?? {},
+  );
+  renderCollection(memory?.collection ?? {}, favourite);
 
+  let hangout = "Still exploring for a spot of his own.";
+
+  if (preferences.hangout) {
+    hangout = "Getting to know a spot he found himself.";
+
+    if (preferences.hangout.visits >= 3) {
+      hangout = "He’s settled on his own favourite hangout.";
+    }
+  }
+
+  $("#hangout-summary").textContent = hangout;
   const perch = memory?.perch;
   $("#perch-summary").textContent = perch
     ? `Remembered · ${Math.round(perch.x)}, ${Math.round(perch.y)} on his desktop`
@@ -348,7 +365,7 @@ function renderMemories(episodes: readonly MemoryEpisode[]) {
     .replaceChildren(...recentRows);
 }
 
-function renderCollection(collection: Memory["collection"]) {
+function renderCollection(collection: Memory["collection"], favourite: Collectible | null) {
   const entries = Object.entries(collection)
     .filter(
       (entry): entry is [Collectible, number] => {
@@ -381,7 +398,7 @@ function renderCollection(collection: Memory["collection"]) {
         image.src = `assets/belongings/${id}.svg`;
         image.alt = "";
         label.textContent = item.name;
-        description.textContent = item.description;
+        description.textContent = id === favourite ? "Gullbert’s favourite" : item.description;
         label.append(description);
         quantity.textContent = `×${count}`;
 
@@ -401,6 +418,9 @@ function renderCollection(collection: Memory["collection"]) {
 
 if (native) {
   let targetId: number | null = null;
+  await native.event.listen("gullbert-shutdown-error", ({ payload }) => {
+    error(payload);
+  });
   await native.event.listen("gullbert-target", ({ payload }) => {
     if (payload.outcome === "started") {
       targetId = payload.id;

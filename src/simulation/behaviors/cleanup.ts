@@ -65,7 +65,7 @@ export interface CleanupState {
   sulkUntil: number;
   away: number;
   apology: boolean;
-  retaliation: { at: number; kind: "bag" | "splat"; bag: Bag | null } | null;
+  retaliation: { at: number; kind: "bag" | "splat" | "leave"; bag: Bag | null } | null;
   retaliationAllowedAt: number;
   suppressUntil: number;
   lines: Partial<Record<CleanupKind | "escalation" | "sulk", number>>;
@@ -203,6 +203,7 @@ export function directCleanupTarget(sim: DirectGeometry, point: Point) {
 export class Cleanup {
   readonly #host: CleanupHost;
   #state = createCleanupState();
+  #recentRemovals: number[] = [];
 
   constructor(host: CleanupHost) {
     this.#host = host;
@@ -331,6 +332,7 @@ export class Cleanup {
     }
 
     this.#host.objects.remove(target.kind, target.id);
+    this.#rememberRemoval(sim);
     session.removals += 1;
     session.recent = session.recent.filter((time) => {
       return sim.time - time <= 20;
@@ -373,19 +375,35 @@ export class Cleanup {
     state.apology =
       !state.retaliation && !sim.settings.paused && this.#host.random() < 0.25;
   }
-  #scheduleRetaliation(session: Session, sim: CleanupObservation): void {
+  #rememberRemoval(sim: CleanupObservation): void {
+    if (sim.settings.paused || sim.settings.mischief === 0) {
+      return;
+    }
+
+    this.#recentRemovals = this.#recentRemovals.filter((at) => sim.time - at <= 120);
+    this.#recentRemovals.push(sim.time);
+    this.#recentRemovals = this.#recentRemovals.slice(-6);
+  }
+
+  #scheduleRetaliation(
+    session: Pick<Session, "removals" | "bag">,
+    sim: CleanupObservation,
+  ): void {
     const state = this.#state;
     const level = sim.settings.mischief;
 
-    if (session.removals < 2 || sim.settings.paused || level <= 0) {
+    if (sim.settings.paused || level <= 0) {
       return;
     }
 
-    if (sim.time < state.retaliationAllowedAt) {
+    const recent = this.#recentRemovals.filter((at) => sim.time - at <= 120);
+    const removals = Math.max(session.removals, recent.length);
+
+    if (removals < 2 || sim.time < state.retaliationAllowedAt) {
       return;
     }
 
-    if (!session.bag && level < 2) {
+    if (!session.bag && level < 2 && removals < 3) {
       return;
     }
 
@@ -395,22 +413,27 @@ export class Cleanup {
       reactionChance = 0.6;
     }
 
+    reactionChance += Math.min(0.15, Math.max(0, removals - 2) * 0.05);
+
     if (!(this.#host.random() < reactionChance)) {
       return;
     }
 
-    let kind: "bag" | "splat";
+    let kind: "bag" | "splat" | "leave";
 
-    if (level === 1 || (session.bag && this.#host.random() < 0.5)) {
+    if (level === 1) {
+      kind = session.bag ? "bag" : "leave";
+    } else if (session.bag && this.#host.random() < 0.5) {
       kind = "bag";
     } else {
       kind = "splat";
     }
 
     state.retaliation = { at: sim.time + 5, kind, bag: session.bag };
-    state.retaliationAllowedAt = sim.time + 90;
+    state.retaliationAllowedAt = sim.time + 180;
+    this.#recentRemovals = [];
   }
-  bulk() {
+  bulk(removedSomething = false) {
     const sim = this.#host.observe();
     this.cancel();
     this.#state.suppressUntil = sim.time + 30;
@@ -418,12 +441,22 @@ export class Cleanup {
     this.#state.level = 2;
     this.#host.moods.set("offended", sim.time, { speak: false });
     this.#host.speech.say(dialogue.gullbert.cleanup.youveRuinedTheAtmosphere);
+
+    if (removedSomething) {
+      this.#rememberRemoval(sim);
+      this.#scheduleRetaliation({ removals: 1, bag: null }, sim);
+
+      if (this.#state.retaliation) {
+        this.#state.retaliation.at = this.#state.suppressUntil + 5;
+      }
+    }
   }
   configure() {
     const sim = this.#host.observe();
     const state = this.#state;
 
     if (sim.settings.paused || sim.settings.mischief === 0) {
+      this.#recentRemovals = [];
       state.retaliation = null;
     } else if (
       sim.settings.mischief === 1 &&
@@ -437,6 +470,7 @@ export class Cleanup {
     }
   }
   settle() {
+    this.#recentRemovals = [];
     this.cancel();
     this.#host.moods.settleOffence();
   }
@@ -464,6 +498,9 @@ export class Cleanup {
           this.#host.speech.say(
             dialogue.gullbert.cleanup.aReplacementAtmosphere,
           );
+        } else if (retaliation.kind === "leave") {
+          this.#host.action("pretend_leave");
+          this.#host.speech.say(dialogue.gullbert.pettiness.cleanupExit, 4);
         }
       }
     }

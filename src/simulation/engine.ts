@@ -5,6 +5,9 @@ import { Activity } from "./activity.js";
 import { Speech } from "./speech.js";
 import { FoodPolicy } from "./food-policy.js";
 import { Belongings } from "./belongings.js";
+import { Motivation } from "./motivation.js";
+import { Pettiness } from "./pettiness.js";
+import { Boredom } from "./boredom.js";
 import { RoutineRegistry } from "./registry.js";
 import { ScopedRoutine } from "./scoped-routine.js";
 import type {
@@ -16,6 +19,7 @@ import type { BehaviorCapabilities, SimulationView } from "./capabilities.js";
 import {
   projectPresentation,
   type PetPresentation,
+  type PresentationObservation,
   type ReadonlyValue,
 } from "./presentation.js";
 import { interactionRects } from "./interaction.js";
@@ -37,7 +41,7 @@ import { Mood } from "./behaviors/moods.js";
 import { QuietRoutine } from "./behaviors/quiet.js";
 import { Pickup, canPickup, pickupRect } from "./behaviors/pickup.js";
 import { Touch, canTouch } from "./behaviors/touch.js";
-import { Cleanup, directCleanupTarget } from "./behaviors/cleanup.js";
+import { Cleanup, cleanupObjects, directCleanupTarget } from "./behaviors/cleanup.js";
 import { normalizeHat, hatRemark } from "./behaviors/hats.js";
 import { GagRoutine, gagOffset } from "./behaviors/gags.js";
 import { TheatreRoutine, theatreOffset } from "./behaviors/theatre.js";
@@ -84,6 +88,10 @@ export class Gullbert {
   #activity: Activity;
   #speech = new Speech();
   #moods: Mood;
+  #motivation = new Motivation();
+  #pettiness = new Pettiness();
+  #boredom = new Boredom();
+  #nextHangoutVisit = 60;
   constructor(
     width = 1200,
     height = 800,
@@ -119,7 +127,10 @@ export class Gullbert {
         this.#sounds.push(sound);
       },
       ateChip: (point) => {
-        this.#learning.ateMeal(point);
+        this.#ateMeal(point);
+      },
+      walked: (point) => {
+        this.#restAtHangout(point);
       },
     });
     this.#food = new FoodPolicy(this.#random);
@@ -137,7 +148,11 @@ export class Gullbert {
     this.#work = new WorkRoutine(this.#capabilities);
     this.#cleanup = new Cleanup({
       observe: () => {
-        return this.#baseObservation();
+        return {
+          ...this.#geometryObservation(),
+          flight: this.#activity.flight,
+          settings: { ...this.#settings },
+        };
       },
       body: this.#body,
       objects: this.#objects,
@@ -158,13 +173,24 @@ export class Gullbert {
     });
     this.#touch = new Touch({
       scratched: () => {
+        this.#pettiness.settle();
+        this.#motivation.enjoyed("scratch");
         this.#learning.scratched();
       },
       body: this.#body,
       clock: this.#capabilities.clock,
       speech: this.#capabilities.speech,
       available: () => {
-        return canTouch(this.#baseObservation());
+        return canTouch({
+          visible: this.#visible,
+          pickup: this.#pickup.snapshot(),
+          scene: this.#registry.scene,
+          flight: this.#activity.flight,
+          tidying: this.tidying,
+          cleanup: this.#cleanup.snapshot(),
+          time: this.#time,
+          mode: this.#activity.mode,
+        });
       },
       sleeping: () => {
         return this.#activity.mode === "nap";
@@ -193,7 +219,7 @@ export class Gullbert {
         return this.tidying;
       },
       visual: () => {
-        const view = this.#observe();
+        const view = { scene: this.#registry.scene, time: this.#time };
         const theatre = theatreOffset(view);
         const gag = gagOffset(view);
         return {
@@ -328,11 +354,15 @@ export class Gullbert {
     return this.#belongings.exportMemory();
   }
   restoreMemory(data: unknown) {
+    this.#pettiness.settle();
     this.#learning.cancelAssociations();
     this.#cancelScene();
     this.#cancelFlight();
     this.#rest();
     this.#belongings.restore(data);
+    this.#learning.resetHabits();
+    this.#boredom.reset(this.#belongings.snapshot().memory.episodes);
+    this.#nextHangoutVisit = this.#time + 60;
   }
   resize(width: number, height: number): void {
     this.#work.reset();
@@ -413,6 +443,7 @@ export class Gullbert {
     this.#registry.visibility(visible);
 
     if (!visible) {
+      this.#pettiness.settle();
       this.#work.reset();
       this.#learning.cancelAssociations();
       this.#pickup.cancel();
@@ -422,6 +453,7 @@ export class Gullbert {
     }
   }
   #cancelScene(): void {
+    this.#pettiness.interrupt();
     this.#objects.releaseBag();
     this.#registry.interrupt();
   }
@@ -471,6 +503,7 @@ export class Gullbert {
     );
   }
   clean() {
+    const removedSomething = cleanupObjects(this.#objects.snapshot()).length > 0;
     this.#learning.cancelAssociations();
     this.#objects.clear();
     this.#pickup.cancel();
@@ -482,11 +515,15 @@ export class Gullbert {
 
     this.#activity.clearPendingDrop();
     this.#rest();
-    this.#cleanup.bulk();
+    this.#cleanup.bulk(removedSomething);
   }
   action(name: string, point?: Point) {
     if (point && (!Number.isFinite(point.x) || !Number.isFinite(point.y))) {
       return;
+    }
+
+    if (name === "forget_learning") {
+      this.#pettiness.settle();
     }
 
     if (name === "prepare_chip") {
@@ -562,6 +599,10 @@ export class Gullbert {
     this.#replaceActivity();
 
     if (this.#startRoutine(name, point)) {
+      if (name === "forget_learning") {
+        this.#boredom.reset(this.#belongings.snapshot().memory.episodes);
+      }
+
       return;
     }
 
@@ -648,6 +689,12 @@ export class Gullbert {
     const dt = clamp(delta, 0, 0.1);
     this.#time += dt;
     this.#expireTransientState();
+    this.#boredom.observe(this.#belongings.snapshot().memory.episodes);
+
+    if (!this.#settings.paused) {
+      this.#motivation.update(dt, this.#activity.mode);
+      this.#boredom.update(dt, this.#activity.mode);
+    }
 
     if (this.#stepActiveRoutine(dt)) {
       return;
@@ -696,7 +743,20 @@ export class Gullbert {
       return;
     }
 
-    if (this.#learning.maybeStart()) {
+    const motivation = this.#motivation.snapshot();
+    const boredom = this.#boredom.snapshot();
+
+    if (this.#stepPettyReaction()) {
+      return;
+    }
+
+    if (this.#learning.maybeStart(motivation, boredom)) {
+      const kind = this.#registry.scene?.kind;
+
+      if (kind === "trick" || kind === "cap") {
+        this.#pettiness.invited(this.#registry.identity);
+      }
+
       return;
     }
 
@@ -782,16 +842,76 @@ export class Gullbert {
         this.action("squawk");
       }
     } else if (this.#time >= this.#activity.until) {
-      const quiet = this.#quiet.choose();
+      const quiet = this.#quiet.choose(motivation, boredom);
 
       if (quiet) {
         this.#registry.start(quiet);
         return;
       }
 
-      this.#activity.walk(this.#randomPoint());
+      this.#wander();
     }
   }
+
+  #wander(): void {
+    let destination = this.#randomPoint();
+
+    if (this.#time >= this.#nextHangoutVisit && this.#random() < 0.3) {
+      const hangout = this.#belongings.hangoutPoint();
+      const distance = Math.hypot(hangout.x - this.#body.x, hangout.y - this.#body.y);
+
+      if (distance >= 32) {
+        destination = hangout;
+      }
+    }
+
+    this.#activity.walk(destination);
+  }
+
+  #restAtHangout(point: Point): void {
+    if (this.#settings.paused || this.#time < this.#nextHangoutVisit) {
+      return;
+    }
+
+    if (!this.#belongings.visitHangout(point)) {
+      return;
+    }
+
+    this.#nextHangoutVisit = this.#time + 90;
+    const visits = this.#belongings.snapshot().memory.preferences.hangout!.visits;
+    const until = this.#time + 4 + Math.min(4, visits);
+    this.#activity.linger(until);
+    this.#activity.settleUntil(until);
+    const line = visits >= 3
+      ? dialogue.gullbert.hangout.usualSpot
+      : dialogue.gullbert.hangout.gettingComfortable;
+    this.#say(line, 3);
+  }
+
+  #stepPettyReaction(): boolean {
+    if (this.#pettiness.waiting(this.#time)) {
+      return true;
+    }
+
+    const action = this.#pettiness.take(this.#time, this.#settings);
+
+    if (!action) {
+      return false;
+    }
+
+    if (this.#time < this.#cleanup.snapshot().suppressUntil) {
+      return false;
+    }
+
+    this.action(action);
+    this.#moods.set("offended", this.#time, { speak: false });
+    const line = action === "poop"
+      ? dialogue.gullbert.pettiness.ignoredMess
+      : dialogue.gullbert.pettiness.ignoredExit;
+    this.#say(line, 4);
+    return true;
+  }
+
   configure(settings: Partial<Settings>) {
     const previousHat = this.#settings.hat;
 
@@ -800,6 +920,7 @@ export class Gullbert {
       (settings.mischief != null &&
         settings.mischief !== this.#settings.mischief)
     ) {
+      this.#pettiness.settle();
       this.#learning.cancelAssociations();
       this.#pickup.cancel();
 
@@ -1042,7 +1163,7 @@ export class Gullbert {
       moods: this.#moods,
       meals: Object.freeze({
         consumed(point: Point) {
-          runtime.#learning.ateMeal(point);
+          runtime.#ateMeal(point);
         },
       }),
       destinations: Object.freeze({
@@ -1086,6 +1207,41 @@ export class Gullbert {
     const pose = this.pose;
     return { ...this.#baseObservation(), pose, frame: frameFor(pose) };
   }
+  #geometryObservation() {
+    return {
+      ...this.#body.snapshot(),
+      ...this.#objects.snapshot(),
+      scene: this.#registry.scene,
+      time: this.#time,
+      visible: this.#visible,
+      tidying: this.tidying,
+      mode: this.#activity.mode,
+    };
+  }
+  #presentationObservation(): PresentationObservation {
+    const geometry = this.#geometryObservation();
+    const scene = geometry.scene;
+    const pose = this.pose;
+    let carriedItem = null;
+
+    if (scene?.kind === "gift" && scene.carrying) {
+      carriedItem = scene.item;
+    }
+
+    return {
+      ...geometry,
+      ...this.#speech.snapshot(),
+      ...this.#moods.snapshot(),
+      settings: { ...this.#settings },
+      until: this.#activity.until,
+      memory: this.#belongings.snapshot().memory,
+      touch: this.#touch.snapshot(),
+      pickup: this.#pickup.snapshot(),
+      carriedItem,
+      pose,
+      frame: frameFor(pose),
+    };
+  }
   #baseObservation(): SimulationView {
     const pose: Pose = "idle";
     const belongings = this.#belongings.snapshot();
@@ -1105,6 +1261,8 @@ export class Gullbert {
       visible: this.#visible,
       memory: belongings.memory,
       memoryRevision: belongings.revision,
+      motivation: this.#motivation.snapshot(),
+      boredom: this.#boredom.snapshot(),
       nextPerchVisit: this.#perch.nextPerchVisit,
       cleanup: this.#cleanup.snapshot(),
       touch: this.#touch.snapshot(),
@@ -1121,8 +1279,21 @@ export class Gullbert {
     };
   }
 
+  #ateMeal(point: Point): void {
+    this.#pettiness.settle();
+    this.#motivation.enjoyed("meal");
+    this.#learning.ateMeal(point);
+  }
+
   #completeRoutine(): void {
     const scene = this.#registry.scene;
+    this.#pettiness.completed(
+      this.#registry.identity,
+      scene,
+      this.#time,
+      this.#settings,
+      this.#random,
+    );
     let played = false;
 
     switch (scene?.kind) {
@@ -1150,6 +1321,8 @@ export class Gullbert {
     this.#registry.complete();
 
     if (played) {
+      this.#pettiness.settle();
+      this.#motivation.enjoyed("play");
       this.#learning.playCompleted();
     }
   }
@@ -1178,7 +1351,7 @@ export class Gullbert {
 
     const presentation = { ...routine, props };
     return freezeObservation(
-      projectPresentation(this.#observe(), pointer, interactive, presentation),
+      projectPresentation(this.#presentationObservation(), pointer, interactive, presentation),
     );
   }
   status() {
@@ -1203,23 +1376,34 @@ export class Gullbert {
     return sounds;
   }
   interactionRects(interactive = true) {
-    return interactionRects(this.#observe(), interactive);
+    return interactionRects(this.#geometryObservation(), interactive);
   }
   pickupRect() {
-    return pickupRect(this.#observe());
+    return pickupRect({ ...this.#body.snapshot(), scene: this.#registry.scene, time: this.#time });
   }
   canPickup(): boolean {
-    return canPickup(this.#observe());
+    return canPickup({
+      visible: this.#visible,
+      tidying: this.tidying,
+      scene: this.#registry.scene,
+      time: this.#time,
+    });
   }
   directCleanupAt(point: Point): boolean {
-    return directCleanupTarget(this.#observe(), point) !== null;
+    return directCleanupTarget(this.#geometryObservation(), point) !== null;
   }
   flickCap(point: Point): boolean {
     if (!this.#visible || this.tidying) {
       return false;
     }
 
-    return this.#cap.flick(point);
+    const flicked = this.#cap.flick(point);
+
+    if (flicked) {
+      this.#pettiness.settle();
+    }
+
+    return flicked;
   }
   beginPickup(point: Point, now: number): boolean {
     return this.#pickup.begin(point, now);

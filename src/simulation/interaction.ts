@@ -37,18 +37,10 @@ export function interactionRects(
     | "cones"
     | "looseChips"
     | "crumb"
-    | "flight"
-    | "goal"
     | "mode"
-    | "pickup"
-    | "settings"
     | "tidying"
-    | "facing"
     | "x"
     | "y"
-    | "cleanup"
-    | "width"
-    | "height"
   >,
   interactive = true,
 ): HitRect[] {

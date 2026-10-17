@@ -1,7 +1,12 @@
 import type { SimulationView } from "../capabilities.js";
 
 /** Small cosmetic movements share visible simulation time with the meal/touch. */
-export function affectionMotion(sim: SimulationView) {
+export function affectionMotion(
+  sim: Pick<
+    SimulationView,
+    "mode" | "scene" | "until" | "time" | "touch" | "facing" | "x"
+  >,
+) {
   let remaining = Infinity;
 
   if (sim.mode === "eat" && !sim.scene) {

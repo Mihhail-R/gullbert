@@ -2,7 +2,7 @@ import { dialogue } from "../dialogue.js";
 import { observe } from "../observation.js";
 import type { ReadonlyValue } from "../presentation.js";
 import { scopeCapabilities } from "../capabilities.js";
-import type { Item, Collectible } from "../items.js";
+import type { Collectible } from "../items.js";
 import type { Pose } from "../poses.js";
 import type { Point } from "../model.js";
 import type { SimulationView, BehaviorCapabilities } from "../capabilities.js";
@@ -10,13 +10,6 @@ import type { SceneOwner } from "../routine.js";
 import type { Scene, GiftScene as OwnedScene } from "../scenes.js";
 import { ITEMS } from "../items.js";
 
-const treasures: Collectible[] = [
-  "bottle_cap",
-  "bent_spoon",
-  "sock",
-  "glass_diamond",
-];
-const gifts: Item[] = [...treasures, "parking_ticket", "chip"];
 export function giftPose(
   sim: Pick<SimulationView, "scene" | "time">,
 ): Pose | null {
@@ -159,12 +152,6 @@ export class GiftRoutine implements SceneOwner {
     body.place(body.safePoint({ x: body.x, y: origin.y }));
   }
 
-  #choose<T>(choices: T[]) {
-    const sim = this.#environment;
-    return choices[
-      Math.min(choices.length - 1, Math.floor(sim.random() * choices.length))
-    ];
-  }
   #finish(delay = 6) {
     const sim = this.#environment;
     sim.activity.settleUntil(sim.clock.now + delay);
@@ -192,7 +179,7 @@ export class GiftRoutine implements SceneOwner {
     this.#scene = {
       kind: "gift",
       phase: "takeoff",
-      item: this.#choose(gifts),
+      item: sim.belongings.chooseGift(sim.random),
       carrying: false,
       origin: sim.body.safePoint({ x: sim.body.x, y: sim.body.y }),
       side: side,
@@ -324,7 +311,11 @@ export class GiftRoutine implements SceneOwner {
         if (sim.clock.now >= scene.until) {
           scene.phase = "reveal";
           scene.until = sim.clock.now + 1.8;
-          sim.speech.say(ITEMS[scene.item].reveal, 3);
+          const favourite = sim.belongings.favouriteTreasure();
+          const line = scene.item === favourite
+            ? dialogue.gullbert.gifts.myFavourite
+            : ITEMS[scene.item].reveal;
+          sim.speech.say(line, 3);
 
           if (scene.item === "chip") {
             sim.events.emit("munch");

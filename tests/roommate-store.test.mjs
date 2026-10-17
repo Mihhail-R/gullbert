@@ -226,3 +226,44 @@ test("shutdown waits for writes but ignores their late failures", async () => {
   assert.deepEqual(h.results, []);
   assert.equal(h.timers.size, 0);
 });
+
+test("desktop flush commits the latest queued snapshot and shares requests", async () => {
+  const first = deferred();
+  const latest = deferred();
+  const h = persistence({ save: (memory) => memory.collection.sock === 0
+    ? first.promise : latest.promise });
+  await h.store.restore();
+  h.store.start();
+  h.change();
+  const flushing = h.store.flush();
+  assert.equal(h.store.flush(), flushing);
+  let finished = false;
+  void flushing.then(() => {
+    finished = true;
+  });
+  first.resolve();
+  await settle();
+  assert.equal(finished, false);
+  assert.deepEqual(h.saved.at(-1), { collection: { sock: 1 } });
+  latest.resolve();
+  await flushing;
+  assert.equal(finished, true);
+  await h.store.dispose();
+});
+
+test("desktop flush reports a failed commit and supports an explicit retry", async () => {
+  let fail = true;
+  const h = persistence({ save() {
+    if (fail) {
+      throw new Error("disk unavailable");
+    }
+  } });
+  await h.store.restore();
+  h.store.start();
+  await settle();
+  await assert.rejects(h.store.flush(), /disk unavailable/);
+  fail = false;
+  await h.store.flush();
+  assert.equal(h.saved.length, 3);
+  await h.store.dispose();
+});

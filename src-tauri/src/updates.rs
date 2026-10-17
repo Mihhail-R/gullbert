@@ -2,6 +2,7 @@
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::{
+    future::Future,
     sync::{
         atomic::{AtomicBool, Ordering},
         Mutex,
@@ -161,23 +162,31 @@ pub(crate) async fn install_update(
 ) -> Result<(), String> {
     controls(&window)?;
     let _operation = runtime.begin()?;
+
     #[cfg(target_os = "macos")]
     {
         let exe = std::env::current_exe().map_err(|e| e.to_string())?;
         let path = exe.to_string_lossy();
+
         if path.contains("/AppTranslocation/") || path.starts_with("/Volumes/") {
-            return Err("Move Gullbert to Applications, quit this copy, and open it from Applications before updating.".into());
+            return Err(concat!(
+                "Move Gullbert to Applications, quit this copy, and open it from ",
+                "Applications before updating."
+            )
+            .into());
         }
     }
+
     let update = runtime
         .pending
         .lock()
         .unwrap()
         .take()
         .ok_or("Check for updates before installing.")?;
+
     let mut downloaded = 0;
-    update
-        .download_and_install(
+    let bytes = update
+        .download(
             |chunk, total| {
                 downloaded += chunk as u64;
                 let _ = window.emit(
@@ -189,25 +198,82 @@ pub(crate) async fn install_update(
                     },
                 );
             },
-            || {
-                let _ = window.emit(
-                    "gullbert-update-progress",
-                    Progress {
-                        downloaded: 0,
-                        total: None,
-                        installing: true,
-                    },
-                );
-            },
+            || {},
         )
         .await
         .map_err(|e| format!("Update failed; check again to retry. {e}"))?;
+
+    // Windows install launches the installer and exits the process itself. Flush
+    // before calling it, and keep the pet frozen until the restart is authorized.
+    let prepared = install_when_saved(crate::shutdown::prepare(&app), || {
+        let _ = window.emit(
+            "gullbert-update-progress",
+            Progress {
+                downloaded: 0,
+                total: None,
+                installing: true,
+            },
+        );
+        update
+            .install(bytes)
+            .map_err(|e| format!("Update failed; check again to retry. {e}"))
+    })
+    .await
+    .map_err(|error| {
+        crate::shutdown::show_error(&app, &error);
+        error
+    })?;
+    prepared.allow_exit();
     app.restart();
+}
+
+// Hold the successful save permit throughout installation; dropping it on any
+// failure resumes the pet, while Windows may terminate inside the installer.
+async fn install_when_saved<Permit>(
+    save: impl Future<Output = Result<Permit, String>>,
+    install: impl FnOnce() -> Result<(), String>,
+) -> Result<Permit, String> {
+    let permit = save.await?;
+    install()?;
+    Ok(permit)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn installation_waits_for_committed_memories() {
+        tauri::async_runtime::block_on(async {
+            let (send, mut receive) = tauri::async_runtime::channel(1);
+            let installed = AtomicBool::new(false);
+            let mut installation = std::pin::pin!(install_when_saved(
+                async { receive.recv().await.unwrap() },
+                || {
+                    installed.store(true, Ordering::SeqCst);
+                    Ok(())
+                },
+            ));
+            let mut context = std::task::Context::from_waker(std::task::Waker::noop());
+            assert!(installation.as_mut().poll(&mut context).is_pending());
+            assert!(!installed.load(Ordering::SeqCst));
+
+            send.try_send(Ok(())).unwrap();
+            installation.await.unwrap();
+            assert!(installed.load(Ordering::SeqCst));
+        });
+    }
+
+    #[test]
+    fn failed_save_never_starts_the_installer() {
+        tauri::async_runtime::block_on(async {
+            let result = install_when_saved(async { Err::<(), _>("disk full".into()) }, || {
+                panic!("installer must not run before a successful save")
+            })
+            .await;
+            assert_eq!(result, Err("disk full".into()));
+        });
+    }
+
     #[test]
     fn github_client_initializes_before_any_updater_check() {
         assert!(github_client().is_ok());

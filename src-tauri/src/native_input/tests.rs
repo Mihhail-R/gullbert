@@ -397,6 +397,82 @@ fn failed_restoration_hides_instead_of_leaving_an_interactive_overlay() {
 }
 
 #[test]
+fn showing_after_failed_target_release_restores_click_through_first() {
+    let mut input = Input::default();
+    let effects = Recording::default();
+    input.begin_target(&effects, Purpose::Tidy, "tidy").unwrap();
+    effects.fail.set(Some("capture:off"));
+    input.finish_target(&effects);
+    assert!(!effects.visible());
+    assert!(effects.capture.get());
+    effects.clear();
+
+    crate::actions::Action::named("show")
+        .unwrap()
+        .perform(&mut Routing {
+            input: &mut input,
+            effects: &effects,
+        })
+        .unwrap();
+    input.sync_interaction(&effects, vec![], None);
+
+    assert!(effects.visible());
+    effects.assert_released();
+    let events = effects.events.borrow();
+    let release = events
+        .iter()
+        .position(|event| event == "capture:off")
+        .unwrap();
+    let show = events
+        .iter()
+        .position(|event| event == "visible:on")
+        .unwrap();
+    assert!(release < show);
+}
+
+#[test]
+fn showing_stays_hidden_while_capture_recovery_still_fails() {
+    let mut input = Input::default();
+    let effects = Recording::default();
+    input.begin_target(&effects, Purpose::Tidy, "tidy").unwrap();
+    effects.fail.set(Some("capture:off"));
+    input.finish_target(&effects);
+    effects.clear();
+    effects.fail.set(Some("capture:off"));
+
+    assert!(input.set_visible(&effects, true).is_err());
+    assert!(!effects.visible());
+    assert!(effects.capture.get());
+    assert!(!effects
+        .events
+        .borrow()
+        .iter()
+        .any(|event| event == "visible:on"));
+
+    input.set_visible(&effects, true).unwrap();
+    assert!(effects.visible());
+    effects.assert_released();
+}
+
+#[test]
+fn watcher_retries_failed_hover_release_while_the_overlay_is_hidden() {
+    let mut input = Input::default();
+    let effects = Recording::default();
+    input.sync_interaction(&effects, vec![rect()], None);
+    assert!(effects.capture.get());
+    effects.pointer.set(None);
+    effects.fail.set(Some("capture:off"));
+
+    input.watch(&effects);
+    assert!(!effects.visible());
+    assert!(effects.capture.get());
+    input.watch(&effects);
+
+    assert!(!effects.visible());
+    effects.assert_released();
+}
+
+#[test]
 fn stale_target_and_cursor_deadlines_do_not_affect_replacements() {
     let mut input = Input::default();
     let effects = Recording::default();
@@ -420,7 +496,7 @@ fn stale_target_and_cursor_deadlines_do_not_affect_replacements() {
 }
 
 #[test]
-fn pickup_heartbeat_expiry_releases_capture_but_keeps_fixed_deadline_semantics() {
+fn pickup_heartbeat_expiry_releases_capture_and_escape_without_waiting_for_deadline() {
     let mut input = Input::default();
     let effects = Recording::default();
     let id = input.begin_pickup(&effects, rect()).unwrap();
@@ -429,15 +505,50 @@ fn pickup_heartbeat_expiry_releases_capture_but_keeps_fixed_deadline_semantics()
     assert!(effects.capture.get());
     effects.advance(Duration::from_millis(350));
     input.watch(&effects);
-    assert!(!effects.capture.get());
-    assert!(effects.escape.get());
+    effects.assert_released();
+    assert_eq!(effects.actions(), ["cancel"]);
     assert!(input.sync_interaction(&effects, vec![], Some(id)).is_none());
     input.escape(&effects).unwrap();
-    assert!(effects.actions().is_empty());
     effects.advance(Duration::from_millis(29650));
     effects.fire_due(&mut input);
     assert_eq!(effects.actions(), ["cancel"]);
     effects.assert_released();
+}
+
+#[test]
+fn late_heartbeat_or_escape_finishes_expired_pickup_without_canceling_its_replacement() {
+    for trigger in ["heartbeat", "escape"] {
+        let mut input = Input::default();
+        let effects = Recording::default();
+        let old_id = input.begin_pickup(&effects, rect()).unwrap();
+        let old_deadline = effects.latest();
+        effects.advance(Duration::from_millis(350));
+
+        match trigger {
+            "heartbeat" => {
+                assert!(input
+                    .sync_interaction(&effects, vec![], Some(old_id))
+                    .is_none());
+            }
+
+            "escape" => input.escape(&effects).unwrap(),
+
+            _ => unreachable!(),
+        }
+
+        effects.assert_released();
+        assert_eq!(effects.actions(), ["cancel"]);
+        let new_id = input.begin_pickup(&effects, rect()).unwrap();
+        effects.clear();
+        input.expired(&effects, old_deadline);
+        assert!(input.end_pickup(&effects, old_id, true, true).is_none());
+        assert!(effects.actions().is_empty());
+        assert!(effects.capture.get());
+        assert!(effects.escape.get());
+
+        input.end_pickup(&effects, new_id, false, false);
+        effects.assert_released();
+    }
 }
 
 #[test]
@@ -824,4 +935,33 @@ fn public_routing_preserves_pointer_positioning_and_visibility_policy() {
         .position(|event| event == "emit:feed")
         .unwrap();
     assert!(position < visible && visible < command);
+}
+
+#[test]
+fn shutdown_releases_every_input_mode_and_old_hit_regions_cannot_recapture() {
+    for mode in ["target", "pickup", "cursor"] {
+        let mut input = Input::default();
+        let effects = Recording::default();
+        input.sync_interaction(&effects, vec![rect()], None);
+
+        match mode {
+            "target" => input.begin_target(&effects, Purpose::Tidy, "tidy").unwrap(),
+
+            "pickup" => {
+                input.begin_pickup(&effects, rect()).unwrap();
+            }
+
+            "cursor" => {
+                let id = cursor(&mut input, &effects);
+                assert!(input.tug_cursor(&effects, id, point()));
+            }
+
+            _ => unreachable!(),
+        }
+
+        super::desktop::quiesce_input(&mut input, &effects);
+        effects.assert_released();
+        input.reconcile(&effects, effects.pointer().as_ref());
+        effects.assert_released();
+    }
 }

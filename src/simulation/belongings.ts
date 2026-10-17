@@ -1,9 +1,11 @@
 import { dialogue } from "./dialogue.js";
 import { MEMORY_LIMIT, memoryCount, normalizeMemory } from "./memory.js";
-import { ITEMS, isCollectible, type Collectible } from "./items.js";
+import { ITEMS, isCollectible, type Collectible, type Item } from "./items.js";
 import type { Memory, MemoryEpisode, Point, Trick } from "./model.js";
 import { observe } from "./observation.js";
 import type { ReadonlyValue } from "./presentation.js";
+import { chooseGift, favouriteTreasure, hangoutPosition } from "./preferences.js";
+import { SIZE } from "./geometry.js";
 
 export const TRICK_COOLDOWN_MS = 2 * 60 * 1000;
 export const GREETING_COOLDOWN_MS = 5 * 60 * 1000;
@@ -18,12 +20,14 @@ export class Belongings {
   #height: number;
   #now: () => number;
   #snapshot: ReadonlyValue<{ memory: Memory; revision: number }> | null = null;
+  readonly #initialSeed = 1 + Math.floor(Math.random() * 0xffff_ffff);
 
   constructor(width: number, height: number, now = Date.now) {
     this.#width = width;
     this.#height = height;
     this.#now = now;
     this.#memory = normalizeMemory(null, width, height);
+    this.#memory.preferences.seed = this.#initialSeed;
   }
 
   remember(kind: MemoryEpisode["kind"], detail: string, point: Point): void {
@@ -136,7 +140,50 @@ export class Belongings {
 
   restore(data: unknown): void {
     this.#memory = normalizeMemory(data, this.#width, this.#height);
+
+    if (this.#memory.preferences.seed === 0) {
+      this.#memory.preferences.seed = this.#initialSeed;
+    }
+
     this.#revision += 1;
+  }
+
+  hangoutPoint(): Point {
+    const position = hangoutPosition(this.#memory.preferences);
+    return {
+      x: position.x * Math.max(0, this.#width - SIZE),
+      y: position.y * Math.max(0, this.#height - SIZE),
+    };
+  }
+
+  chooseGift(random: () => number): Item {
+    return chooseGift(this.#memory.preferences, random);
+  }
+
+  visitHangout(point: Point): boolean {
+    if (this.#width <= SIZE || this.#height <= SIZE) {
+      return false;
+    }
+
+    const target = this.hangoutPoint();
+    const distance = Math.hypot(point.x - target.x, point.y - target.y);
+
+    if (!Number.isFinite(distance) || distance > 2) {
+      return false;
+    }
+
+    const preferences = this.#memory.preferences;
+    preferences.hangout = {
+      ...hangoutPosition(preferences),
+      visits: Math.min(1000, (preferences.hangout?.visits ?? 0) + 1),
+    };
+    this.#revision += 1;
+    this.remember("activity", "hangout", point);
+    return true;
+  }
+
+  favouriteTreasure(): Collectible | null {
+    return favouriteTreasure(this.#memory.preferences, this.#memory.collection);
   }
 
   resize(width: number, height: number): void {
@@ -177,6 +224,17 @@ export class Belongings {
       (this.#memory.collection[item] ?? 0) + 1,
     );
     this.#memory.greetings.lastDiscovery = item;
+    const affection = this.#memory.preferences.treasureAffection;
+    const familiarItems = Object.keys(affection)
+      .filter(isCollectible);
+
+    for (const known of familiarItems) {
+      if (known !== item) {
+        affection[known]! *= 0.92;
+      }
+    }
+
+    affection[item] = Math.min(12, (affection[item] ?? 0) + 1);
 
     if (point) {
       this.remember("gift", item, point);
@@ -295,13 +353,15 @@ export class Belongings {
     function owned(id: unknown): id is Collectible {
       return isCollectible(id) && (collection[id] ?? 0) > 0;
     }
-    let item;
+    let item = this.favouriteTreasure();
 
-    if (owned(history.lastDiscovery)) {
-      item = history.lastDiscovery;
-    } else {
-      item = Object.keys(collection)
-        .find(owned);
+    if (!item) {
+      if (owned(history.lastDiscovery)) {
+        item = history.lastDiscovery;
+      } else {
+        item = Object.keys(collection)
+          .find(owned) ?? null;
+      }
     }
 
     let lines = firstLines;
