@@ -1,5 +1,9 @@
 {
   "gullbert": {
+    "hangout": {
+      "gettingComfortable": "i like it here.",
+      "usualSpot": "my usual spot."
+    },
     "pettiness": {
       "ignoredExit": "fine. my audience is elsewhere.",
       "ignoredMess": "perhaps this will receive a response.",
@@ -144,6 +148,7 @@
       "gladWeResolvedThat": "glad we resolved that."
     },
     "gifts": {
+      "myFavourite": "my favourite.",
       "backSoonExcellentJudgementAwaits": "back soon. excellent judgement awaits.",
       "beholdMyImpeccableTaste": "behold my impeccable taste.",
       "items": {

@@ -20,6 +20,7 @@ test("missing and malformed snapshots produce fresh, empty durable memories", ()
     },
     perch: null,
     collection: {},
+    preferences: { seed: 0, treasureAffection: {}, hangout: null },
     greetings: { seen: false, lastAt: 0, lastLine: "", lastDiscovery: null },
   };
 
@@ -88,6 +89,7 @@ test("simulation restoration exports an independent snapshot and preserves prefe
   sim.configure({ paused: true, sound: true, mischief: 2, hat: "captain" });
   const saved = {
     version: 1,
+    preferences: { seed: 123 },
     perch: { x: 600, y: 450 },
     collection: { sock: 2 },
     greetings: {
@@ -117,7 +119,10 @@ test("simulation restoration exports an independent snapshot and preserves prefe
   sim.resize(100, 100);
   assert.deepEqual(sim.inspect().memory.perch, { x: 4, y: 4 });
   sim.restoreMemory(null);
-  assert.deepEqual(sim.exportMemory(), normalizeMemory(null, 100, 100));
+  const fresh = normalizeMemory(null, 100, 100);
+  fresh.preferences.seed = sim.exportMemory().preferences.seed;
+  assert.ok(fresh.preferences.seed > 0);
+  assert.deepEqual(sim.exportMemory(), fresh);
 });
 
 test("legacy nest snapshots retain gifts, perch and greetings without restoring the nest", () => {
@@ -136,6 +141,7 @@ test("legacy nest snapshots retain gifts, perch and greetings without restoring 
   };
   sim.restoreMemory(legacy);
   const { nest, ...expected } = legacy;
+  expected.preferences.seed = sim.exportMemory().preferences.seed;
   assert.deepEqual(sim.exportMemory(), expected);
   sim.action("bring_gift");
 

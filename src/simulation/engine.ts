@@ -90,6 +90,7 @@ export class Gullbert {
   #motivation = new Motivation();
   #pettiness = new Pettiness();
   #boredom = new Boredom();
+  #nextHangoutVisit = 60;
   constructor(
     width = 1200,
     height = 800,
@@ -128,6 +129,9 @@ export class Gullbert {
         this.#pettiness.settle();
         this.#motivation.enjoyed("meal");
         this.#learning.ateChip(point);
+      },
+      walked: (point) => {
+        this.#restAtHangout(point);
       },
     });
     this.#food = new FoodPolicy(this.#random);
@@ -346,6 +350,7 @@ export class Gullbert {
     this.#belongings.restore(data);
     this.#learning.resetHabits();
     this.#boredom.reset(this.#belongings.snapshot().memory.episodes);
+    this.#nextHangoutVisit = this.#time + 60;
   }
   resize(width: number, height: number): void {
     this.#work.reset();
@@ -832,9 +837,45 @@ export class Gullbert {
         return;
       }
 
-      this.#activity.walk(this.#randomPoint());
+      this.#wander();
     }
   }
+
+  #wander(): void {
+    let destination = this.#randomPoint();
+
+    if (this.#time >= this.#nextHangoutVisit && this.#random() < 0.3) {
+      const hangout = this.#belongings.hangoutPoint();
+      const distance = Math.hypot(hangout.x - this.#body.x, hangout.y - this.#body.y);
+
+      if (distance >= 32) {
+        destination = hangout;
+      }
+    }
+
+    this.#activity.walk(destination);
+  }
+
+  #restAtHangout(point: Point): void {
+    if (this.#settings.paused || this.#time < this.#nextHangoutVisit) {
+      return;
+    }
+
+    if (!this.#belongings.visitHangout(point)) {
+      return;
+    }
+
+    this.#nextHangoutVisit = this.#time + 90;
+    const visits = this.#belongings.snapshot().memory.preferences.hangout!.visits;
+    const until = this.#time + 4 + Math.min(4, visits);
+    this.#activity.linger(until);
+    this.#activity.settleUntil(until);
+    const line = visits >= 3
+      ? dialogue.gullbert.hangout.usualSpot
+      : dialogue.gullbert.hangout.gettingComfortable;
+    this.#say(line, 3);
+  }
+
   #stepPettyReaction(): boolean {
     if (this.#pettiness.waiting(this.#time)) {
       return true;

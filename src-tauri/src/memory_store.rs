@@ -248,6 +248,23 @@ mod tests {
         assert_eq!(row, ("spin".into(), 1_792_100_000_000, 120.0));
     }
     #[test]
+    fn personal_seed_and_earned_preferences_survive_reopening() {
+        let dir = Directory::new();
+        let mut saved = memory();
+        saved["preferences"] = serde_json::json!({
+            "seed": 4_294_967_295_u64,
+            "treasureAffection": {"sock": 3, "bottle_cap": 1.5},
+            "hangout": {"x": 0.24, "y": 0.65, "visits": 5}
+        });
+        save(&dir.0, &saved).unwrap();
+        assert_eq!(load(&dir.0).unwrap(), saved);
+        let mut next = load(&dir.0).unwrap();
+        next["preferences"]["hangout"]["visits"] = serde_json::json!(6);
+        save(&dir.0, &next).unwrap();
+        assert_eq!(load(&dir.0).unwrap(), next);
+        assert_eq!(next["preferences"]["seed"], saved["preferences"]["seed"]);
+    }
+    #[test]
     fn imports_legacy_once_and_preserves_original() {
         let dir = Directory::new();
         let legacy = r#"{"version":1,"collection":{"sock":2},"learned":{"tricks":{"spin":3}}}"#;
