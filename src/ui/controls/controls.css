@@ -11,6 +11,13 @@
 [hidden] {
   display: none !important;
 }
+/* The desktop window stays fixed; only its content panels scroll. */
+html:not(.preview),
+body:not(.preview) {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
 body {
   margin: 0;
   font-size: 13px;
@@ -75,6 +82,7 @@ small {
   display: grid;
   grid-template-columns: 185px minmax(0, 1fr);
   height: 100dvh;
+  overflow: hidden;
 }
 .sidebar {
   display: flex;
@@ -145,6 +153,7 @@ small {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: none;
   padding: 20px 26px;
 }
 .life-heading {

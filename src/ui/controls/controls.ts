@@ -454,6 +454,7 @@ if (native) {
     error(String(e));
   }
 } else {
+  document.documentElement.classList.add("preview");
   document.body.classList.add("preview");
   $("#demo").hidden = false;
   $("#reset-preview")
