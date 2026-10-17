@@ -121,6 +121,10 @@ export class Touch {
     this.#context = context;
   }
 
+  get animating(): boolean {
+    return this.#state.reaction === "pet";
+  }
+
   snapshot(): TouchSnapshot {
     let point = null;
 

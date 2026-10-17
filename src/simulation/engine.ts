@@ -860,6 +860,10 @@ export class Gullbert {
     this.#nextMischief = this.#time + mischiefDelay;
   }
   get moving() {
+    if (this.#cleanup.moving || this.#touch.animating) {
+      return true;
+    }
+
     if (
       this.#pickup.snapshot().held?.dragged ||
       this.#registry.active ||

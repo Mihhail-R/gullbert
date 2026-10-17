@@ -858,8 +858,8 @@ export class PetApplication {
         }
       } else if (sim.directCleanupAt(point)) {
         sim.action("direct_pick", point);
-        this.#render();
         this.#releaseInteraction();
+        this.#wake();
       }
 
       return;
