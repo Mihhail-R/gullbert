@@ -38,7 +38,7 @@ Everything happens locally. There are no hunger chores, streaks, or penalties fo
 
 The control room has four pages: **Home** for recent memories and shared activities, **Play & learn** for snacks, games, training and tidying, **His world** for memories, treasures, hats and favourite places, and **Settings** for behaviour, screen access and updates. Appearance defaults to **System**, following your device’s light or dark mode as it changes. Choose **Light** or **Dark** in Settings to override it. Your choice is saved locally for the control room and browser playground, independently of his learned memories. The window is resizable, with compact navigation at narrower widths.
 
-Ordinary bird routines, petty crimes and surprise scenes happen naturally in the installed app. Their demonstration buttons live in the website playground below the control-room preview. The tray and existing keyboard shortcuts remain available. **Reset scene** in the playground stops the routine, clears loose mess and summons him; it keeps his memories and collection.
+Ordinary bird routines, petty crimes and surprise scenes happen naturally in the installed app. The website opens directly to the standalone browser playground, with its demonstration buttons beside Gullbert. The four-page control room belongs to the installed app. The tray and existing keyboard shortcuts remain available. **Reset scene** in the playground stops the routine, clears loose mess and summons him; it keeps his memories and collection.
 
 The control room and menu bar / system tray expose the main actions. Closing the control room leaves Gullbert running; choose **Quit** to exit. Nothing is added to startup. **Summon Gullbert** moves him to the display containing your cursor; he occupies one display at a time.
 
@@ -135,7 +135,7 @@ Open [http://127.0.0.1:4173](http://127.0.0.1:4173). The playground shares the a
 
 ### Publish the browser preview and downloads
 
-GitHub Pages hosts the browser playground; GitHub Releases hosts the desktop downloads. In the repository's **Settings → Pages → Build and deployment**, select **GitHub Actions** as the source. After merging to `main`, the [Pages workflow](.github/workflows/pages.yml) tests and publishes `web-dist/` at [mihhail-r.github.io/gullbert/](https://mihhail-r.github.io/gullbert/). You can also run **Publish browser preview** manually on `main`.
+GitHub Pages hosts the browser playground; GitHub Releases hosts the desktop downloads. In the repository's **Settings → Pages → Build and deployment**, select **GitHub Actions** as the source. After merging to `main`, the [Pages workflow](.github/workflows/pages.yml) tests and publishes `pages-dist/` at [mihhail-r.github.io/gullbert/](https://mihhail-r.github.io/gullbert/). You can also run **Publish browser preview** manually on `main`.
 
 To release desktop packages, push a new version tag such as `v0.3.0-beta.5`. The build workflow takes the app version from the tag and creates a draft release containing Apple Silicon and Intel Mac DMGs, a Windows x64 installer, and signed update packages. Test the downloaded packages, edit the release notes, and publish the draft. Preview tags are marked **pre-release** automatically. Draft releases are not public downloads.
 
@@ -183,6 +183,10 @@ cargo test --manifest-path src-tauri/Cargo.toml --locked
 The frontend has no runtime npm dependencies. Tauri uses the operating system's webview. TypeScript compiles into ignored `web-dist/`; tests exercise that emitted code. Use `npm run format` to apply frontend and documentation formatting.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for architecture, testing, and contribution guidelines.
+
+### Browser preview builds
+
+`npm run preview` opens the standalone playground at the local site root. For control-room development, open `/index.html` on that local server. `npm run build:pages` creates `pages-dist/` with the playground as its entry point; GitHub Pages publishes that folder. Native builds keep the desktop control room in `web-dist/index.html`.
 
 ## License and credits
 

@@ -3,6 +3,8 @@ node_modules/
 /src-tauri/target/
 /src-tauri/gen/
 /web-dist/
+/pages-dist/
+/.pages-build-*/
 /dist/
 /.web-build-*/
 
