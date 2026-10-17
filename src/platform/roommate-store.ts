@@ -24,7 +24,11 @@ export class MemoryPersistence {
   #disposed = false;
   #submittedRevision = -1;
   #retry: ReturnType<typeof setTimeout> | undefined;
-  #pending: Memory | null = null;
+  #pending: { memory: Memory; revision: number } | null = null;
+  #committedRevision = -1;
+  #writeError: unknown = null;
+  #flushing: Promise<void> | null = null;
+  #flushingRevision = -1;
   #writing: Promise<void> | null = null;
   #shutdown: Promise<void> | null = null;
 
@@ -74,13 +78,49 @@ export class MemoryPersistence {
     }
 
     this.#submittedRevision = revision;
-    this.#pending = structuredClone(this.#dependencies.snapshot());
+    this.#pending = {
+      memory: structuredClone(this.#dependencies.snapshot()),
+      revision,
+    };
 
     if (!this.#writing) {
       this.#writing = this.#drain()
         .finally(() => {
           this.#writing = null;
         });
+    }
+  }
+
+  /** Flush without disposing: a failed desktop shutdown must remain retryable. */
+  flush(): Promise<void> {
+    const revision = this.#dependencies.revision();
+
+    if (this.#flushing && this.#flushingRevision === revision) {
+      return this.#flushing;
+    }
+
+    const flushing = this.#flush(revision)
+      .finally(() => {
+        if (this.#flushing === flushing) {
+          this.#flushing = null;
+        }
+      });
+    this.#flushing = flushing;
+    this.#flushingRevision = revision;
+    return flushing;
+  }
+
+  async #flush(revision: number): Promise<void> {
+    if (!this.#active) {
+      throw new Error("Memory storage is not ready to flush.");
+    }
+
+    this.#cancelRetry();
+    this.remember();
+    await this.#writing;
+
+    if (this.#committedRevision !== revision) {
+      throw this.#writeError ?? new Error("The latest memories have not been saved.");
     }
   }
 
@@ -106,9 +146,12 @@ export class MemoryPersistence {
       this.#pending = null;
 
       try {
-        await this.#dependencies.storage.save(snapshot);
+        await this.#dependencies.storage.save(snapshot.memory);
+        this.#committedRevision = snapshot.revision;
+        this.#writeError = null;
         this.#result(null);
       } catch (error) {
+        this.#writeError = error;
         this.#result(error);
       }
     }

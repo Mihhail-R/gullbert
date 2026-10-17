@@ -31,6 +31,7 @@ interface Commands {
   app_version: [undefined, string];
   check_update: [{ beta: boolean }, { version: string; notes: string } | null];
   install_update: [undefined, void];
+  shutdown_ready: [{ id: number; error: string | null }, void];
   act: [{ action: ActionName }, void];
   update_settings: [{ settings: Settings }, void];
   snapshot: [undefined, Snapshot];
@@ -60,6 +61,9 @@ interface Commands {
   target_picked: [Point & { id: number }, void];
 }
 interface Events {
+  "gullbert-shutdown-prepare": number;
+  "gullbert-shutdown-cancel": number;
+  "gullbert-shutdown-error": string;
   "gullbert-update-progress": {
     downloaded: number;
     total: number | null;

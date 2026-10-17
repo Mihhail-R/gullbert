@@ -53,6 +53,128 @@ test(
   }
 );
 
+test("native commands received during memory restore survive startup in order", async () => {
+  const pending = deferred();
+  const h = harness({ native: true, load: () => pending.promise });
+  const configured = [];
+  h.simulation.configure = (settings) => {
+    configured.push(settings);
+  };
+  const startup = h.app.start();
+  await settle();
+  assert.ok(h.calls.some(([name]) => name === "pet_ready"));
+  const settings = { sound: false, paused: true, mischief: 1, hat: "none" };
+  h.nativeListeners.get("gullbert-settings")({ payload: settings });
+  h.nativeListeners.get("gullbert-visible")({ payload: false });
+  h.nativeListeners.get("gullbert-action")({ payload: { action: "feed" } });
+  h.nativeListeners.get("gullbert-target")({
+    payload: { outcome: "started", id: 1, purpose: "poop", preparation: "cancel" },
+  });
+  h.nativeListeners.get("gullbert-target")({
+    payload: { outcome: "selected", id: 1, point: { x: 200, y: 300 } },
+  });
+  assert.deepEqual(h.calls.filter(([name]) => name === "action"), []);
+  assert.deepEqual(h.saved, []);
+
+  pending.resolve({ collection: { sock: 9 } });
+  await startup;
+  assert.deepEqual(h.restored, [{ collection: { sock: 9 } }]);
+  assert.deepEqual(configured.at(-1), settings);
+  assert.equal(h.updates.at(-1).visible, false);
+  assert.equal(h.updates.at(-1).targeting, false);
+  assert.deepEqual(h.calls.filter(([name]) => name === "action"), [
+    ["action", "feed"],
+    ["action", "cancel"],
+    ["action", "poop"],
+  ]);
+  await h.app.dispose();
+});
+
+test("native events delivered before pet_ready resolves survive its snapshot", async () => {
+  const ready = deferred();
+  const h = harness({
+    native: true,
+    invoke(name) {
+      if (name === "pet_ready") {
+        return ready.promise;
+      }
+    },
+  });
+  const configured = [];
+  h.simulation.configure = (settings) => {
+    configured.push(settings);
+  };
+  const startup = h.app.start();
+  await settle();
+  const settings = { sound: false, paused: true, mischief: 1, hat: "none" };
+  h.nativeListeners.get("gullbert-settings")({ payload: settings });
+  h.nativeListeners.get("gullbert-visible")({ payload: false });
+  h.nativeListeners.get("gullbert-action")({ payload: { action: "feed" } });
+  ready.resolve({
+    settings: { ...settings, paused: false },
+    visible: true,
+    shortcut_errors: [],
+  });
+  await startup;
+  assert.deepEqual(configured.at(-1), settings);
+  assert.equal(h.updates.at(-1).visible, false);
+  assert.ok(h.calls.some(([name, action]) => name === "action" && action === "feed"));
+  await h.app.dispose();
+});
+
+test("preview commands received during memory restore survive startup", async () => {
+  const pending = deferred();
+  const h = harness({ load: () => pending.promise });
+  const configured = [];
+  h.simulation.configure = (settings) => {
+    configured.push(settings);
+  };
+  const startup = h.app.start();
+  const settings = { sound: false, paused: true, mischief: 1, hat: "none" };
+  h.emit("message", { type: "settings", settings });
+  h.emit("message", { type: "action", action: "feed" });
+  h.emit("message", { type: "visible", visible: false });
+  pending.resolve({ collection: { sock: 9 } });
+  await startup;
+  assert.deepEqual(configured.at(-1), settings);
+  assert.equal(h.updates.at(-1).visible, false);
+  assert.ok(h.calls.some(([name, action]) => name === "action" && action === "feed"));
+  await h.app.dispose();
+});
+
+test("disposing during native restore discards commands waiting for startup", async () => {
+  const pending = deferred();
+  const h = harness({ native: true, load: () => pending.promise });
+  const startup = h.app.start();
+  await settle();
+  h.nativeListeners.get("gullbert-action")({ payload: { action: "feed" } });
+  await h.app.dispose();
+  pending.resolve({ collection: { sock: 9 } });
+  await startup;
+  assert.deepEqual(h.calls.filter(([name]) => name === "action"), []);
+  assert.deepEqual(h.restored, []);
+  assert.deepEqual(h.saved, []);
+  assert.equal(h.greeted, 0);
+  assert.equal(h.timers.size, 0);
+});
+
+test("commands queued before a failed restore cannot overwrite unread memory", async () => {
+  const pending = deferred();
+  const h = harness({ native: true, load: () => pending.promise });
+  const startup = h.app.start();
+  await settle();
+  h.nativeListeners.get("gullbert-visible")({ payload: true });
+  h.nativeListeners.get("gullbert-action")({ payload: { action: "feed" } });
+  pending.reject(new Error("disk unavailable"));
+  await startup;
+  await h.app.dispose();
+  assert.deepEqual(h.restored, []);
+  assert.deepEqual(h.saved, []);
+  assert.equal(h.errors.length, 1);
+  assert.equal(h.updates.at(-1).visible, false);
+  assert.deepEqual(h.calls.filter(([name]) => name === "action"), []);
+});
+
 test("a native listener that arrives after disposal is immediately removed", async () => {
   const pending = deferred();
   let subscriptions = 0;

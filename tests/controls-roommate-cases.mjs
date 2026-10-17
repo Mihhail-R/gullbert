@@ -556,6 +556,15 @@ export function roommateRenderingTests(mode) {
     }
   });
 
+  if (mode === "native") {
+    test("native: shutdown failures stay visible after ordinary memory status updates", () => {
+      listeners.get("gullbert-shutdown-error")({ payload: "Save failed. Retry Quit." });
+      listeners.get("gullbert-roommate")({ payload: { mood: "curious" } });
+      assert.equal(element("error").hidden, false);
+      assert.equal(element("error").textContent, "Save failed. Retry Quit.");
+    });
+  }
+
   test(`${mode}: preview reset uses safe commands without forgetting memories`, () => {
     commands.length = 0;
     messages.length = 0;
