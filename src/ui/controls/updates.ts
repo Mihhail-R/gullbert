@@ -1,3 +1,4 @@
+import { showPage } from "./navigation.js";
 import { invoke, native } from "../../platform/bridge.js";
 import { requiredElement as $ } from "../dom.js";
 import { UpdateController } from "./update-controller.js";
@@ -54,12 +55,8 @@ export async function setupUpdates() {
       );
     });
     await native.event.listen("gullbert-open-updates", () => {
-      for (const section of document.querySelectorAll<HTMLDetailsElement>(
-        ".control-section",
-      )) {
-        section.open = section === panel;
-      }
-
+      showPage("settings");
+      panel.open = true;
       panel.scrollIntoView({ block: "nearest" });
     });
     check.disabled = false;

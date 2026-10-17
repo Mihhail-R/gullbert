@@ -1,3 +1,5 @@
+@import url("../theme.css");
+
 :root {
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   color: #293344;
@@ -569,4 +571,42 @@ body.gull-dragging {
   font: bold 10px/14px monospace;
   text-align: center;
   white-space: pre-line;
+}
+
+/* Browser chrome follows the control room's appearance; the overlay stays transparent. */
+body[data-theme] #typing-playground {
+  color: var(--ink);
+  background: var(--paper);
+  border-color: var(--line);
+}
+body[data-theme] #typing-demo {
+  color: var(--ink);
+  background: var(--card);
+  border-color: var(--line);
+}
+body[data-theme] #typing-playground small {
+  color: var(--muted);
+}
+body[data-theme] :is(#speech, #guest-speech, #target-banner) {
+  color: var(--ink);
+  background: var(--card);
+  border-color: var(--line);
+}
+body[data-theme] #target-banner button {
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+body[data-theme] {
+  background-color: var(--portrait) !important;
+  background-image: radial-gradient(
+    var(--line) 1px,
+    transparent 1px
+  ) !important;
+  background-size: 20px 20px !important;
+}
+body[data-theme] #speech::after {
+  background: var(--card);
+  border-color: var(--line);
 }
