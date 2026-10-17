@@ -397,6 +397,82 @@ fn failed_restoration_hides_instead_of_leaving_an_interactive_overlay() {
 }
 
 #[test]
+fn showing_after_failed_target_release_restores_click_through_first() {
+    let mut input = Input::default();
+    let effects = Recording::default();
+    input.begin_target(&effects, Purpose::Tidy, "tidy").unwrap();
+    effects.fail.set(Some("capture:off"));
+    input.finish_target(&effects);
+    assert!(!effects.visible());
+    assert!(effects.capture.get());
+    effects.clear();
+
+    crate::actions::Action::named("show")
+        .unwrap()
+        .perform(&mut Routing {
+            input: &mut input,
+            effects: &effects,
+        })
+        .unwrap();
+    input.sync_interaction(&effects, vec![], None);
+
+    assert!(effects.visible());
+    effects.assert_released();
+    let events = effects.events.borrow();
+    let release = events
+        .iter()
+        .position(|event| event == "capture:off")
+        .unwrap();
+    let show = events
+        .iter()
+        .position(|event| event == "visible:on")
+        .unwrap();
+    assert!(release < show);
+}
+
+#[test]
+fn showing_stays_hidden_while_capture_recovery_still_fails() {
+    let mut input = Input::default();
+    let effects = Recording::default();
+    input.begin_target(&effects, Purpose::Tidy, "tidy").unwrap();
+    effects.fail.set(Some("capture:off"));
+    input.finish_target(&effects);
+    effects.clear();
+    effects.fail.set(Some("capture:off"));
+
+    assert!(input.set_visible(&effects, true).is_err());
+    assert!(!effects.visible());
+    assert!(effects.capture.get());
+    assert!(!effects
+        .events
+        .borrow()
+        .iter()
+        .any(|event| event == "visible:on"));
+
+    input.set_visible(&effects, true).unwrap();
+    assert!(effects.visible());
+    effects.assert_released();
+}
+
+#[test]
+fn watcher_retries_failed_hover_release_while_the_overlay_is_hidden() {
+    let mut input = Input::default();
+    let effects = Recording::default();
+    input.sync_interaction(&effects, vec![rect()], None);
+    assert!(effects.capture.get());
+    effects.pointer.set(None);
+    effects.fail.set(Some("capture:off"));
+
+    input.watch(&effects);
+    assert!(!effects.visible());
+    assert!(effects.capture.get());
+    input.watch(&effects);
+
+    assert!(!effects.visible());
+    effects.assert_released();
+}
+
+#[test]
 fn stale_target_and_cursor_deadlines_do_not_affect_replacements() {
     let mut input = Input::default();
     let effects = Recording::default();
