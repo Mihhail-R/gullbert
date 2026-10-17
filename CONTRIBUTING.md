@@ -23,7 +23,7 @@ CI runs `npm run lint` and rejects style violations. Naming, meaningful statemen
 
 For native changes, also run `cargo fmt --manifest-path src-tauri/Cargo.toml --check`, test the desktop overlay, and state which operating system you used. Check click-through, dragging, targeting, Escape, hiding, and shortcuts; browser mocks cannot verify OS input delivery. Include a screenshot or short clip for a new gag.
 
-Keep autonomous actions infrequent and bounded. Commands take priority, hidden time does not accumulate events, and remembered belongings survive cleanup. Keep the core offline, without telemetry, cloud AI services, auto-start, or background network calls. Screen capture is confined to the explicitly enabled local-vision feature: transient, cropped, and processed on-device. The explicit App updates flow may contact GitHub to discover and download signed releases. Discuss larger changes before adding dependencies.
+Keep autonomous actions infrequent and bounded. Commands take priority, hidden time does not accumulate events, and remembered belongings survive cleanup. Keep the core offline, without telemetry, cloud AI services, auto-start, or background network calls. Do not capture the screen, inspect text in other applications, or request Accessibility access. The explicit App updates flow may contact GitHub to discover and download signed releases. Discuss larger changes before adding dependencies.
 
 Code contributions use MIT; artwork must declare its license. Do not submit third-party character packs without permission.
 
@@ -80,18 +80,16 @@ Native input capture must expire independently of frontend updates. Ordinary pla
 
 The Rust desktop shell uses responsibility-based modules within one binary crate:
 
-| Module                                      | Responsibility                                                               |
-| ------------------------------------------- | ---------------------------------------------------------------------------- |
-| `main.rs`                                   | Startup, plugin and command registration, window lifecycle                   |
-| `actions.rs`                                | Shared action routing, action messages, and launcher flags                   |
-| `windows.rs`                                | Window lookup, monitor selection, and cursor coordinate conversion           |
-| `vision.rs` / `vision/` / `native/vision.m` | Opt-in local screen OCR, throttling, permission and detection status         |
-| `caret.rs`                                  | Read-only caret geometry, Accessibility access, and coordinate normalization |
-| `state.rs`                                  | Application state, preference persistence, and control-room snapshots        |
-| `roommate.rs`, `memory_store.rs`            | Local SQLite memory, legacy migration, and roommate status messages          |
-| `tray.rs`                                   | Tray menus, labels, and menu events                                          |
-| `shortcuts.rs`                              | Global shortcut registration and event routing                               |
-| `native_input/`                             | Input ownership, deadlines, OS effects, and serialized dispatch              |
+| Module                           | Responsibility                                                        |
+| -------------------------------- | --------------------------------------------------------------------- |
+| `main.rs`                        | Startup, plugin and command registration, window lifecycle            |
+| `actions.rs`                     | Shared action routing, action messages, and launcher flags            |
+| `windows.rs`                     | Window lookup, monitor selection, and cursor coordinate conversion    |
+| `state.rs`                       | Application state, preference persistence, and control-room snapshots |
+| `roommate.rs`, `memory_store.rs` | Local SQLite memory, legacy migration, and roommate status messages   |
+| `tray.rs`                        | Tray menus, labels, and menu events                                   |
+| `shortcuts.rs`                   | Global shortcut registration and event routing                        |
+| `native_input/`                  | Input ownership, deadlines, OS effects, and serialized dispatch       |
 
 Keep commands beside the responsibility they expose, and register their qualified paths in `main.rs`; frontend command names stay unchanged. Keep implementation helpers private and use `pub(crate)` only where another module needs access. Group related types and behavior together rather than creating one file per type. Unit tests stay with their owning module; the larger input lifecycle suite remains in `native_input/tests.rs`.
 
@@ -105,37 +103,11 @@ Pickup timing uses elapsed wall time for its rolling history and revenge budget;
 
 While Gullbert is running, a second invocation of its executable accepts local commands such as `--summon`, `--hide`, `--show`, `--clean`, `--poop-here`, `--feed`, `--place-bag`, `--eat-cursor`, `--bring-gift`, `--place-perch`, `--tidy`, and `--cancel`. See the command mapping in `src-tauri/src/actions.rs` for all supported flags. These arguments are ignored on first launch, which opens the control room normally.
 
-## Local vision checks
-
-`cargo test --manifest-path src-tauri/Cargo.toml --locked` also checks OCR result validation. Actual ScreenCaptureKit capture and permission delivery require manual desktop testing. The build compiles `native/vision.m` with Apple clang for the selected architecture; ScreenCaptureKit is weak-linked so the base app can still launch on macOS 11–13 with vision unavailable.
-
-### Windows text vision
-
-Windows uses Ocrs + RTen compiled into the executable, with two embedded, checksum-pinned models. Run `npm run prepare:vision` before direct Windows Cargo builds/tests; npm dev/build does this automatically on Windows. `models/manifest.json` pins the upstream runtime-model URLs and SHA-256 hashes, and `build.rs` verifies them without network access. Do not commit model binaries or screen captures. Include the model notice/license when distributing; model weights are CC BY-SA 4.0, distinct from the MIT application code.
-
-Microsoft's [Windows.Media.Ocr documentation](https://learn.microsoft.com/en-us/uwp/api/windows.media.ocr) requires package identity for desktop apps. Ocrs avoids adding MSIX identity or a runtime installer to the existing NSIS distribution. Its English-oriented models differ from Apple Vision; exact OCR output is not expected to match.
-
-`vision/ocr.rs` owns model loading and recognition; `vision/windows.rs` captures only a 640 × 360 physical-pixel crop using GDI, on a worker thread temporarily set to per-monitor DPI awareness v2. Monitor selection, negative origins, and OCR boxes stay in physical screen coordinates; `caret.rs` converts once using the overlay scale. Capture excludes this process's visible top-level windows using `WDA_EXCLUDEFROMCAPTURE` and requires DWM composition and Windows build 19041+. Failure to exclude a window fails the entire scan. Affinity remains set for those windows for their lifetime. GDI objects and thread DPI are restored on every exit. Model weights are cached, but images and recognition results are dropped after each scan. No text, pixels, or OCR errors containing text are logged or persisted.
-
-The shared runtime retains its single-flight slot until OCR completes. Cancellation invalidates the generation and clears cached targets; it does not forcibly interrupt the OCR library. Pause, hide/show, Polite-ish, and vision-setting changes discard late results. The final caret gate also rejects a result if the overlay moved or its DPI changed. Window awareness and image recognition are outside this feature.
-
-Automated coverage includes crop clipping, nearest-word selection, printable-character fallback, physical-to-logical DPI conversion, stale-result cancellation, and throttling. The Windows native suite additionally loads both embedded models, checks a blank image, and recognizes a synthetic HELLO WORLD fixture through nearest-word selection and screen-coordinate conversion. CI builds the NSIS installer and runs native tests on Windows; these checks cannot establish capture behavior.
-
-**Native Windows testing still required before release:**
-
-- Install the NSIS build on a clean Windows 10 2004+ / Windows 11 machine, disconnect the network, and scan visible text without OCR DLLs, language packs, or package identity.
-- Check light/dark browser pages and chat text, small fonts, unsupported scripts, and the carried character's landing position.
-- Verify the pet, bubbles, nest, and control room never become OCR targets, including when the overlay covers the monitor. Confirm underlying text is visible in captures; GDI/compositor behavior must be tested on real hardware.
-- Use 100%, 125%, 150%, and 200% displays, negative monitor origins, monitors above/left, pointer positions at seams, summon between monitors, DPI changes, and monitor disconnect during a scan.
-- Pause, hide then show, switch vision off/on, select Polite-ish, and issue commands during slow scans. Verify no stale hunt, overlapping scans, or catch-up burst occurs.
-- Check protected video, lock/secure desktop, remote desktop, and capture failure recovery; no target is preferable to capturing Gullbert or using stale geometry.
-- Measure first-scan latency, steady-state CPU/memory, and GDI handle counts during repeated scans and failures. Check Windows builds older than 19041 report unsupported while ordinary caret mode remains usable.
-
 ## Giving the birds something to say
 
 Edit [`src/simulation/dialogue.json`](src/simulation/dialogue.json) for character speech, postcard captions, and treasure descriptions. No TypeScript edits are needed to change existing lines or add alternatives to a pool. The catalog is bundled locally at build time; rebuild or use the preview watcher to see edits. Installed copies do not hot-load this source file.
 
-- `gullbert.general`, `greetings`, `moods`, and `hats` contain everyday remarks. Other blocks match the interaction or routine: `cleanup`, `crime`, `cursor`, `gags`, `gifts`, `perch`, `pickup`, `quiet`, `snacks`, `theatre`, `touch`, and `typing`.
+- `gullbert.general`, `greetings`, `moods`, and `hats` contain everyday remarks. Other blocks match the interaction or routine: `cleanup`, `crime`, `cursor`, `gags`, `gifts`, `perch`, `pickup`, `quiet`, `snacks`, `theatre`, and `touch`.
 - Arrays of strings are pools of alternatives. Append a line to add variety. Keep at least one nonblank, distinct entry. Greetings and moods avoid immediate repeats when multiple options exist; cleanup cycles its responses; hats and general remarks use the simulation's random selection.
 - Single strings are fixed cues for a particular action or punchline. Edit their values while retaining the keys. Adding a new situation or turning a fixed cue into a pool needs a corresponding behavior change.
 - `gullbert.greetings.treasure` uses `{item}` for the name of an actually owned treasure. Keep that placeholder in each alternative; other placeholders are not supported.
@@ -156,9 +128,7 @@ Run `npm test` and `npm run check` after editing. The build rejects empty pools,
 
 ## Run from source
 
-Install Node.js 22+, the current stable Rust toolchain (at least 1.90), and the [Tauri platform prerequisites](https://v2.tauri.app/start/prerequisites/): Xcode Command Line Tools on macOS; Microsoft C++ Build Tools with the desktop C++ workload and WebView2 on Windows. Windows `npm run dev` and `npm run build` prepare checksum-pinned OCR models before compilation (about 12 MB, downloaded once and reusable offline). For direct Cargo commands or cross-compilation, first run `npm run prepare:vision`. These build-time downloads are never performed by the installed app. Model attribution and licenses are in `src-tauri/models/NOTICE.txt` and included in Windows bundles.
-
-The macOS build also needs an SDK with the macOS 14 ScreenCaptureKit APIs, even when building for an older macOS version.
+Install Node.js 22+, the current stable Rust toolchain (at least 1.90), and the [Tauri platform prerequisites](https://v2.tauri.app/start/prerequisites/): Xcode Command Line Tools on macOS; Microsoft C++ Build Tools with the desktop C++ workload and WebView2 on Windows.
 
 ```sh
 npm ci
@@ -212,4 +182,4 @@ Push a tag such as `v0.3.0-beta.1` only after merging the intended source. CI pr
 
 Before publishing the first updater release, test a signed upgrade between two distinct versions on each supported platform, including a rejected signature, an interrupted download, and preserved settings. GitHub API rate limits, connectivity failures, and missing update assets surface as errors rather than an “up to date” result.
 
-The macOS deployment target is 11.0; local vision requires 14.0 or newer. Linux desktop builds are not part of the supported build matrix. Before a stable release, test downloaded packages on each target platform, including installation, click-through, dragging, targeting, Escape, physical shortcuts, sound, permissions, and multiple displays. Browser tests and native unit tests do not establish desktop compatibility. Exclusive fullscreen apps and some virtual desktop configurations may hide the overlay. macOS transparency uses Tauri's private API option; distribution targets direct downloads rather than the Mac App Store.
+The macOS deployment target is 11.0. Linux desktop builds are not part of the supported build matrix. Before a stable release, test downloaded packages on each target platform, including installation, click-through, dragging, targeting, Escape, physical shortcuts, sound, and multiple displays. Browser tests and native unit tests do not establish desktop compatibility. Exclusive fullscreen apps and some virtual desktop configurations may hide the overlay. macOS transparency uses Tauri's private API option; distribution targets direct downloads rather than the Mac App Store.

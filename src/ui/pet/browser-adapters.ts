@@ -1,5 +1,5 @@
 import type { PreviewMessage } from "../../platform/bridge.js";
-import type { CaretSample, Point } from "../../simulation/model.js";
+import type { Point } from "../../simulation/model.js";
 import type { PetPresentation } from "../../simulation/presentation.js";
 import { requiredElement, updateText } from "../dom.js";
 import type {
@@ -16,39 +16,6 @@ export class PetBrowser implements ApplicationBrowser {
     private readonly window: Window,
     private readonly document: Document,
   ) {}
-
-  caret(): CaretSample | null {
-    const editor = this.document.getElementById("typing-demo");
-    const selection = this.window.getSelection();
-
-    if (!editor || editor.hidden || this.document.activeElement !== editor) {
-      return null;
-    }
-
-    if (
-      !selection?.isCollapsed ||
-      !selection.rangeCount ||
-      !editor.contains(selection.anchorNode)
-    ) {
-      return null;
-    }
-
-    const range = selection.getRangeAt(0)
-      .cloneRange();
-    const rect = range.getClientRects()[0];
-
-    if (!rect || rect.height <= 0) {
-      return null;
-    }
-
-    return {
-      x: rect.x,
-      y: rect.y,
-      height: rect.height,
-      context: "playground-editor",
-      position: String(selection.anchorOffset),
-    };
-  }
 
   size(): { width: number; height: number } {
     return { width: this.window.innerWidth, height: this.window.innerHeight };

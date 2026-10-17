@@ -670,10 +670,6 @@ impl crate::actions::Effects for Routing<'_> {
     fn quit(&mut self) {
         self.effects.effect("quit").unwrap();
     }
-    #[cfg(all(debug_assertions, target_os = "macos"))]
-    fn window_probe(&mut self, _spike: bool) -> Result<(), String> {
-        Ok(())
-    }
 }
 
 // Export real routing/input event delivery for the application + Gullbert tests.

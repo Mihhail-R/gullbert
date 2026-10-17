@@ -101,7 +101,6 @@ export function harness(options = {}) {
       return false;
     },
     updatePickupClock() {},
-    caret() {},
     cursorEncounter() {
       return null;
     },

@@ -1,20 +1,4 @@
 {
-  "window_probe": {
-    "variant": "WindowProbe",
-    "aliases": ["--window-probe"],
-    "availability": "debug_macos",
-    "visibility": "preserve",
-    "route": "window_probe",
-    "preparation": "tidy_cancel"
-  },
-  "window_spike": {
-    "variant": "WindowSpike",
-    "aliases": ["--window-spike"],
-    "availability": "debug_macos",
-    "visibility": "preserve",
-    "route": "window_spike",
-    "preparation": "tidy_cancel"
-  },
   "summon": {
     "variant": "Summon",
     "aliases": ["--summon"],

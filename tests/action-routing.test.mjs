@@ -282,7 +282,7 @@ test("frontend catalog validation rejects malformed definitions and incompatible
       catalog.feed.variant = "Quit";
     },
     (catalog) => {
-      catalog.window_probe.availability = "all";
+      catalog.feed.availability = "unknown";
     },
   ]) {
     const catalog = structuredClone(source);

@@ -11,7 +11,6 @@ use tauri::{Emitter, Manager};
 #[serde(default)]
 pub(crate) struct Settings {
     pub(crate) paused: bool,
-    pub(crate) vision: bool,
     sound: bool,
     pub(crate) mischief: u8,
     hat: String,
@@ -20,7 +19,6 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             paused: false,
-            vision: false,
             sound: false,
             mischief: 1,
             hat: "none".into(),
@@ -71,12 +69,14 @@ fn save_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), String
     if settings.mischief > 2 {
         return Err("Mischief must be 0, 1 or 2".into());
     }
+
     if !matches!(
         settings.hat.as_str(),
         "none" | "captain" | "cone" | "beanie" | "paper-crown" | "fried-egg"
     ) {
         return Err("Unknown hat".into());
     }
+
     let dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let temp = dir.join("settings.tmp");
@@ -86,12 +86,13 @@ fn save_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), String
     )
     .map_err(|e| e.to_string())?;
     std::fs::rename(temp, dir.join("settings.json")).map_err(|e| e.to_string())?;
+
     if settings.paused
         || settings.mischief != app.state::<State>().settings.lock().unwrap().mischief
     {
         native_input::interrupt(&app);
     }
-    crate::vision::reset(&app);
+
     *app.state::<State>().settings.lock().unwrap() = settings.clone();
     app.emit("gullbert-settings", settings)
         .map_err(|e| e.to_string())
@@ -141,5 +142,24 @@ mod tests {
             assert!(restored.paused && restored.sound);
             assert_eq!(restored.mischief, 2);
         }
+    }
+
+    #[test]
+    fn retired_preferences_do_not_discard_current_settings() {
+        let settings: Settings = serde_json::from_str(
+            r#"{"vision":true,"paused":true,"sound":true,"mischief":2,"hat":"captain"}"#,
+        )
+        .unwrap();
+        let saved = serde_json::to_value(settings).unwrap();
+
+        assert_eq!(
+            saved,
+            serde_json::json!({
+                "paused": true,
+                "sound": true,
+                "mischief": 2,
+                "hat": "captain",
+            })
+        );
     }
 }

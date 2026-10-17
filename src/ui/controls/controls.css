@@ -399,6 +399,8 @@ small {
 }
 .settings-section {
   min-width: 0;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--line);
 }
 .settings-section > .setting:last-child {
   padding-bottom: 0;
@@ -439,16 +441,14 @@ small {
 .play-snacks .hint {
   margin: 10px 0 0;
 }
-.play-columns,
-.settings-columns {
+.play-columns {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 28px;
   padding: 22px 0;
   border-bottom: 1px solid var(--line);
 }
-.play-games,
-.settings-behaviour {
+.play-games {
   padding-right: 28px;
   border-right: 1px solid var(--line);
 }
@@ -583,12 +583,6 @@ small {
 }
 .setting > button {
   flex-shrink: 0;
-}
-#vision-status {
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.5;
-  margin: 10px 0;
 }
 .setting small {
   display: block;
@@ -823,13 +817,11 @@ iframe {
   }
 }
 @media (max-width: 850px) {
-  .play-columns,
-  .settings-columns {
+  .play-columns {
     grid-template-columns: 1fr;
     gap: 24px;
   }
-  .play-games,
-  .settings-behaviour {
+  .play-games {
     padding: 0 0 20px;
     border-right: 0;
     border-bottom: 1px solid var(--line);
