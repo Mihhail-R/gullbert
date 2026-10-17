@@ -5,6 +5,7 @@ import { Activity } from "./activity.js";
 import { Speech } from "./speech.js";
 import { FoodPolicy } from "./food-policy.js";
 import { Belongings } from "./belongings.js";
+import { Motivation } from "./motivation.js";
 import { RoutineRegistry } from "./registry.js";
 import { ScopedRoutine } from "./scoped-routine.js";
 import type {
@@ -84,6 +85,7 @@ export class Gullbert {
   #activity: Activity;
   #speech = new Speech();
   #moods: Mood;
+  #motivation = new Motivation();
   constructor(
     width = 1200,
     height = 800,
@@ -119,6 +121,7 @@ export class Gullbert {
         this.#sounds.push(sound);
       },
       ateChip: (point) => {
+        this.#motivation.enjoyed("meal");
         this.#learning.ateChip(point);
       },
     });
@@ -158,6 +161,7 @@ export class Gullbert {
     });
     this.#touch = new Touch({
       scratched: () => {
+        this.#motivation.enjoyed("scratch");
         this.#learning.scratched();
       },
       body: this.#body,
@@ -650,6 +654,10 @@ export class Gullbert {
     this.#time += dt;
     this.#expireTransientState();
 
+    if (!this.#settings.paused) {
+      this.#motivation.update(dt, this.#activity.mode);
+    }
+
     if (this.#stepActiveRoutine(dt)) {
       return;
     }
@@ -697,7 +705,9 @@ export class Gullbert {
       return;
     }
 
-    if (this.#learning.maybeStart()) {
+    const motivation = this.#motivation.snapshot();
+
+    if (this.#learning.maybeStart(motivation)) {
       return;
     }
 
@@ -783,7 +793,7 @@ export class Gullbert {
         this.action("squawk");
       }
     } else if (this.#time >= this.#activity.until) {
-      const quiet = this.#quiet.choose();
+      const quiet = this.#quiet.choose(motivation);
 
       if (quiet) {
         this.#registry.start(quiet);
@@ -1101,6 +1111,7 @@ export class Gullbert {
       visible: this.#visible,
       memory: belongings.memory,
       memoryRevision: belongings.revision,
+      motivation: this.#motivation.snapshot(),
       nextPerchVisit: this.#perch.nextPerchVisit,
       cleanup: this.#cleanup.snapshot(),
       touch: this.#touch.snapshot(),
@@ -1146,6 +1157,7 @@ export class Gullbert {
     this.#registry.complete();
 
     if (played) {
+      this.#motivation.enjoyed("play");
       this.#learning.playCompleted();
     }
   }

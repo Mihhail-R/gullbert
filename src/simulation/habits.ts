@@ -1,5 +1,6 @@
 import type { Memory, MemoryEpisode, Trick } from "./model.js";
 import type { ReadonlyValue } from "./presentation.js";
+import { NEUTRAL_MOTIVATION, type MotivationState } from "./motivation.js";
 
 type Habit = "habit_snack" | "show_spin" | "show_dead" | "play_cap";
 interface Evidence {
@@ -11,6 +12,23 @@ interface Attempt {
   at: number;
   responseId: number;
   unanswered: number;
+}
+
+function motivationWeight(command: Habit, motivation: Readonly<MotivationState>): number {
+  const energy = motivation.energy - 0.5;
+  const company = motivation.socialInterest - 0.5;
+
+  switch (command) {
+    case "habit_snack":
+      return 2 ** (2 * (motivation.curiosity - 0.5));
+
+    case "show_spin":
+    case "show_dead":
+      return 2 ** (2 * energy + 3 * company);
+
+    case "play_cap":
+      return 2 ** (4 * energy + 3 * company);
+  }
 }
 
 // Recent outcomes matter more than old ones. The prior leaves room to try again.
@@ -128,6 +146,7 @@ export class Habits {
     now: number,
     mischief: number,
     random: () => number,
+    motivation: Readonly<MotivationState> = NEUTRAL_MOTIVATION,
   ): Habit | null {
     if (now < this.#nextChoice) {
       return null;
@@ -159,6 +178,8 @@ export class Habits {
     const available: Evidence[] = [];
 
     for (const choice of choices) {
+      choice.weight *= motivationWeight(choice.command, motivation);
+
       const attempt = this.#attempts.get(choice.command);
 
       if (attempt) {

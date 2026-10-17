@@ -3,9 +3,24 @@ import type { Quiet, QuietName } from "../model.js";
 import type { Pose } from "../poses.js";
 import type { Routine, RoutineCapabilities } from "../routine.js";
 import type { Mood } from "./moods.js";
+import { NEUTRAL_MOTIVATION, type MotivationState } from "../motivation.js";
 
 const routines: QuietName[] = ["nap", "preen", "tilt", "stretch"];
 const durations = { preen: 3.8, tilt: 2.4, stretch: 3.2 };
+
+function quietWeight(name: QuietName, motivation: Readonly<MotivationState>): number {
+  switch (name) {
+    case "nap":
+      return 2 ** (5 * (0.5 - motivation.energy));
+
+    case "tilt":
+      return 2 ** (4 * (motivation.curiosity - 0.5));
+
+    case "preen":
+    case "stretch":
+      return 2 ** (2 * (0.5 - motivation.energy));
+  }
+}
 
 export interface QuietHost extends Pick<
   RoutineCapabilities,
@@ -150,7 +165,7 @@ export class QuietRoutine implements Routine {
     return {};
   }
 
-  choose(): QuietName | null {
+  choose(motivation: Readonly<MotivationState> = NEUTRAL_MOTIVATION): QuietName | null {
     const now = this.#host.clock.now;
 
     if (
@@ -177,12 +192,24 @@ export class QuietRoutine implements Routine {
       choices.push(preferred, preferred);
     }
 
-    return choices[
-      Math.min(
-        choices.length - 1,
-        Math.floor(this.#host.random() * choices.length),
-      )
-    ];
+    const weighted = choices.map((name) => {
+      return { name, weight: quietWeight(name, motivation) };
+    });
+    const wanderWeight = Math.max(0, motivation.curiosity - 0.5) * 8 * motivation.energy;
+    const total = weighted.reduce((sum, choice) => sum + choice.weight, wanderWeight);
+    let draw = this.#host.random() * total;
+
+    for (const choice of weighted) {
+      draw -= choice.weight;
+
+      if (draw < 0) {
+        return choice.name;
+      }
+    }
+
+    // A curious walk uses this quiet slot, rather than retrying a nap every frame.
+    this.#nextQuiet = now + 14;
+    return null;
   }
 
   #pose(): Pose | null {
