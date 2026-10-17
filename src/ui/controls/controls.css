@@ -382,31 +382,34 @@ small {
   justify-content: space-between;
   gap: 16px;
 }
-.page-intro {
-  color: var(--muted);
-  line-height: 1.7;
-  margin: 10px 0 16px;
-}
 .content-columns {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18px;
+  align-items: start;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
 }
 .surface-card {
-  padding: 18px;
+  padding: 16px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--card);
   min-width: 0;
 }
 .surface-card h2 {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+}
+.surface-card > :last-child {
+  margin-bottom: 0;
+}
+.surface-card > .setting:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
 }
 .hint {
   font-size: 12px;
   color: var(--muted);
-  line-height: 1.7;
-  margin: 14px 0;
+  line-height: 1.5;
+  margin: 10px 0;
 }
 .button-grid,
 .pair {
@@ -420,26 +423,23 @@ small {
   text-align: left;
   font-size: 12px;
 }
-.play-columns {
-  align-items: start;
-}
 .action-stack {
   display: grid;
   gap: 8px;
 }
 .action-stack button {
   width: 100%;
-  min-height: 42px;
+  min-height: 38px;
   text-align: left;
   line-height: 1.4;
 }
 .group-heading {
-  margin: 24px 0 12px;
+  margin: 16px 0 8px;
   font-size: 13px;
   font-weight: 600;
 }
 .games-grid button {
-  min-height: 42px;
+  min-height: 38px;
   line-height: 1.4;
 }
 .games-grid button:last-child {
@@ -449,7 +449,7 @@ small {
   display: inline-block;
 }
 .trick-actions button {
-  padding: 12px 14px;
+  padding: 9px 12px;
 }
 .trick-actions strong {
   display: block;
@@ -458,37 +458,37 @@ small {
 }
 .trick-actions span {
   display: block;
-  margin-top: 5px;
+  margin-top: 3px;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.5;
 }
 .reward-actions {
-  margin-top: 20px;
-  padding-top: 20px;
+  margin-top: 12px;
+  padding-top: 12px;
   border-top: 1px solid var(--line);
 }
 .ritual-notes {
   border-left: 2px solid var(--amber);
-  padding-left: 18px;
+  padding-left: 12px;
   color: var(--muted);
-  line-height: 1.8;
+  line-height: 1.5;
 }
 .ritual-notes p + p {
-  margin-top: 12px;
+  margin-top: 8px;
 }
 .tidy-line {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 24px;
+  gap: 8px;
+  margin-top: 12px;
 }
 .subnav {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
   border-bottom: 1px solid var(--line);
-  margin: 22px 0;
+  margin: 0 0 14px;
 }
 .subnav button {
   background: transparent;
@@ -511,9 +511,9 @@ small {
 #collection-items li {
   display: grid;
   grid-template-columns: 48px 1fr auto;
-  gap: 15px;
+  gap: 12px;
   align-items: center;
-  padding: 16px 0;
+  padding: 10px 0;
   border-bottom: 1px solid var(--line);
 }
 #collection-items img {
@@ -528,23 +528,36 @@ small {
 }
 #collection-empty {
   color: var(--muted);
-  margin: 20px 0;
+  margin: 12px 0;
+}
+.wardrobe-preview .portrait-bird {
+  transform: none;
+  margin: 0;
 }
 .wardrobe-preview {
   display: flex;
   justify-content: center;
-  padding: 25px 0;
+  padding: 12px 0;
   background: var(--portrait);
   border-radius: 6px;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 .setting {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  padding: 18px 0;
+  gap: 12px;
+  padding: 12px 0;
   border-bottom: 1px solid var(--line);
+}
+.setting > button {
+  flex-shrink: 0;
+}
+#vision-status {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 10px 0;
 }
 .setting small {
   display: block;
@@ -559,7 +572,8 @@ select {
   background: var(--tint);
 }
 .appearance {
-  margin: 20px 0;
+  margin: 0 0 12px;
+  padding: 0 0 12px;
 }
 .theme-control {
   display: flex;
@@ -613,7 +627,7 @@ input[role="switch"]:checked::before {
 }
 details {
   border-bottom: 1px solid var(--line);
-  padding: 16px 0;
+  padding: 10px 0;
 }
 summary {
   cursor: pointer;
@@ -632,8 +646,9 @@ kbd {
 }
 .privacy-note {
   color: var(--muted);
-  line-height: 1.8;
-  margin-top: 25px;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 12px;
 }
 .update-content {
   padding: 15px 0;

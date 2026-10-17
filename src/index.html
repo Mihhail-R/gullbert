@@ -23,7 +23,7 @@
               focusable="false"
             >
               <use href="ui/icons.svg#home"></use></svg
-            >Today</button
+            >Home</button
           ><button data-page="play">
             <svg
               class="ui-icon"
@@ -60,9 +60,9 @@
       </aside>
       <div class="room-main">
         <main id="pages">
-          <section data-destination="today" aria-label="Today">
+          <section data-destination="today" aria-label="Home">
             <div class="life-heading">
-              <h1 tabindex="-1">Today</h1>
+              <h1 tabindex="-1">Home</h1>
               <time id="journal-date"></time>
             </div>
             <div class="life-intro">
@@ -219,8 +219,7 @@
                   <button data-action="place_bag">Place chip bag…</button>
                 </div>
                 <p class="hint">
-                  Feed him where he is, or choose a spot. Repeated meals teach
-                  him where to check.
+                  Placed food: choose a desktop spot. Escape cancels.
                 </p>
                 <h3 class="group-heading">Games &amp; company</h3>
                 <div class="button-grid games-grid">
@@ -231,19 +230,14 @@
                   <button data-action="invite_pigeon">Invite pigeon</button>
                 </div>
                 <p class="hint">
-                  Hover to scratch his head. Click to poke; hold and drag to
-                  pick him up.
-                </p>
-                <p class="hint">
-                  For placement, choose a spot on your desktop. Escape cancels.
+                  Hover to scratch. Click to poke. Hold and drag to pick up.
                 </p>
               </section>
               <section id="learning" class="surface-card">
                 <h2>Tricks &amp; rewards</h2>
-                <p id="learning-summary" class="tag">Getting to know you</p>
+                <p id="learning-summary" class="tag">No tricks learned yet</p>
                 <p class="hint">
-                  Ask for a trick. When he finishes and asks for a chip, reward
-                  him within 20 seconds.
+                  Reward him within 20 seconds of finishing a trick.
                 </p>
                 <div class="action-stack trick-actions" aria-label="Tricks">
                   <button
@@ -274,10 +268,7 @@
                   </button>
                   <button data-action="feed_here">Leave a chip here…</button>
                 </div>
-                <p class="hint">
-                  Three rewards make a trick familiar; six make it practiced.
-                  Lessons stay between visits.
-                </p>
+                <p class="hint">3 rewards: learned. 6: practiced.</p>
               </section>
             </div>
             <div class="tidy-line">
@@ -295,18 +286,12 @@
               ><button data-world="rituals">Rituals &amp; places</button>
             </nav>
             <section data-world-panel="memories" class="surface-card">
-              <h2 id="memory-summary">A fresh start</h2>
-              <p class="hint">
-                What he did, when, and where on the desktop. Kept on this device
-                between visits. His latest 200 experiences stay in memory;
-                learned habits and totals stay longer.
-              </p>
+              <h2 id="memory-summary">No memories yet</h2>
+              <p class="hint">Latest 12 memories. Saved on this device.</p>
               <p id="memory-empty" class="hint">
-                Try a trick, share a chip, or invite a visitor. His memories
-                will appear here.
+                Share a chip or play a game to start.
               </p>
               <ol id="memory-items" aria-live="polite"></ol>
-              <p class="hint">Showing his 12 most recent experiences.</p>
               <p id="visitor-summary" class="hint">No familiar visitors yet.</p>
             </section>
             <section
@@ -314,17 +299,10 @@
               class="surface-card"
               hidden=""
             >
-              <h2>
-                Questionable treasures <span id="collection-count">0</span>
-              </h2>
-              <p id="collection-empty">
-                Nothing yet. A promising lack of taste.
-              </p>
+              <h2>Treasures <span id="collection-count">0</span></h2>
+              <p id="collection-empty">Nothing collected yet.</p>
               <ul id="collection-items"></ul>
               <p id="belongings-summary" class="hint">No treasures yet</p>
-              <p class="hint">
-                His collection stays between visits and survives tidying.
-              </p>
               <button class="primary" data-action="bring_gift">
                 Bring me something
               </button>
@@ -341,8 +319,7 @@
               </div>
               <div class="setting">
                 <div>
-                  <label for="hat">Tiny wardrobe</label
-                  ><small>Enormous responsibility. Saved locally.</small>
+                  <label for="hat">Hat</label>
                 </div>
                 <select id="hat">
                   <option value="none">None</option>
@@ -355,14 +332,13 @@
               </div>
             </section>
             <section data-world-panel="rituals" class="surface-card" hidden="">
-              <h2>He’s getting to know you.</h2>
+              <h2>Habits &amp; favourite spot</h2>
               <div class="ritual-notes" aria-live="polite">
                 <p id="snack-ritual">
-                  Feed him in the same spot a few times. He’ll remember.
+                  Feed him in one spot 3 times to teach a snack stop.
                 </p>
                 <p id="scratch-ritual">
-                  Scratch his head after cap football or a chip toss to start a
-                  ritual.
+                  Scratch his head after games 3 times to start a ritual.
                 </p>
               </div>
               <div class="setting">
@@ -380,15 +356,14 @@
                 </button>
               </div>
               <p class="hint">
-                Forgetting lessons keeps his visitors, treasures, hat and
-                favourite spot.
+                Resetting lessons keeps his collection and favourite spot.
               </p>
             </section>
           </section>
           <section data-destination="settings" aria-label="Settings" hidden="">
             <h1 tabindex="-1">Settings</h1>
             <div class="setting appearance">
-              <h2>Make yourself comfortable</h2>
+              <h2>Appearance</h2>
               <div class="theme-control" role="group" aria-label="Appearance">
                 <button data-theme="light" aria-pressed="true">Light</button
                 ><button data-theme="dark" aria-pressed="false">Dark</button>
@@ -398,13 +373,11 @@
             <p id="preferences-summary" class="hint">Menace · Sound off</p>
             <section class="content-columns">
               <section class="surface-card">
-                <h2>His behaviour</h2>
+                <h2>Behaviour</h2>
                 <div class="setting">
                   <div>
                     <label for="mischief">Mischief level</label
-                    ><small
-                      >How bold he gets with your cursor and typing.</small
-                    >
+                    ><small>Cursor and typing mischief.</small>
                   </div>
                   <select id="mischief">
                     <option value="0">Polite-ish</option>
@@ -413,11 +386,11 @@
                   </select>
                 </div>
                 <div class="setting">
-                  <label for="paused">Pause autonomous antics</label
+                  <label for="paused">Pause antics</label
                   ><input id="paused" type="checkbox" role="switch" />
                 </div>
                 <div class="setting">
-                  <label for="sound">Tiny sound effects</label
+                  <label for="sound">Sound effects</label
                   ><input id="sound" type="checkbox" role="switch" />
                 </div>
               </section>
@@ -437,8 +410,8 @@
                   <div>
                     <label for="vision">Local vision</label
                     ><small
-                      >Nibble visible words near the mouse. Processed on this
-                      device; nothing saved or sent.</small
+                      >Read words near the pointer. Processed locally; never
+                      saved or sent.</small
                     >
                   </div>
                   <input id="vision" type="checkbox" role="switch" />
@@ -492,8 +465,7 @@
               </section>
             </details>
             <p class="privacy-note">
-              Stored on this device. Closing this window leaves Gullbert
-              running.
+              Closing this window leaves Gullbert running.
             </p>
           </section>
         </main>

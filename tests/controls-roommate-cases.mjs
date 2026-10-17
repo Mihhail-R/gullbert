@@ -110,7 +110,7 @@ export function roommateRenderingTests(mode) {
   test(`${mode}: empty status resets all roommate sections`, () => {
     deliver({});
     assert.equal(element("mood").textContent, "Contentedly gull.");
-    assert.equal(element("learning-summary").textContent, "Getting to know you");
+    assert.equal(element("learning-summary").textContent, "No tricks learned yet");
 
     for (const trick of ["come", "spin", "dead"]) {
       assert.equal(element(`lesson-${trick}`).textContent, "New trick");
@@ -118,13 +118,13 @@ export function roommateRenderingTests(mode) {
 
     assert.equal(
       element("snack-ritual").textContent,
-      "Feed him in the same spot a few times. He’ll remember.",
+      "Feed him in one spot 3 times to teach a snack stop.",
     );
     assert.equal(
       element("scratch-ritual").textContent,
-      "Scratch his head after cap football or a chip toss to start a ritual.",
+      "Scratch his head after games 3 times to start a ritual.",
     );
-    assert.equal(element("memory-summary").textContent, "A fresh start");
+    assert.equal(element("memory-summary").textContent, "No memories yet");
     assert.equal(element("memory-empty").hidden, false);
     assert.equal(element("memory-items").children.length, 0);
     assert.equal(element("collection-count").textContent, "0");
@@ -138,12 +138,12 @@ export function roommateRenderingTests(mode) {
   test(`${mode}: trick and ritual thresholds preserve exact labels`, () => {
     const cases = [
       [0, 0, "New trick"],
-      [0, 2, "2 performed · no chip rewards yet"],
-      [1, 0, "Making the connection · 1/3"],
-      [2, 4, "Making the connection · 2/3 · 4 performed"],
+      [0, 2, "2 performed · unrewarded"],
+      [1, 0, "Learning · 1/3"],
+      [2, 4, "Learning · 2/3 · 4 performed"],
       [3, 0, "Learned · 3/6"],
       [5, 8, "Learned · 5/6 · 8 performed"],
-      [6, 9, "Professional nuisance · 6/6 · 9 performed"],
+      [6, 9, "Practiced · 6/6 · 9 performed"],
     ];
 
     for (const [count, performed, label] of cases) {
@@ -152,12 +152,12 @@ export function roommateRenderingTests(mode) {
         performances: { come: performed },
       } });
       assert.equal(element("lesson-come").textContent, label);
-      const summary = count >= 3 ? "1 questionable trick learned" : "Getting to know you";
+      const summary = count >= 3 ? "1 trick learned" : "No tricks learned yet";
       assert.equal(element("learning-summary").textContent, summary);
     }
 
     deliver({ memory: { learned: { tricks: { come: 3, spin: 6, dead: 2 } } } });
-    assert.equal(element("learning-summary").textContent, "2 questionable tricks learned");
+    assert.equal(element("learning-summary").textContent, "2 tricks learned");
 
     for (const count of [1, 2, 3]) {
       deliver({ memory: { learned: {
@@ -166,11 +166,11 @@ export function roommateRenderingTests(mode) {
         scratchesAfterPlay: count,
       } } });
       const snack = count === 3
-        ? "Snack spot remembered. He’ll occasionally check the usual establishment."
-        : `Noticing a snack spot · ${count}/3 meals here.`;
+        ? "Snack spot learned. He’ll return for food."
+        : `Learning a snack spot · ${count}/3 meals here.`;
       const scratch = count === 3
-        ? "After-play scratches remembered. He’ll present his head after a game."
-        : `Learning your after-play ritual · ${count}/3 head scratches.`;
+        ? "Scratch ritual learned. He’ll ask after games."
+        : `Learning a scratch ritual · ${count}/3 head scratches.`;
       assert.equal(element("snack-ritual").textContent, snack);
       assert.equal(element("scratch-ritual").textContent, scratch);
     }
@@ -223,7 +223,7 @@ export function roommateRenderingTests(mode) {
     assert.equal(element("memory-items").children.length, 1);
     assert.equal(rows[0].isConnected, false);
     deliver({});
-    assert.equal(element("memory-summary").textContent, "A fresh start");
+    assert.equal(element("memory-summary").textContent, "No memories yet");
     assert.equal(element("memory-items").children.length, 0);
     assert.equal(element("memory-empty").hidden, false);
   });
@@ -351,7 +351,7 @@ export function roommateRenderingTests(mode) {
     assert.equal(document.querySelector("iframe").contentDocument.body.dataset.theme, "light");
   });
 
-  test(`${mode}: Today shows real recent memories and keeps its shelf in sync`, () => {
+  test(`${mode}: Home shows real recent memories and keeps its shelf in sync`, () => {
     const episodes = Array.from({ length: 5 }, (_, index) => {
       return {
         id: index,

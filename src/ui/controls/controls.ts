@@ -235,11 +235,11 @@ function roommate(data: RoommateStatus) {
     let label = "New trick";
 
     if (count >= 6) {
-      label = "Professional nuisance · 6/6";
+      label = "Practiced · 6/6";
     } else if (count >= 3) {
       label = `Learned · ${count}/6`;
     } else if (count > 0) {
-      label = `Making the connection · ${count}/3`;
+      label = `Learning · ${count}/3`;
     }
 
     if (count >= 3) {
@@ -253,43 +253,40 @@ function roommate(data: RoommateStatus) {
     }
 
     if (performed > 0 && count === 0) {
-      label = `${performed} performed · no chip rewards yet`;
+      label = `${performed} performed · unrewarded`;
     }
 
     $(`#lesson-${trick}`).textContent = label;
   }
 
-  let summary = "Getting to know you";
+  let summary = "No tricks learned yet";
 
   if (knownTricks === 1) {
-    summary = "1 questionable trick learned";
+    summary = "1 trick learned";
   } else if (knownTricks > 1) {
-    summary = `${knownTricks} questionable tricks learned`;
+    summary = `${knownTricks} tricks learned`;
   }
 
   $("#learning-summary").textContent = summary;
 
   const meals = memory?.learned?.snackSpot?.meals ?? 0;
-  let snack = "Feed him in the same spot a few times. He’ll remember.";
+  let snack = "Feed him in one spot 3 times to teach a snack stop.";
 
   if (meals >= 3) {
-    snack =
-      "Snack spot remembered. He’ll occasionally check the usual establishment.";
+    snack = "Snack spot learned. He’ll return for food.";
   } else if (meals > 0) {
-    snack = `Noticing a snack spot · ${meals}/3 meals here.`;
+    snack = `Learning a snack spot · ${meals}/3 meals here.`;
   }
 
   $("#snack-ritual").textContent = snack;
 
   const scratches = memory?.learned?.scratchesAfterPlay ?? 0;
-  let scratch =
-    "Scratch his head after cap football or a chip toss to start a ritual.";
+  let scratch = "Scratch his head after games 3 times to start a ritual.";
 
   if (scratches >= 3) {
-    scratch =
-      "After-play scratches remembered. He’ll present his head after a game.";
+    scratch = "Scratch ritual learned. He’ll ask after games.";
   } else if (scratches > 0) {
-    scratch = `Learning your after-play ritual · ${scratches}/3 head scratches.`;
+    scratch = `Learning a scratch ritual · ${scratches}/3 head scratches.`;
   }
 
   $("#scratch-ritual").textContent = scratch;
@@ -313,7 +310,7 @@ function roommate(data: RoommateStatus) {
 }
 
 function renderMemories(episodes: readonly MemoryEpisode[]) {
-  let memorySummary = "A fresh start";
+  let memorySummary = "No memories yet";
 
   if (episodes.length === 1) {
     memorySummary = "1 recent memory";
