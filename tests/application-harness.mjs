@@ -113,6 +113,7 @@ export function harness(options = {}) {
     configure() {},
     resize() {},
     pointer() {},
+    observeWork() {},
     tidyPointer() {},
     greet() {
       greeted++;

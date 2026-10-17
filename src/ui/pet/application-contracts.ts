@@ -108,6 +108,7 @@ export type ApplicationSimulation = Pick<
   | "configure"
   | "resize"
   | "pointer"
+  | "observeWork"
   | "tidyPointer"
   | "greet"
   | "setVisible"

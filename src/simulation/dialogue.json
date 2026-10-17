@@ -1,5 +1,29 @@
 {
   "gullbert": {
+    "work": {
+      "arrival": "i'll supervise.",
+      "chips": "excellent work. my fee is chips.",
+      "slow": [
+        "type faster.",
+        "one finger? i have no fingers.",
+        "we're paid by the chip."
+      ],
+      "fast": [
+        "too fast. slower.",
+        "save some letters for tomorrow.",
+        "i was still reading that. allegedly."
+      ],
+      "steady": [
+        "yes. more of that.",
+        "i would have typed it louder.",
+        "your technique lacks beak."
+      ],
+      "pause": [
+        "forgotten how?",
+        "thinking is unpaid.",
+        "chip break? chip break."
+      ]
+    },
     "cap": {
       "invitation": "click the cap. try your best.",
       "chase": "mine.",

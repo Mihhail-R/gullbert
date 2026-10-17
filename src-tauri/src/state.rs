@@ -94,6 +94,8 @@ fn save_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), String
     }
 
     *app.state::<State>().settings.lock().unwrap() = settings.clone();
+    crate::work_activity::stop(&app);
+
     app.emit("gullbert-settings", settings)
         .map_err(|e| e.to_string())
 }

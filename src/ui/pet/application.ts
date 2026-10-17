@@ -5,6 +5,7 @@ import { createPickupDrag } from "../../platform/pickup-drag.js";
 import { createCursorBiteBridge } from "../../platform/cursor-bite.js";
 import { MemoryPersistence } from "../../platform/roommate-store.js";
 import { createPointerTracker } from "../../platform/pointer.js";
+import { WorkObserver } from "../../platform/work-observer.js";
 import { contains } from "../../simulation/behaviors/touch.js";
 import type { Point, PointerSample, Settings } from "../../simulation/model.js";
 import type { CursorScene } from "../../simulation/scenes.js";
@@ -49,6 +50,7 @@ export class PetApplication {
   readonly #drag: ReturnType<typeof createPickupDrag>;
   readonly #bite: ReturnType<typeof createCursorBiteBridge>;
   readonly #pointer: ReturnType<typeof createPointerTracker>;
+  readonly #work: WorkObserver | null;
 
   readonly #dependencies: ApplicationDependencies;
 
@@ -202,6 +204,18 @@ export class PetApplication {
       schedule: this.#dependencies.clock.schedule,
       cancel: this.#dependencies.clock.cancel,
     });
+    this.#work = null;
+
+    if (native) {
+      this.#work = new WorkObserver({
+        read: () => native.invoke("work_activity"),
+        stop: () => this.#runNative(native.invoke("stop_work_activity")),
+        sample: (sample, nowMs) => dependencies.simulation.observeWork(sample, nowMs),
+        now: () => dependencies.clock.now(),
+        schedule: dependencies.clock.schedule,
+        cancel: dependencies.clock.cancel,
+      });
+    }
   }
 
   start(): Promise<void> {
@@ -237,6 +251,7 @@ export class PetApplication {
     this.#cancelDrag();
     this.#dependencies.simulation.setVisible(false);
     this.#pointer.stop();
+    this.#work?.stop();
     this.#releaseInteraction();
     this.#bite.stop();
 
@@ -439,6 +454,7 @@ export class PetApplication {
       }
 
       this.#cancelDrag();
+      this.#work?.stop();
 
       if (this.#dependencies.simulation.cursorEncounter()) {
         this.#dependencies.simulation.action("cancel");
@@ -679,6 +695,7 @@ export class PetApplication {
 
     const now = this.#dependencies.clock.now();
     const sim = this.#dependencies.simulation;
+    this.#syncWork();
     sim.updatePickupClock(this.#dependencies.clock.wallNow());
 
     if (this.#drag.active && !sim.status().held) {
@@ -725,12 +742,27 @@ export class PetApplication {
     this.#last = this.#dependencies.clock.now();
     this.#dependencies.simulation.setVisible(this.#visible);
     this.#syncPointer();
+    this.#syncWork();
 
     if (!this.#visible) {
       this.#dependencies.audio.suspend();
       this.#render();
     } else {
       this.#tick();
+    }
+  }
+
+  #syncWork(): void {
+    if (!this.#work) {
+      return;
+    }
+
+    const available = this.#running() && this.#visible && !this.#targeting.active;
+
+    if (available && this.#dependencies.simulation.status().workEnabled) {
+      this.#work.start();
+    } else {
+      this.#work.stop();
     }
   }
 

@@ -65,6 +65,12 @@ export interface PerchScene extends TimedScene {
   kind: "perch";
   phase: "approach" | "settle" | "loiter";
 }
+export interface WorkScene extends TimedScene {
+  kind: "work";
+  phase: "approach" | "watch";
+  windowId: number;
+  nextRemark: number;
+}
 export interface CapScene extends TimedScene {
   kind: "cap";
   phase: "drop" | "ready" | "chase" | "peck" | "return" | "collect" | "victory";
@@ -241,6 +247,7 @@ export type Scene =
   | CrimeScene
   | GiftScene
   | PerchScene
+  | WorkScene
   | CapScene
   | LearningScene
   | TheatreScene
