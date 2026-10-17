@@ -10,7 +10,7 @@ const mime = {
   ".png": "image/png",
   ".svg": "image/svg+xml",
 };
-export function createPreviewServer(root = frontendRoot) {
+export function createPreviewServer(root = frontendRoot, entryPoint = "index.html") {
   return http.createServer(async (req, res) => {
     let pathname;
 
@@ -26,7 +26,7 @@ export function createPreviewServer(root = frontendRoot) {
 
     const file = path.resolve(
       root,
-      `.${pathname === "/" ? "/index.html" : pathname}`,
+      `.${pathname === "/" ? `/${entryPoint}` : pathname}`,
     );
 
     if (!file.startsWith(root + path.sep)) {
@@ -54,7 +54,7 @@ if (
 ) {
   buildFrontend();
   const stopWatching = watchFrontend();
-  const server = createPreviewServer();
+  const server = createPreviewServer(frontendRoot, "playground.html");
   server.on("close", stopWatching);
   server.listen(Number(process.env.PORT ?? 4173), "127.0.0.1", function () {
     console.log(`Gullbert preview: http://127.0.0.1:${this.address().port}`);

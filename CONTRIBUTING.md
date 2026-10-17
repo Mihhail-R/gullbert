@@ -42,7 +42,7 @@ Code contributions use MIT; artwork must declare its license. Do not submit thir
 | `tests/`                    | Behaviour and persistence tests                                  |
 | `art/`                      | Current editable artwork and source assets                       |
 
-The HTML entry points stay at `src/index.html` and `src/pet.html` so browser and Tauri URLs remain stable. Keep CSS beside its UI. CSS asset URLs are relative to the stylesheet; image URLs assigned to DOM nodes are relative to the page.
+The desktop control room uses `src/index.html`, the public browser playground uses `src/playground.html`, and both load `src/pet.html` for the bird. The Pages build publishes the playground as its root `index.html` without changing the desktop entry point. Keep CSS beside its UI. CSS asset URLs are relative to the stylesheet; image URLs assigned to DOM nodes are relative to the page.
 
 ## Implementation boundaries
 
