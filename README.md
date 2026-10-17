@@ -10,10 +10,15 @@ Gullbert roams your desktop, demands chips, learns tricks, collects questionable
 
 ## Requirements and installation
 
-- **macOS 11+**, Apple Silicon or Intel. Download the matching `.dmg` and drag Gullbert into Applications.
+- **macOS 11+**, Apple Silicon (M-series). Download the `darwin-aarch64.dmg` and drag Gullbert into Applications. Intel Macs are not supported.
 - **Windows 10+**, x64, with WebView2. Download and run the `setup.exe`.
 
-This is an early preview. Apple Silicon Macs have had local testing; Intel Macs and Windows still need hands-on testing. Builds are unsigned or ad-hoc signed and not notarized, so you may see system security prompts.
+Gullbert has been tested on the maintainers' Apple Silicon Mac and Windows PC. Testing does not yet cover every OS version or display configuration.
+
+Mac builds are ad-hoc signed and not notarized by Apple; Windows installers are unsigned. Paid platform signing is deferred. Update packages are cryptographically signed and verified by the app.
+
+- **Mac first launch:** open Gullbert from Applications. If macOS says it cannot verify the app, go to **System Settings → Privacy & Security → Open Anyway**, then confirm. On older macOS versions, use **System Preferences → Security & Privacy → General**. See [Apple's instructions](https://support.apple.com/102445).
+- **Windows first install:** if SmartScreen shows **Windows protected your PC**, choose **More info → Run anyway** when available.
 
 Use the control room or menu bar / system tray to play, adjust behaviour, or hide him. Closing the control room leaves him running; choose **Quit** to exit. He does not start automatically at login.
 

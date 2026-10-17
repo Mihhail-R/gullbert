@@ -74,16 +74,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [mac-apple-silicon, mac-intel, windows-x64]
+        platform: [mac-apple-silicon, windows-x64]
         task: [package, test]
         include:
           - platform: mac-apple-silicon
             os: macos-latest
             target: aarch64-apple-darwin
-            bundle: app,dmg
-          - platform: mac-intel
-            os: macos-15-intel
-            target: x86_64-apple-darwin
             bundle: app,dmg
           - platform: windows-x64
             os: windows-latest
@@ -121,7 +117,7 @@ jobs:
       - name: Build without installers to warm the release cache
         if: matrix.task == 'package' && env.RELEASE_TAG == ''
         run: npm run build -- --target ${{ matrix.target }} --no-bundle
-      - name: Build signed update packages and installers
+      - name: Build installers and signed update packages
         if: matrix.task == 'package' && env.RELEASE_TAG != ''
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -183,8 +179,10 @@ jobs:
             artifacts/*.sig
             artifacts/latest.json
           body: |
-            Install on Mac: download the DMG for your processor, open it, and drag Gullbert into Applications. Quit any older copy first, then open Gullbert from Applications.
-            Install on Windows: run the setup.exe.
+            Supported platforms: Apple Silicon Macs and Windows x64. Intel Macs are no longer supported.
+            Install on Mac: download the darwin-aarch64 DMG, open it, and drag Gullbert into Applications. Quit any older copy first, then open Gullbert from Applications.
+            If macOS cannot verify Gullbert, open System Settings → Privacy & Security → Open Anyway after attempting to launch it. On older macOS versions, use System Preferences → Security & Privacy → General.
+            Install on Windows: run the setup.exe. If SmartScreen shows “Windows protected your PC”, choose More info → Run anyway when available.
             Future updates: open App updates in Gullbert and choose Check for updates, then Install and restart.
             Beta builds include beta releases by default; stable builds only offer stable releases unless you opt in.
             Mac builds are ad-hoc signed, not Apple-notarized. Windows installers are unsigned. Update packages are cryptographically signed.
