@@ -333,6 +333,7 @@ export class Gullbert {
     this.#cancelFlight();
     this.#rest();
     this.#belongings.restore(data);
+    this.#learning.resetHabits();
   }
   resize(width: number, height: number): void {
     this.#work.reset();
