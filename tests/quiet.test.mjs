@@ -184,3 +184,28 @@ test("a curious walk consumes the quiet slot and does not bypass pause", () => {
   assert.equal(sim.routine.choose(curious), null);
   assert.equal(sim.routine.snapshot().nextQuiet, 34);
 });
+
+test("boredom encourages ordinary wandering while low energy still favors rest", () => {
+  const counts = { content: 0, bored: 0, tired: 0 };
+
+  for (let draw = 0; draw < 1000; draw++) {
+    for (const name of Object.keys(counts)) {
+      const sim = bird(() => draw / 1000);
+      const motivation = {
+        energy: name === "tired" ? 0.2 : 0.5,
+        curiosity: 0.5,
+        socialInterest: 0.5,
+      };
+      const boredom = { level: name === "content" ? 0 : 0.8, interest: {} };
+      sim.routine.choose(motivation, boredom);
+      sim.time = 20;
+
+      if (sim.routine.choose(motivation, boredom) === null) {
+        counts[name] += 1;
+      }
+    }
+  }
+
+  assert.ok(counts.bored > counts.content);
+  assert.ok(counts.tired < counts.bored);
+});

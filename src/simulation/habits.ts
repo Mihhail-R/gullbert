@@ -1,6 +1,7 @@
 import type { Memory, MemoryEpisode, Trick } from "./model.js";
 import type { ReadonlyValue } from "./presentation.js";
 import { NEUTRAL_MOTIVATION, type MotivationState } from "./motivation.js";
+import { FRESH_INTEREST, type BoredomState } from "./boredom.js";
 
 type Habit = "habit_snack" | "show_spin" | "show_dead" | "play_cap";
 interface Evidence {
@@ -147,6 +148,7 @@ export class Habits {
     mischief: number,
     random: () => number,
     motivation: Readonly<MotivationState> = NEUTRAL_MOTIVATION,
+    boredom: BoredomState = FRESH_INTEREST,
   ): Habit | null {
     if (now < this.#nextChoice) {
       return null;
@@ -179,6 +181,10 @@ export class Habits {
 
     for (const choice of choices) {
       choice.weight *= motivationWeight(choice.command, motivation);
+
+      if (choice.command !== "habit_snack") {
+        choice.weight *= boredom.interest[choice.command] ?? 1;
+      }
 
       const attempt = this.#attempts.get(choice.command);
 

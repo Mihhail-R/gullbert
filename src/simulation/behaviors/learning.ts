@@ -6,6 +6,7 @@ import { dialogue } from "../dialogue.js";
 import { beakOffsetX, clamp } from "../geometry.js";
 import { Habits } from "../habits.js";
 import type { MotivationState } from "../motivation.js";
+import type { BoredomState } from "../boredom.js";
 import type { Point, SceneProp, Trick } from "../model.js";
 import { observe } from "../observation.js";
 import type { Pose } from "../poses.js";
@@ -171,7 +172,7 @@ export class LearningRoutine implements SceneOwner {
     return null;
   }
 
-  maybeStart(motivation: Readonly<MotivationState>): boolean {
+  maybeStart(motivation: Readonly<MotivationState>, boredom: BoredomState): boolean {
     const sim = this.#environment;
 
     if (
@@ -188,6 +189,7 @@ export class LearningRoutine implements SceneOwner {
       sim.policy.settings().mischief,
       sim.random,
       motivation,
+      boredom,
     );
 
     if (!command) {
