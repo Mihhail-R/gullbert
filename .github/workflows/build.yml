@@ -179,7 +179,7 @@ jobs:
             artifacts/*.sig
             artifacts/latest.json
           body: |
-            Supported platforms: Apple Silicon Macs and Windows x64. Intel Macs are no longer supported.
+            Supported platforms: Apple Silicon Macs and Windows x64.
             Install on Mac: download the darwin-aarch64 DMG, open it, and drag Gullbert into Applications. Quit any older copy first, then open Gullbert from Applications.
             If macOS cannot verify Gullbert, open System Settings → Privacy & Security → Open Anyway after attempting to launch it. On older macOS versions, use System Preferences → Security & Privacy → General.
             Install on Windows: run the setup.exe. If SmartScreen shows “Windows protected your PC”, choose More info → Run anyway when available.
