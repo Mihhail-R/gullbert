@@ -128,7 +128,7 @@ test("release preparation rejects invalid tags and inconsistent source before wr
   }
 });
 
-test("release collection preserves distinct architectures and signatures", () => {
+test("release collection packages only Apple Silicon and Windows x64 with signatures", () => {
   const root = mkdtempSync(path.join(tmpdir(), "gullbert-release-"));
 
   try {
@@ -136,7 +136,6 @@ test("release collection preserves distinct architectures and signatures", () =>
 
     for (const target of [
       "aarch64-apple-darwin",
-      "x86_64-apple-darwin",
       "x86_64-pc-windows-msvc",
     ]) {
       const bundle = path.join(root, target);
@@ -159,14 +158,27 @@ test("release collection preserves distinct architectures and signatures", () =>
     }
 
     const manifest = merge(destination, "0.3.0-beta.1");
-    assert.equal(Object.keys(manifest.platforms).length, 3);
+    const platforms = Object.keys(manifest.platforms)
+      .sort();
+    assert.deepEqual(platforms, [
+      "darwin-aarch64",
+      "windows-x86_64",
+    ]);
     assert.match(
       manifest.platforms["darwin-aarch64"].url,
       /v0.3.0-beta.1\/Gullbert-0.3.0-beta.1-darwin-aarch64.app.tar.gz$/,
     );
     assert.equal(
-      manifest.platforms["darwin-x86_64"].signature,
-      "signature-x86_64-apple-darwin",
+      manifest.platforms["darwin-aarch64"].signature,
+      "signature-aarch64-apple-darwin",
+    );
+    assert.equal(
+      manifest.platforms["windows-x86_64"].signature,
+      "signature-x86_64-pc-windows-msvc",
+    );
+    assert.throws(
+      () => collect(root, destination, "x86_64-apple-darwin", "0.3.0-beta.1"),
+      /Unsupported release target: x86_64-apple-darwin/,
     );
     assert.throws(
       () => merge(destination, "0.4.0"),

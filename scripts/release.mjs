@@ -11,7 +11,6 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("../", import.meta.url));
 const targets = {
   "aarch64-apple-darwin": "darwin-aarch64",
-  "x86_64-apple-darwin": "darwin-x86_64",
   "x86_64-pc-windows-msvc": "windows-x86_64",
 };
 export function checkVersion(tag, directory = root) {
