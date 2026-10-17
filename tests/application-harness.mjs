@@ -101,7 +101,6 @@ export function harness(options = {}) {
       return false;
     },
     updatePickupClock() {},
-    caret() {},
     cursorEncounter() {
       return null;
     },
@@ -114,6 +113,7 @@ export function harness(options = {}) {
     configure() {},
     resize() {},
     pointer() {},
+    observeWork() {},
     tidyPointer() {},
     greet() {
       greeted++;

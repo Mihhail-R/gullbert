@@ -1,7 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod actions;
-mod caret;
 mod memory_store;
 mod native_input;
 mod roommate;
@@ -9,8 +8,8 @@ mod shortcuts;
 mod state;
 mod tray;
 mod updates;
-mod vision;
 mod windows;
+mod work_activity;
 
 #[cfg(target_os = "macos")]
 #[path = "single_instance_macos.rs"]
@@ -49,20 +48,10 @@ fn main() {
         }
     }
 
-    #[cfg(all(debug_assertions, target_os = "macos"))]
-    if std::env::args().nth(1).as_deref() == Some("--window-spike-access") {
-        println!(
-            "Window spike: Accessibility trusted={}",
-            native_input::window_spike::trusted()
-        );
-        return;
-    }
-
     tauri::Builder::default()
         .manage(State::default())
         .manage(updates::Runtime::default())
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .manage(vision::Runtime::default())
         .manage(native_input::Runtime::default())
         .plugin(single_instance::init(|app, args, _| {
             actions::dispatch_action(app, actions::from_cli(args.get(1).map(String::as_str)));
@@ -79,9 +68,8 @@ fn main() {
             native_input::desktop::target_picked,
             native_input::desktop::cancel_targeting,
             windows::cursor_position,
-            caret::caret_position,
-            caret::caret_access,
-            vision::vision_status,
+            work_activity::work_activity,
+            work_activity::stop_work_activity,
             native_input::desktop::sync_interaction,
             native_input::desktop::begin_pickup,
             native_input::desktop::end_pickup,
@@ -92,14 +80,14 @@ fn main() {
             roommate::request_roommate,
             roommate::publish_roommate
         ])
-        .on_window_event(|w, event| {
+        .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
 
-                if w.label() == "controls" {
-                    let _ = w.hide();
+                if window.label() == "controls" {
+                    let _ = window.hide();
                 } else {
-                    report(native_input::dispatch(w.app_handle(), |app| {
+                    report(native_input::dispatch(window.app_handle(), |app| {
                         report(native_input::set_visible(app, false));
                     }));
                 }
@@ -107,13 +95,7 @@ fn main() {
         })
         .setup(|app| {
             native_input::Runtime::watch(app.handle().clone());
-
-            // Protect even initially hidden controls before their first show.
-            // Capture rechecks visible windows and fails closed on any error.
-            #[cfg(target_os = "windows")]
-            for window in app.webview_windows().values() {
-                let _ = window.set_content_protected(true);
-            }
+            work_activity::install(app);
 
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
@@ -126,12 +108,5 @@ fn main() {
         })
         .build(tauri::generate_context!())
         .expect("Gullbert could not start")
-        .run(|_app, _event| {
-            #[cfg(all(debug_assertions, target_os = "macos"))]
-            if let tauri::RunEvent::ExitRequested { api, .. } = _event {
-                if native_input::window_spike::quit() {
-                    api.prevent_exit();
-                }
-            }
-        });
+        .run(|_app, _event| {});
 }

@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en" class="preview">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Gullbert — browser playground</title>
+    <link rel="stylesheet" href="ui/controls/controls.css" />
+  </head>
+  <body class="preview playground-only">
+    <main id="demo">
+      <header class="website-header">
+        <div>
+          <strong>Gullbert.</strong
+          ><span>A little nuisance for your desktop.</span>
+        </div>
+        <a
+          class="download-link"
+          href="https://github.com/Mihhail-R/gullbert/releases"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Download for macOS or Windows<svg
+            class="ui-icon"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <use href="ui/icons.svg#summon"></use></svg
+        ></a>
+      </header>
+      <div class="preview-title">
+        <p class="eyebrow">The browser playground</p>
+        <h1>Meet your next distraction.</h1>
+        <p>
+          Try the things he does. The installed app lets them happen in their
+          own time.
+        </p>
+      </div>
+      <div class="playground-layout">
+        <div class="playground">
+          <span class="playground-label">THE TEST DESKTOP</span
+          ><iframe title="Gullbert's preview playground"></iframe>
+        </div>
+        <section class="preview-controls">
+          <p class="eyebrow">Give him a cue</p>
+          <h2>A preview of the chaos</h2>
+          <details open>
+            <summary>Everyday bird</summary>
+            <div class="button-grid">
+              <button data-action="squawk">Have a word</button
+              ><button data-action="nap">Take a nap</button
+              ><button data-action="preen">Preen feathers</button
+              ><button data-action="tilt">Tilt his head</button
+              ><button data-action="stretch">Stretch wings</button
+              ><button data-action="search_snack">Find a snack</button
+              ><button data-action="perch">Perch</button>
+            </div>
+          </details>
+          <details>
+            <summary>Petty crime</summary>
+            <div class="button-grid">
+              <button data-action="nibble_cursor">Nibble cursor</button
+              ><button data-action="eat_cursor">Eat cursor</button
+              ><button data-action="bag_caper">Bag caper</button
+              ><button data-action="steal_bag">Steal bag</button
+              ><button data-action="caught">Caught you!</button
+              ><button data-action="poop">Leave a gift</button
+              ><button data-action="target">Poop here…</button>
+            </div>
+          </details>
+          <details>
+            <summary>Little spectacles</summary>
+            <div class="button-grid">
+              <button data-action="gull_argument">Gull argument</button
+              ><button data-action="baguette_parade">Baguette parade</button
+              ><button data-action="pretend_leave">Pretend to leave</button
+              ><button data-action="cursor_egg">Cursor egg</button
+              ><button data-action="municipal_gull">Municipal gull</button
+              ><button data-action="apology">The apology</button
+              ><button data-action="postcards">Poop postcards</button>
+            </div>
+          </details>
+          <details>
+            <summary>Play &amp; company</summary>
+            <div class="button-grid">
+              <button data-action="blow_bubbles">Blow bubbles</button
+              ><button data-action="bath_time">Bath time</button
+              ><button data-action="chip_toss">Chip toss…</button
+              ><button data-action="play_cap">Cap football</button
+              ><button data-action="invite_pigeon">Invite pigeon</button>
+            </div>
+          </details>
+          <p class="hint">
+            Pointer catches are pretend here. Escape cancels placement and
+            releases the pointer.
+          </p>
+          <button id="reset-preview">Reset scene</button>
+          <p class="hint">
+            Clears loose mess and brings him back. His memories and collection
+            stay.
+          </p>
+
+          <details>
+            <summary>Appearance &amp; behaviour</summary>
+            <div class="setting">
+              <label for="preview-mischief">Mischief</label
+              ><select id="preview-mischief">
+                <option value="0">Polite-ish</option>
+                <option value="1" selected>Menace</option>
+                <option value="2">Public enemy</option>
+              </select>
+            </div>
+            <div class="setting">
+              <label for="preview-sound">Sound effects</label
+              ><input id="preview-sound" type="checkbox" role="switch" />
+            </div>
+            <div class="theme-control" role="group" aria-label="Appearance">
+              <button data-theme="system" aria-pressed="true">System</button
+              ><button data-theme="light" aria-pressed="false">Light</button
+              ><button data-theme="dark" aria-pressed="false">Dark</button>
+            </div>
+            <p id="theme-error" role="alert" hidden></p>
+          </details>
+        </section>
+      </div>
+      <p class="hint">
+        Early preview · Unsigned builds. See release notes before installing.
+      </p>
+    </main>
+    <script type="module" src="ui/playground.js"></script>
+  </body>
+</html>

@@ -9,8 +9,6 @@
     "allow-install-update",
     "allow-update-settings",
     "allow-act",
-    "allow-caret-access",
-    "allow-vision-status",
     "allow-request-roommate"
   ]
 }

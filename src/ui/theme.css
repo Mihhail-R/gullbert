@@ -1,0 +1,45 @@
+/* Approved handoff palette. Shared by the control room and browser playground. */
+body {
+  --ink: #343447;
+  --muted: #77707a;
+  --paper: #faf6ef;
+  --canvas: #e9e3da;
+  --line: #ded5ca;
+  --accent: #515a83;
+  --accent-ink: #fffaf3;
+  --tint: #eee7de;
+  --card: #fffbf5;
+  --portrait: #eae0d3;
+  --rust: #a65f48;
+  --amber: #ac7c32;
+  --sidebar: #303141;
+  --sidebar-ink: #eee8e3;
+  --sidebar-muted: #aaa6b4;
+  --sidebar-selected: #4b4d65;
+  --hover: #e7ded3;
+  --shadow: #44332a12;
+  color: var(--ink);
+  background: var(--canvas);
+  color-scheme: light;
+}
+body[data-theme="dark"] {
+  --ink: #eee3d6;
+  --muted: #b6a9ad;
+  --paper: #242129;
+  --canvas: #19171d;
+  --line: #403943;
+  --accent: #dfa18d;
+  --accent-ink: #261c1f;
+  --tint: #302a34;
+  --card: #2a262f;
+  --portrait: #38303a;
+  --rust: #e3ad93;
+  --amber: #d2af70;
+  --sidebar: #1d1b24;
+  --sidebar-ink: #e6dbd5;
+  --sidebar-muted: #b1a4b8;
+  --sidebar-selected: #3b3448;
+  --hover: #3d3340;
+  --shadow: #00000030;
+  color-scheme: dark;
+}

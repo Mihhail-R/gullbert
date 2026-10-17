@@ -1,3 +1,5 @@
+@import url("../theme.css");
+
 :root {
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   color: #293344;
@@ -502,59 +504,39 @@ body.gull-dragging {
   z-index: 1;
 }
 
-.theatre-prop[data-asset="letter"] {
-  color: #3b3026;
-  font:
-    bold 25px/28px ui-monospace,
-    monospace;
+.theatre-prop[data-asset="snack-invoice"] {
+  box-sizing: border-box;
+  padding: 5px 2px;
+  border: 2px solid #74694e;
+  background: #f5e8c6;
+  color: #633d32;
+  box-shadow: 2px 2px 0 #0003;
+  font: bold 10px/14px monospace;
   text-align: center;
-  text-shadow:
-    -1px -1px 0 #fff5d9,
-    1px -1px 0 #fff5d9,
-    -1px 1px 0 #fff5d9,
-    1px 1px 0 #fff5d9;
+  white-space: pre-line;
 }
 
-#typing-playground {
-  position: absolute;
-  top: 38%;
-  left: 10%;
-  width: 80%;
-  max-width: 520px;
-  padding: 18px;
-  border: 1px solid #b5b4a3;
-  border-radius: 12px;
-  background: #fffdf3;
+/* Browser chrome follows the control room's appearance; the overlay stays transparent. */
+body[data-theme] :is(#speech, #guest-speech, #target-banner) {
+  color: var(--ink);
+  background: var(--card);
+  border-color: var(--line);
 }
-#typing-playground label {
-  display: block;
-  font-size: 12px;
-  margin-bottom: 12px;
+body[data-theme] #target-banner button {
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-color: var(--accent);
 }
-#typing-demo {
-  min-height: 72px;
-  padding: 12px;
-  background: white;
-  border: 1px solid #c9c6b7;
-  border-radius: 5px;
-  font:
-    16px/1.6 ui-monospace,
-    monospace;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  user-select: text;
+
+body[data-theme] {
+  background-color: var(--portrait) !important;
+  background-image: radial-gradient(
+    var(--line) 1px,
+    transparent 1px
+  ) !important;
+  background-size: 20px 20px !important;
 }
-#typing-playground small {
-  display: block;
-  margin-top: 10px;
-  color: #6c705f;
-  font:
-    11px/1.5 system-ui,
-    sans-serif;
-}
-#gull.typing[data-phase="pounce"] #bird {
-  animation: peck 0.2s steps(1, end) infinite;
-}
-#gull.typing[data-phase="innocent"] #bird {
-  transform: rotate(-4deg);
+body[data-theme] #speech::after {
+  background: var(--card);
+  border-color: var(--line);
 }

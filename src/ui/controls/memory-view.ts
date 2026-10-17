@@ -8,6 +8,7 @@ const tricks: Record<string, string> = {
 };
 const activities: Record<string, string> = {
   cursor: "Investigated the pointer",
+  trick_refusal: "Refused to perform without snacks",
   snack: "Went looking for snacks",
   theft: "Investigated a chip bag",
   caper: "Got into a chip bag",

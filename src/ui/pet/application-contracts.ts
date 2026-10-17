@@ -5,7 +5,6 @@ import type {
 } from "../../platform/bridge.js";
 import type { Gullbert } from "../../simulation/engine.js";
 import type {
-  CaretSample,
   Memory,
   Point,
   PointerSample,
@@ -46,7 +45,6 @@ export interface ApplicationEvents {
 }
 
 export interface ApplicationBrowser {
-  caret?(): CaretSample | null;
   size(): { width: number; height: number };
   listen<K extends keyof ApplicationEvents>(
     name: K,
@@ -110,7 +108,7 @@ export type ApplicationSimulation = Pick<
   | "configure"
   | "resize"
   | "pointer"
-  | "caret"
+  | "observeWork"
   | "tidyPointer"
   | "greet"
   | "setVisible"

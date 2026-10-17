@@ -8,8 +8,6 @@ mod queue;
 mod targeting;
 #[cfg(test)]
 mod tests;
-#[cfg(all(debug_assertions, target_os = "macos"))]
-pub(crate) mod window_spike;
 
 pub(crate) use desktop::{
     begin_target, dispatch, eat_cursor, escape, interrupt, ready, replace_target, request,

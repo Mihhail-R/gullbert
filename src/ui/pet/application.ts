@@ -4,8 +4,8 @@ import type { ActionMessage, PreviewMessage } from "../../platform/bridge.js";
 import { createPickupDrag } from "../../platform/pickup-drag.js";
 import { createCursorBiteBridge } from "../../platform/cursor-bite.js";
 import { MemoryPersistence } from "../../platform/roommate-store.js";
-import { CaretTracker } from "../../platform/caret.js";
 import { createPointerTracker } from "../../platform/pointer.js";
+import { WorkObserver } from "../../platform/work-observer.js";
 import { contains } from "../../simulation/behaviors/touch.js";
 import type { Point, PointerSample, Settings } from "../../simulation/model.js";
 import type { CursorScene } from "../../simulation/scenes.js";
@@ -49,8 +49,8 @@ export class PetApplication {
   readonly #persistence: MemoryPersistence;
   readonly #drag: ReturnType<typeof createPickupDrag>;
   readonly #bite: ReturnType<typeof createCursorBiteBridge>;
-  readonly #caret: CaretTracker;
   readonly #pointer: ReturnType<typeof createPointerTracker>;
+  readonly #work: WorkObserver | null;
 
   readonly #dependencies: ApplicationDependencies;
 
@@ -62,7 +62,6 @@ export class PetApplication {
       action: (action, point) => dependencies.simulation.action(action, point),
       running: () => this.#running(),
       prepare: () => {
-        this.#caret.stop();
         this.#cancelDrag();
       },
       cancelDrag: () => this.#cancelDrag(),
@@ -183,22 +182,6 @@ export class PetApplication {
         this.#syncPointer();
       },
     });
-    this.#caret = new CaretTracker({
-      read: () => {
-        const native = this.#dependencies.native;
-
-        if (native) {
-          return native.invoke("caret_position");
-        }
-
-        return Promise.resolve(this.#dependencies.browser.caret?.() ?? null);
-      },
-      sample: (sample) => {
-        this.#dependencies.simulation.caret(sample);
-      },
-      schedule: this.#dependencies.clock.schedule,
-      cancel: this.#dependencies.clock.cancel,
-    });
     let read = null;
 
     if (this.#dependencies.native) {
@@ -221,6 +204,18 @@ export class PetApplication {
       schedule: this.#dependencies.clock.schedule,
       cancel: this.#dependencies.clock.cancel,
     });
+    this.#work = null;
+
+    if (native) {
+      this.#work = new WorkObserver({
+        read: () => native.invoke("work_activity"),
+        stop: () => this.#runNative(native.invoke("stop_work_activity")),
+        sample: (sample, nowMs) => dependencies.simulation.observeWork(sample, nowMs),
+        now: () => dependencies.clock.now(),
+        schedule: dependencies.clock.schedule,
+        cancel: dependencies.clock.cancel,
+      });
+    }
   }
 
   start(): Promise<void> {
@@ -256,7 +251,7 @@ export class PetApplication {
     this.#cancelDrag();
     this.#dependencies.simulation.setVisible(false);
     this.#pointer.stop();
-    this.#caret.stop();
+    this.#work?.stop();
     this.#releaseInteraction();
     this.#bite.stop();
 
@@ -459,6 +454,7 @@ export class PetApplication {
       }
 
       this.#cancelDrag();
+      this.#work?.stop();
 
       if (this.#dependencies.simulation.cursorEncounter()) {
         this.#dependencies.simulation.action("cancel");
@@ -479,43 +475,52 @@ export class PetApplication {
   }
 
   #previewMessage(message: PreviewMessage): void {
-    if (message.type === "action") {
-      if (!this.#running()) {
-        return;
-      }
+    switch (message.type) {
+      case "action":
+        if (!this.#running()) {
+          return;
+        }
 
-      try {
-        submitPreviewAction(message.action, {
-          replace: () => {
-            this.#targeting.replace();
-          },
-          visibility: (visible) => {
-            this.#changeVisibility(visible);
-            this.#dependencies.browser.publish({ type: "visible", visible });
-          },
-          command: (action, point) => {
-            this.#action({ action, point });
-          },
-          target: (purpose, preparation) => {
-            this.#targeting.startPreview(purpose, preparation);
-          },
-          center: () => {
-            const size = this.#dependencies.browser.size();
-            return { x: size.width / 2, y: size.height / 2 };
-          },
-          quit: () => {
-            this.#dependencies.browser.publish({ type: "preview-quit" });
-          },
-        });
-      } catch (error) {
-        this.#dependencies.reportError(error);
-      }
-    } else if (message.type === "escape") {
-      this.#cancel();
-    } else if (message.type === "settings") {
-      this.#configure(message.settings);
-    } else if (message.type === "visible") {
-      this.#changeVisibility(message.visible);
+        try {
+          submitPreviewAction(message.action, {
+            replace: () => {
+              this.#targeting.replace();
+            },
+            visibility: (visible) => {
+              this.#changeVisibility(visible);
+              this.#dependencies.browser.publish({ type: "visible", visible });
+            },
+            command: (action, point) => {
+              this.#action({ action, point });
+            },
+            target: (purpose, preparation) => {
+              this.#targeting.startPreview(purpose, preparation);
+            },
+            center: () => {
+              const size = this.#dependencies.browser.size();
+              return { x: size.width / 2, y: size.height / 2 };
+            },
+            quit: () => {
+              this.#dependencies.browser.publish({ type: "preview-quit" });
+            },
+          });
+        } catch (error) {
+          this.#dependencies.reportError(error);
+        }
+
+        return;
+
+      case "escape":
+        this.#cancel();
+        return;
+
+      case "settings":
+        this.#configure(message.settings);
+        return;
+
+      case "visible":
+        this.#changeVisibility(message.visible);
+        return;
     }
   }
 
@@ -525,7 +530,6 @@ export class PetApplication {
     }
 
     this.#cancelDrag();
-    this.#caret.stop();
     this.#dependencies.simulation.configure(settings);
     this.#wake();
   }
@@ -691,6 +695,7 @@ export class PetApplication {
 
     const now = this.#dependencies.clock.now();
     const sim = this.#dependencies.simulation;
+    this.#syncWork();
     sim.updatePickupClock(this.#dependencies.clock.wallNow());
 
     if (this.#drag.active && !sim.status().held) {
@@ -737,12 +742,27 @@ export class PetApplication {
     this.#last = this.#dependencies.clock.now();
     this.#dependencies.simulation.setVisible(this.#visible);
     this.#syncPointer();
+    this.#syncWork();
 
     if (!this.#visible) {
       this.#dependencies.audio.suspend();
       this.#render();
     } else {
       this.#tick();
+    }
+  }
+
+  #syncWork(): void {
+    if (!this.#work) {
+      return;
+    }
+
+    const available = this.#running() && this.#visible && !this.#targeting.active;
+
+    if (available && this.#dependencies.simulation.status().workEnabled) {
+      this.#work.start();
+    } else {
+      this.#work.stop();
     }
   }
 
@@ -800,7 +820,6 @@ export class PetApplication {
     }
 
     const sim = this.#dependencies.simulation;
-    this.#caret.stop();
     this.#cancelDrag();
     this.#targeting.replace();
     this.#resizeSimulation();
@@ -839,8 +858,8 @@ export class PetApplication {
         }
       } else if (sim.directCleanupAt(point)) {
         sim.action("direct_pick", point);
-        this.#render();
         this.#releaseInteraction();
+        this.#wake();
       }
 
       return;
@@ -1018,14 +1037,6 @@ export class PetApplication {
     }
 
     this.#syncBite();
-    const canObserve =
-      this.#visible && !this.#targeting.active && !this.#drag.active;
-
-    if (canObserve && this.#dependencies.simulation.status().watchTyping) {
-      this.#caret.start();
-    } else {
-      this.#caret.stop();
-    }
 
     if (this.#visible && !this.#targeting.active) {
       this.#pointer.start();
@@ -1116,8 +1127,6 @@ export class PetApplication {
   }
 
   #resizeSimulation(): void {
-    this.#caret.stop();
-    this.#dependencies.simulation.caret(null);
     const size = this.#dependencies.browser.size();
     this.#dependencies.simulation.resize(size.width, size.height);
   }

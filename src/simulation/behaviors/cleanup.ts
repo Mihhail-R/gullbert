@@ -215,6 +215,14 @@ export class Cleanup {
     return this.#state.session !== null && !this.#state.session.direct;
   }
 
+  get moving(): boolean {
+    return (
+      this.#state.session !== null &&
+      this.#state.level >= 3 &&
+      this.#state.pointer !== null
+    );
+  }
+
   begin(): void {
     this.cancel();
     this.#state.session = {

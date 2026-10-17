@@ -34,14 +34,14 @@
         "label": "controls",
         "title": "Gullbert",
         "url": "index.html",
-        "width": 440,
-        "height": 700,
-        "minWidth": 400,
+        "width": 1060,
+        "height": 800,
+        "minWidth": 560,
         "minHeight": 600,
-        "resizable": false,
+        "resizable": true,
         "visible": true,
         "center": true,
-        "backgroundColor": "#f6f3ea"
+        "backgroundColor": "#faf6ef"
       }
     ],
     "security": {

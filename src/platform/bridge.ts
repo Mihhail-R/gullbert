@@ -1,11 +1,11 @@
 import type { ActionName } from "../actions/catalog.js";
 import type {
-  CaretSample,
   Memory,
   MoodName,
   Point,
   PointerSample,
   Settings,
+  WorkSample,
 } from "../simulation/model.js";
 
 export interface ActionMessage {
@@ -52,12 +52,8 @@ interface Commands {
   ];
   end_pickup: [{ id: number; retaliate: boolean; tug: boolean }, number | null];
   cursor_position: [undefined, PointerSample | null];
-  caret_position: [undefined, CaretSample | null];
-  caret_access: [{ prompt: boolean }, { available: boolean; platform: string }];
-  vision_status: [
-    { prompt: boolean },
-    { supported: boolean; granted: boolean; state: string },
-  ];
+  work_activity: [undefined, WorkSample | null];
+  stop_work_activity: [undefined, void];
   tug_cursor: [{ id: number; x: number; y: number }, boolean];
   release_cursor: [{ id: number }, void];
   cancel_targeting: [{ id?: number }, void];

@@ -7,404 +7,712 @@
     <link rel="stylesheet" href="ui/controls/controls.css" />
   </head>
   <body>
-    <main class="panel">
-      <header>
-        <div class="eyebrow">
-          <span class="dot"></span> YOUR LOCAL NUISANCE
-          <span class="version">v__APP_VERSION__</span>
+    <div class="room">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-bird" aria-hidden="true"></div>
+          <div>Gullbert</div>
         </div>
-        <div class="intro">
-          <div>
-            <h1>Gullbert.</h1>
-            <p>No job. No rent. Absolutely your problem.</p>
-          </div>
-          <div class="portrait" aria-label="A suspicious pixel seagull"></div>
-        </div>
-        <div class="status">
-          <span id="status-dot"></span><span id="status">Settling in…</span
-          ><span id="mood">Contentedly gull.</span>
-        </div>
-      </header>
-      <section class="quick-actions" aria-label="Quick actions">
-        <button class="primary" data-action="summon">
-          <span>↗</span> Summon Gullbert <kbd>⌃ ⌥ G</kbd>
-        </button>
-        <button data-action="feed">Offer a chip</button>
-      </section>
-      <div
-        class="sections"
-        role="region"
-        aria-label="Activities and preferences"
-        tabindex="0"
-      >
-        <details class="control-section" id="snacks" name="control-room">
-          <summary>
-            <span>Snacks</span><small>Chips, bags &amp; snack hunts</small>
-          </summary>
-          <div class="section-content">
-            <button data-action="feed_here">Leave a chip here…</button>
-            <div class="pair">
-              <button data-action="feed"><span>▰</span> Offer a chip</button
-              ><button data-action="place_bag">
-                <span>▤</span> Place chip bag…
-              </button>
-            </div>
-            <div class="pair">
-              <button data-action="search_snack">
-                <span>⌕</span> Find a snack</button
-              ><button data-action="chip_toss">Chip toss…</button>
-            </div>
-            <p class="hint">
-              Offer a chip feeds him where he is. Leave one in a chosen spot, or
-              press Ctrl + Alt + F at your pointer in the desktop app. Repeated
-              meals teach him where to check.
-            </p>
-          </div>
-        </details>
-        <details class="control-section" id="learning" name="control-room">
-          <summary>
-            <span>Tricks &amp; rituals</span
-            ><small id="learning-summary">Getting to know you</small>
-          </summary>
-          <div class="section-content">
-            <p class="hint">
-              Ask for a trick, wait for him to finish and ask for a chip, then
-              reward him within 20 seconds. Three rewarded performances make it
-              familiar. Six make him insufferable.
-            </p>
-            <div class="trick-row">
-              <button data-action="trick_come">Come here…</button
-              ><span id="lesson-come">New trick</span>
-            </div>
-            <div class="trick-row">
-              <button data-action="trick_spin">Spin</button
-              ><span id="lesson-spin">New trick</span>
-            </div>
-            <div class="trick-row">
-              <button data-action="trick_dead">Play dead</button
-              ><span id="lesson-dead">New trick</span>
-            </div>
-            <div class="pair">
-              <button class="primary" data-action="feed">
-                Reward with a chip</button
-              ><button data-action="feed_here">Leave a chip here…</button>
-            </div>
-            <div class="ritual-notes" aria-live="polite">
-              <p id="snack-ritual">
-                Feed him in the same spot a few times. He’ll remember.
-              </p>
-              <p id="scratch-ritual">
-                Scratch his head after cap football or a chip toss to start a
-                ritual.
-              </p>
-            </div>
-            <p class="hint">
-              He remembers every completed performance. Chip rewards teach him
-              the routine. His lessons stay between visits.
-            </p>
-            <button class="subtle" data-action="forget_learning">
-              Forget tricks &amp; rituals
-            </button>
-          </div>
-        </details>
-        <details class="control-section" id="routines" name="control-room">
-          <summary>
-            <span>Bird routines</span
-            ><small>A moment of almost good behaviour</small>
-          </summary>
-          <div class="section-content">
-            <div class="pair">
-              <button data-action="squawk"><span>♪</span> Have a word</button
-              ><button data-action="nap"><span>☾</span> Take a nap</button>
-            </div>
-            <div class="pair">
-              <button data-action="preen"><span>❧</span> Preen feathers</button
-              ><button data-action="tilt"><span>?</span> Tilt his head</button>
-            </div>
-            <div class="pair">
-              <button data-action="stretch">
-                <span>↔</span> Stretch wings
-              </button>
-            </div>
-          </div>
-        </details>
-        <details
-          class="control-section"
-          id="mischief-actions"
-          name="control-room"
-        >
-          <summary>
-            <span>Mischief</span
-            ><small>Petty crime &amp; pointer trouble</small>
-          </summary>
-          <div class="section-content">
-            <div class="pair">
-              <button data-action="nibble_cursor">
-                <span>↖</span> Nibble cursor</button
-              ><button data-action="eat_cursor">
-                <span>↖</span> Eat cursor
-              </button>
-            </div>
-            <div class="pair">
-              <button data-action="bag_caper"><span>!</span> Bag caper</button
-              ><button data-action="steal_bag"><span>↪</span> Steal bag</button>
-            </div>
-            <div class="pair">
-              <button data-action="caught"><span>☝</span> Caught you!</button
-              ><button data-action="poop"><span>✳</span> Leave a gift</button>
-            </div>
-            <div class="pair">
-              <button data-action="target"><span>⌖</span> Poop here…</button>
-            </div>
-            <p class="hint">
-              Eat cursor lets him catch and tug your pointer for one second. Esc
-              releases it. In the playground, move into the desktop; the catch
-              is visual only.
-            </p>
-            <p class="hint">
-              Point anywhere. Press Ctrl + Alt + P. A gift awaits.
-            </p>
-          </div>
-        </details>
-        <details class="control-section" id="play" name="control-room">
-          <summary>
-            <span>Play</span><small>A very competitive little bird</small>
-          </summary>
-          <div class="section-content">
-            <div class="pair">
-              <button data-action="play_cap">Play with a cap</button>
-            </div>
-            <p class="hint">
-              Click the cap to flick it away. He chases it and pecks it back
-              toward your pointer. Three exchanges, then he declares victory.
-            </p>
-          </div>
-        </details>
-        <details class="control-section" id="theatre" name="control-room">
-          <summary>
-            <span>Theatre</span><small>One little spectacle at a time</small>
-          </summary>
-          <div class="section-content">
-            <div class="pair">
-              <button data-action="blow_bubbles">Blow bubbles</button
-              ><button data-action="bath_time">Bath time</button>
-            </div>
-            <div class="pair">
-              <button data-action="invite_pigeon">Invite pigeon</button
-              ><button data-action="gull_argument">Gull argument</button>
-            </div>
-            <div class="pair">
-              <button data-action="baguette_parade">Baguette parade</button
-              ><button data-action="pretend_leave">Pretend to leave</button>
-            </div>
-            <div class="pair">
-              <button data-action="cursor_egg">Cursor egg</button
-              ><button data-action="municipal_gull">Municipal gull</button>
-            </div>
-            <div class="pair">
-              <button data-action="apology">The apology</button>
-              <button data-action="postcards">Poop postcards</button>
-            </div>
-            <p class="hint">
-              For cursor egg, leave your pointer still in his patch. Stop
-              routine ends the show.
-            </p>
-          </div>
-        </details>
-        <details class="control-section" id="belongings" name="control-room">
-          <summary>
-            <span>Gifts &amp; favourite spot</span
-            ><small
-              ><span id="belongings-summary">No treasures yet</span></small
+
+        <nav aria-label="Main navigation">
+          <button data-page="today" aria-current="page">
+            <svg
+              class="ui-icon"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              focusable="false"
             >
-          </summary>
-          <div class="section-content">
-            <div class="pair">
-              <button data-action="bring_gift">Bring me something</button>
-            </div>
-            <div class="pair">
-              <button data-action="place_perch">Favourite spot…</button
-              ><button data-action="perch">Perch</button>
-            </div>
-            <div class="pair small-actions">
-              <button data-action="clear_perch">Clear favourite spot</button>
-            </div>
-            <p class="hint">
-              Ask him to bring something back for your collection.
-            </p>
-            <details id="collection">
-              <summary>
-                Questionable treasures <span id="collection-count">0</span>
-              </summary>
-              <p id="collection-empty">
-                Nothing yet. A promising lack of taste.
-              </p>
-              <ul id="collection-items"></ul>
-            </details>
-          </div>
-        </details>
-        <details class="control-section" id="memories" name="control-room">
-          <summary>
-            <span>His memory</span
-            ><small id="memory-summary">A fresh start</small>
-          </summary>
-          <div class="section-content">
-            <p class="hint">
-              What he did, when, and where on the desktop. Kept on this device
-              between visits. His latest 200 experiences stay in memory; learned
-              habits and totals stay longer.
-            </p>
-            <p id="memory-empty" class="hint">
-              Try a trick, share a chip, or invite a visitor. His memories will
-              appear here.
-            </p>
-            <ol id="memory-items" aria-live="polite"></ol>
-            <p class="hint">Showing his 12 most recent experiences.</p>
-          </div>
-        </details>
-        <details class="control-section" id="tidying" name="control-room">
-          <summary>
-            <span>Tidying</span
-            ><small>A slightly more respectable desktop</small>
-          </summary>
-          <div class="section-content">
-            <div class="pair">
-              <button data-action="tidy">Focused tidy mode…</button
-              ><button data-action="clean">Clean the evidence</button>
-            </div>
-            <p class="hint">
-              Click loose mess to tidy it, or use focused tidy mode. Your
-              treasures and favourite spot stay put.
-            </p>
-          </div>
-        </details>
-        <details class="control-section" id="preferences" name="control-room">
-          <summary>
-            <span>Preferences</span
-            ><small
-              ><span id="preferences-summary">Menace · Sound off</span></small
+              <use href="ui/icons.svg#home"></use></svg
+            >Home</button
+          ><button data-page="play">
+            <svg
+              class="ui-icon"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              focusable="false"
             >
-          </summary>
-          <div class="section-content">
-            <div class="setting">
-              <div>
-                <label for="hat">Tiny wardrobe</label
-                ><small>Enormous responsibility. Saved locally.</small>
+              <use href="ui/icons.svg#play"></use></svg
+            >Play &amp; learn</button
+          ><button data-page="world">
+            <svg
+              class="ui-icon"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <use href="ui/icons.svg#world"></use></svg
+            >His world</button
+          ><button data-page="settings">
+            <svg
+              class="ui-icon"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <use href="ui/icons.svg#settings"></use></svg
+            >Settings
+          </button>
+        </nav>
+        <div class="sidebar-bottom">
+          <small>Stored on this device</small
+          ><small class="version">v__APP_VERSION__</small>
+        </div>
+      </aside>
+      <div class="room-main">
+        <main id="pages">
+          <section data-destination="today" aria-label="Home">
+            <div class="life-heading">
+              <h1 tabindex="-1">Home</h1>
+              <time id="journal-date"></time>
+            </div>
+            <div class="life-intro">
+              <div class="life-welcome">
+                <div class="presence">
+                  <i id="status-dot"></i
+                  ><span id="status" role="status">Settling in…</span
+                  ><span id="mischief-label" class="tag">Menace</span>
+                </div>
+                <div class="essentials">
+                  <button class="primary" data-action="summon">
+                    <svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#summon"></use></svg
+                    ><span>Summon Gullbert</span></button
+                  ><button class="" data-action="feed">Offer a chip</button>
+                </div>
               </div>
-              <select id="hat">
-                <option value="none">None</option>
-                <option value="captain">Captain</option>
-                <option value="beanie">Fisherman’s beanie</option>
-                <option value="paper-crown">Paper crown</option>
-                <option value="fried-egg">Fried egg</option>
-                <option value="cone">Traffic cone</option>
-              </select>
+              <figure class="life-portrait">
+                <div
+                  class="portrait-bird"
+                  role="img"
+                  aria-label="Gullbert the pixel seagull"
+                >
+                  <img class="portrait-hat" alt="" hidden="" />
+                </div>
+
+                <small id="mood">Contentedly gull.</small>
+              </figure>
             </div>
-            <section class="preferences" aria-label="Preferences">
+            <div class="life-columns">
+              <section class="life-memories">
+                <div class="subheading">
+                  <h2>Recent memories</h2>
+                  <button
+                    class="text-link"
+                    data-page="world"
+                    data-world="memories"
+                  >
+                    View all<svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#arrow"></use>
+                    </svg>
+                  </button>
+                </div>
+                <p id="today-memory-empty" class="hint">
+                  No memories yet. Share a chip or play a game.
+                </p>
+                <ol id="today-memories" class="memory-list"></ol>
+              </section>
+              <section>
+                <h2>Quick play</h2>
+                <div class="action-list">
+                  <button data-action="play_cap">
+                    <svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#cap"></use></svg
+                    ><span>Cap football</span
+                    ><svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#arrow"></use>
+                    </svg></button
+                  ><button data-action="chip_toss">
+                    <svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#toss"></use></svg
+                    ><span>Chip toss</span
+                    ><svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#arrow"></use>
+                    </svg></button
+                  ><button data-page="play">
+                    <svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#learn"></use></svg
+                    ><span>Practice a trick</span
+                    ><svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#arrow"></use>
+                    </svg>
+                  </button>
+                </div>
+              </section>
+            </div>
+            <section class="life-collection">
+              <div>
+                <h2>Treasures</h2>
+                <button
+                  class="text-link"
+                  data-page="world"
+                  data-world="treasures"
+                >
+                  View collection<svg
+                    class="ui-icon"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <use href="ui/icons.svg#arrow"></use>
+                  </svg>
+                </button>
+              </div>
+              <p id="today-collection-empty" class="hint">
+                Nothing collected yet.
+              </p>
+              <ul id="today-collection" class="treasure-shelf"></ul>
+            </section>
+          </section>
+          <section
+            data-destination="play"
+            aria-label="Play and learn"
+            hidden=""
+          >
+            <h1 tabindex="-1">Play &amp; learn</h1>
+
+            <section class="play-snacks" aria-labelledby="snacks-heading">
+              <h2 id="snacks-heading">Snacks</h2>
+              <div class="snack-actions">
+                <button data-action="feed">Offer a chip</button>
+                <button data-action="feed_here">Leave a chip here…</button>
+                <button data-action="place_bag">Place chip bag…</button>
+              </div>
+              <p class="hint">
+                Placed food: choose a desktop spot. Escape cancels.
+              </p>
+            </section>
+            <div class="play-columns">
+              <section class="play-games" aria-labelledby="games-heading">
+                <h2 id="games-heading">Games &amp; company</h2>
+                <div class="action-list">
+                  <button data-action="chip_toss">
+                    <svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#toss"></use></svg
+                    ><span>Chip toss…</span
+                    ><svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#arrow"></use>
+                    </svg>
+                  </button>
+                  <button data-action="play_cap">
+                    <svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#cap"></use></svg
+                    ><span>Cap football</span
+                    ><svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#arrow"></use>
+                    </svg>
+                  </button>
+                  <button data-action="blow_bubbles">
+                    <svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#bubbles"></use></svg
+                    ><span>Blow bubbles</span
+                    ><svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#arrow"></use>
+                    </svg>
+                  </button>
+                  <button data-action="bath_time">
+                    <svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#bath"></use></svg
+                    ><span>Bath time</span
+                    ><svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#arrow"></use>
+                    </svg>
+                  </button>
+                  <button data-action="invite_pigeon">
+                    <svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#bird"></use></svg
+                    ><span>Invite pigeon</span
+                    ><svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#arrow"></use>
+                    </svg>
+                  </button>
+                </div>
+                <p class="hint play-touch-tip">
+                  Hover to scratch. Click to poke. Hold and drag to pick up.
+                </p>
+              </section>
+              <section id="learning" aria-labelledby="tricks-heading">
+                <div class="subheading">
+                  <h2 id="tricks-heading">Tricks</h2>
+                  <p id="learning-summary">No tricks learned yet</p>
+                </div>
+                <div class="action-list trick-actions" aria-label="Tricks">
+                  <button
+                    data-action="trick_come"
+                    aria-labelledby="trick-name-come"
+                    aria-describedby="lesson-come"
+                  >
+                    <span class="trick-copy"
+                      ><strong id="trick-name-come">Come here…</strong
+                      ><span id="lesson-come" class="trick-progress"
+                        >New trick</span
+                      ></span
+                    ><svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#play"></use>
+                    </svg>
+                  </button>
+                  <button
+                    data-action="trick_spin"
+                    aria-labelledby="trick-name-spin"
+                    aria-describedby="lesson-spin"
+                  >
+                    <span class="trick-copy"
+                      ><strong id="trick-name-spin">Spin</strong
+                      ><span id="lesson-spin" class="trick-progress"
+                        >New trick</span
+                      ></span
+                    ><svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#play"></use>
+                    </svg>
+                  </button>
+                  <button
+                    data-action="trick_dead"
+                    aria-labelledby="trick-name-dead"
+                    aria-describedby="lesson-dead"
+                  >
+                    <span class="trick-copy"
+                      ><strong id="trick-name-dead">Play dead</strong
+                      ><span id="lesson-dead" class="trick-progress"
+                        >New trick</span
+                      ></span
+                    ><svg
+                      class="ui-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <use href="ui/icons.svg#play"></use>
+                    </svg>
+                  </button>
+                </div>
+                <div class="reward-actions">
+                  <button class="primary" data-action="feed">
+                    Reward with a chip
+                  </button>
+                  <p class="hint">
+                    Reward within 20 seconds. 3 rewards: learned; 6: practiced.
+                  </p>
+                </div>
+              </section>
+            </div>
+            <div class="tidy-line">
+              <button class="text-link" data-action="clean">
+                Clean the evidence
+                <svg
+                  class="ui-icon"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <use href="ui/icons.svg#arrow"></use>
+                </svg>
+              </button>
+              <button class="text-link" data-action="tidy">
+                Focused tidy mode…
+                <svg
+                  class="ui-icon"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <use href="ui/icons.svg#arrow"></use>
+                </svg>
+              </button>
+            </div>
+          </section>
+          <section data-destination="world" aria-label="His world" hidden="">
+            <h1 tabindex="-1">His world</h1>
+
+            <nav class="subnav" aria-label="His world">
+              <button data-world="memories" aria-current="page">Memories</button
+              ><button data-world="treasures">Treasures</button
+              ><button data-world="wardrobe">Wardrobe</button
+              ><button data-world="rituals">Rituals &amp; places</button>
+            </nav>
+            <section data-world-panel="memories" class="world-panel">
+              <h2 id="memory-summary">No memories yet</h2>
+              <p class="hint">Latest 12 memories. Saved on this device.</p>
+              <p id="memory-empty" class="hint">
+                Share a chip or play a game to start.
+              </p>
+              <ol id="memory-items" aria-live="polite"></ol>
+              <p id="visitor-summary" class="hint">No familiar visitors yet.</p>
+            </section>
+            <section data-world-panel="treasures" class="world-panel" hidden="">
+              <h2>Treasures <span id="collection-count">0</span></h2>
+              <p id="collection-empty">Nothing collected yet.</p>
+              <ul id="collection-items"></ul>
+              <p id="belongings-summary" class="hint">No treasures yet</p>
+              <button class="primary" data-action="bring_gift">
+                Bring me something
+              </button>
+            </section>
+            <section
+              data-world-panel="wardrobe"
+              class="world-panel wardrobe-panel"
+              hidden=""
+            >
+              <div>
+                <h2>Wardrobe</h2>
+                <div class="setting">
+                  <div>
+                    <label for="hat">Hat</label>
+                  </div>
+                  <select id="hat">
+                    <option value="none">None</option>
+                    <option value="captain">Captain</option>
+                    <option value="beanie">Fisherman’s beanie</option>
+                    <option value="paper-crown">Paper crown</option>
+                    <option value="fried-egg">Fried egg</option>
+                    <option value="cone">Traffic cone</option>
+                  </select>
+                </div>
+              </div>
+              <div class="wardrobe-preview">
+                <div
+                  class="portrait-bird"
+                  role="img"
+                  aria-label="Gullbert the pixel seagull"
+                >
+                  <img class="portrait-hat" alt="" hidden="" />
+                </div>
+              </div>
+            </section>
+            <section data-world-panel="rituals" class="world-panel" hidden="">
+              <h2>Habits &amp; favourite spot</h2>
+              <div class="ritual-notes" aria-live="polite">
+                <p id="snack-ritual">
+                  Feed him in one spot 3 times to teach a snack stop.
+                </p>
+                <p id="scratch-ritual">
+                  Scratch his head after games 3 times to start a ritual.
+                </p>
+              </div>
+              <div class="setting">
+                <div>
+                  <strong>Favourite spot</strong
+                  ><small id="perch-summary">Not chosen yet</small>
+                </div>
+                <button class="" data-action="place_perch">Choose spot…</button>
+              </div>
+              <div class="tidy-line">
+                <button class="text-link" data-action="clear_perch">
+                  Clear favourite spot</button
+                ><button class="text-link" data-action="forget_learning">
+                  Forget tricks &amp; rituals
+                </button>
+              </div>
+              <p class="hint">
+                Resetting lessons keeps his collection and favourite spot.
+              </p>
+            </section>
+          </section>
+          <section data-destination="settings" aria-label="Settings" hidden="">
+            <h1 tabindex="-1">Settings</h1>
+            <div class="setting appearance">
+              <h2>Appearance</h2>
+              <div class="theme-control" role="group" aria-label="Appearance">
+                <button data-theme="system" aria-pressed="true">System</button>
+                <button data-theme="light" aria-pressed="false">Light</button
+                ><button data-theme="dark" aria-pressed="false">Dark</button>
+              </div>
+            </div>
+            <p id="theme-error" role="alert" hidden=""></p>
+            <p id="preferences-summary" class="hint">Menace · Sound off</p>
+            <section class="settings-section">
+              <h2>Behaviour</h2>
               <div class="setting">
                 <div>
                   <label for="mischief">Mischief level</label
-                  ><small>How bold he gets with your cursor and typing.</small>
+                  ><small>Cursor and desktop mischief.</small>
                 </div>
                 <select id="mischief">
                   <option value="0">Polite-ish</option>
-                  <option value="1" selected>Menace</option>
+                  <option value="1" selected="">Menace</option>
                   <option value="2">Public enemy</option>
                 </select>
               </div>
               <div class="setting">
-                <div>
-                  <span>Caret fishing</span
-                  ><small id="caret-status">Checking caret access…</small>
-                </div>
-                <button id="caret-access" type="button" hidden>
-                  Enable access
-                </button>
-              </div>
-              <div class="setting" id="vision-setting">
-                <div>
-                  <label for="vision">Local vision</label
-                  ><small
-                    >Nibble visible words near the mouse. Processed on this
-                    device; nothing saved or sent.</small
-                  >
-                </div>
-                <input id="vision" type="checkbox" role="switch" />
-              </div>
-              <p id="vision-status" role="status" hidden></p>
-              <button id="vision-access" type="button" hidden>
-                Allow screen access
-              </button>
-              <div class="setting">
-                <label for="paused">Pause autonomous antics</label
+                <label for="paused">Pause antics</label
                 ><input id="paused" type="checkbox" role="switch" />
               </div>
               <div class="setting">
-                <label for="sound">Tiny sound effects</label
+                <label for="sound">Sound effects</label
                 ><input id="sound" type="checkbox" role="switch" />
               </div>
             </section>
-          </div>
-        </details>
-        <details
-          id="updates"
-          class="control-section"
-          name="control-room"
-          hidden
-        >
-          <summary>App updates</summary>
-          <section class="update-content">
-            <p id="update-status" role="status">
-              Check for a newer Gullbert release.
-            </p>
-            <label
-              ><input id="update-beta" type="checkbox" /> Include beta
-              releases</label
+            <details class="settings-detail">
+              <summary>Keyboard shortcuts</summary>
+              <div class="shortcut-list">
+                <div><span>Summon Gullbert</span><kbd>Ctrl + Alt + G</kbd></div>
+                <div>
+                  <span>Hide Gullbert</span><kbd>Ctrl + Alt + Shift + G</kbd>
+                </div>
+                <div>
+                  <span>Clean / cancel targeting</span><kbd>Ctrl + Alt + X</kbd>
+                </div>
+                <div><span>Poop at pointer</span><kbd>Ctrl + Alt + P</kbd></div>
+                <div><span>Chip at pointer</span><kbd>Ctrl + Alt + F</kbd></div>
+                <div><span>Cancel / release cursor</span><kbd>Escape</kbd></div>
+              </div>
+              <p class="hint">On Mac, Alt is Option and Ctrl is Control.</p>
+            </details>
+            <details
+              id="updates"
+              class="control-section"
+              name="control-room"
+              hidden=""
             >
-            <p>Connects to GitHub only when you check or install.</p>
-            <progress id="update-progress" hidden></progress>
-            <button id="update-check" type="button">Check for updates</button>
-            <button id="update-install" type="button" hidden>
-              Install and restart
-            </button>
-            <pre id="update-notes" hidden></pre>
+              <summary>App updates</summary>
+              <section class="update-content">
+                <p id="update-status" role="status">
+                  Check for a newer Gullbert release.
+                </p>
+                <label
+                  ><input id="update-beta" type="checkbox" /> Include beta
+                  releases</label
+                >
+                <p>Connects to GitHub only when you check or install.</p>
+                <progress id="update-progress" hidden=""></progress>
+                <button id="update-check" type="button">
+                  Check for updates
+                </button>
+                <button id="update-install" type="button" hidden="">
+                  Install and restart
+                </button>
+                <pre id="update-notes" hidden=""></pre>
+              </section>
+            </details>
+            <p class="privacy-note">
+              Closing this window leaves Gullbert running.
+            </p>
           </section>
-        </details>
-      </div>
-      <div class="bottom-bar">
-        <div class="footer-actions">
-          <button data-action="cancel">Stop routine</button>
-          <button id="visibility-toggle" data-action="hide">
-            Send him away
-          </button>
-        </div>
-        <footer>
-          <span>He lives in your menu bar / system tray.</span
-          ><button data-action="quit">Quit</button>
+        </main>
+        <footer class="session-controls">
+          <button id="pause-toggle">
+            <svg
+              class="ui-icon"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <use href="ui/icons.svg#pause"></use></svg
+            ><span id="pause-label">Pause antics</span></button
+          ><button class="" data-action="cancel">Stop routine</button
+          ><button id="visibility-toggle" data-action="hide">
+            Send him away</button
+          ><button class="quit" data-action="quit">Quit</button>
         </footer>
-        <p id="error" role="alert" hidden></p>
-        <p id="storage-error" role="alert" hidden></p>
+        <div class="notices">
+          <p id="error" role="alert" hidden=""></p>
+          <p id="storage-error" role="alert" hidden=""></p>
+          <div id="placement-notice" role="status" hidden="">
+            <span id="placement-status"></span
+            ><button id="cancel-placement">Never mind</button>
+          </div>
+        </div>
       </div>
-    </main>
-    <aside id="demo" hidden>
-      <div class="desktop-note">
-        <span>THE TEST DESKTOP</span>
-        <h2>A perfectly peaceful<br />place. For now.</h2>
-        <p>Browser preview. The installed app roams over your real desktop.</p>
-      </div>
-      <div class="preview-downloads">
+    </div>
+    <aside id="demo" hidden="">
+      <header class="website-header">
+        <div>
+          <strong>Gullbert.</strong
+          ><span>A little nuisance for your desktop.</span>
+        </div>
         <a
           class="download-link"
           href="https://github.com/Mihhail-R/gullbert/releases"
           target="_blank"
           rel="noopener noreferrer"
-          >Download for macOS or Windows ↗</a
-        >
+          >Download for macOS or Windows<svg
+            class="ui-icon"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <use href="ui/icons.svg#summon"></use></svg
+        ></a>
+      </header>
+      <div class="preview-title">
+        <p class="eyebrow">The browser playground</p>
+        <h2>Meet your next distraction.</h2>
         <p>
-          Early preview · Unsigned builds. See release notes before installing.
+          Try the things he does. The installed app lets them happen in their
+          own time.
         </p>
       </div>
-      <iframe title="Gullbert's preview playground"></iframe>
+      <div class="playground-layout">
+        <div class="playground">
+          <span class="playground-label">THE TEST DESKTOP</span
+          ><iframe title="Gullbert's preview playground"></iframe>
+        </div>
+        <section class="preview-controls">
+          <p class="eyebrow">Give him a cue</p>
+          <h2>A preview of the chaos</h2>
+          <details open="">
+            <summary>Everyday bird</summary>
+            <div class="button-grid">
+              <button class="" data-action="squawk">Have a word</button
+              ><button class="" data-action="nap">Take a nap</button
+              ><button class="" data-action="preen">Preen feathers</button
+              ><button class="" data-action="tilt">Tilt his head</button
+              ><button class="" data-action="stretch">Stretch wings</button
+              ><button class="" data-action="search_snack">Find a snack</button
+              ><button class="" data-action="perch">Perch</button>
+            </div>
+          </details>
+          <details>
+            <summary>Petty crime</summary>
+            <div class="button-grid">
+              <button class="" data-action="nibble_cursor">Nibble cursor</button
+              ><button class="" data-action="eat_cursor">Eat cursor</button
+              ><button class="" data-action="bag_caper">Bag caper</button
+              ><button class="" data-action="steal_bag">Steal bag</button
+              ><button class="" data-action="caught">Caught you!</button
+              ><button class="" data-action="poop">Leave a gift</button
+              ><button class="" data-action="target">Poop here…</button>
+            </div>
+          </details>
+          <details>
+            <summary>Little spectacles</summary>
+            <div class="button-grid">
+              <button class="" data-action="gull_argument">Gull argument</button
+              ><button class="" data-action="baguette_parade">
+                Baguette parade</button
+              ><button class="" data-action="pretend_leave">
+                Pretend to leave</button
+              ><button class="" data-action="cursor_egg">Cursor egg</button
+              ><button class="" data-action="municipal_gull">
+                Municipal gull</button
+              ><button class="" data-action="apology">The apology</button
+              ><button class="" data-action="postcards">Poop postcards</button>
+            </div>
+          </details>
+          <details>
+            <summary>Play &amp; company</summary>
+            <div class="button-grid">
+              <button class="" data-action="blow_bubbles">Blow bubbles</button
+              ><button class="" data-action="bath_time">Bath time</button
+              ><button class="" data-action="chip_toss">Chip toss…</button
+              ><button class="" data-action="play_cap">Cap football</button
+              ><button class="" data-action="invite_pigeon">
+                Invite pigeon
+              </button>
+            </div>
+          </details>
+          <p class="hint">
+            Pointer catches are pretend here. Escape cancels placement and
+            releases the pointer.
+          </p>
+          <button id="reset-preview">Reset scene</button>
+          <p class="hint">
+            Clears loose mess and brings him back. His memories and collection
+            stay.
+          </p>
+        </section>
+      </div>
+      <p class="hint">
+        Early preview · Unsigned builds. See release notes before installing.
+      </p>
     </aside>
     <script type="module" src="ui/controls/controls.js"></script>
   </body>

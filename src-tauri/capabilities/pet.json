@@ -5,7 +5,6 @@
   "permissions": [
     "allow-pet-ready",
     "allow-target-picked",
-    "allow-caret-position",
     "allow-sync-interaction",
     "allow-begin-pickup",
     "allow-end-pickup",
@@ -13,6 +12,8 @@
     "allow-release-cursor",
     "allow-load-roommate",
     "allow-save-roommate",
-    "allow-publish-roommate"
+    "allow-publish-roommate",
+    "allow-work-activity",
+    "allow-stop-work-activity"
   ]
 }

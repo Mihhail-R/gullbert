@@ -1,5 +1,29 @@
 {
   "gullbert": {
+    "work": {
+      "arrival": "i'll supervise.",
+      "chips": "excellent work. my fee is chips.",
+      "slow": [
+        "type faster.",
+        "one finger? i have no fingers.",
+        "we're paid by the chip."
+      ],
+      "fast": [
+        "too fast. slower.",
+        "save some letters for tomorrow.",
+        "i was still reading that. allegedly."
+      ],
+      "steady": [
+        "yes. more of that.",
+        "i would have typed it louder.",
+        "your technique lacks beak."
+      ],
+      "pause": [
+        "forgotten how?",
+        "thinking is unpaid.",
+        "chip break? chip break."
+      ]
+    },
     "cap": {
       "invitation": "click the cap. try your best.",
       "chase": "mine.",
@@ -257,15 +281,6 @@
       "personalSpaceEverHeardOfIt": "personal space. ever heard of it?",
       "fineOneHeadScratch": "fine. one head scratch."
     },
-    "typing": {
-      "somethingsBiting": "something's biting.",
-      "justANormalBird": "just a normal bird.",
-      "pause": "...",
-      "itWasHereASecondAgo": "it was here a second ago.",
-      "youWerentUsingThis": "you weren't using this.",
-      "structuralPunctuation": "structural punctuation.",
-      "oDelicious": "o. delicious."
-    },
     "general": {
       "remarks": [
         "mine.",
@@ -368,7 +383,23 @@
       "emptySpot": "checking the usual establishment.",
       "scratchExpected": "and now the head bit.",
       "scratchLearned": "good game. good head scratch.",
-      "forgotten": "what tricks? never heard of them."
+      "forgotten": "what tricks? never heard of them.",
+      "refuse": [
+        "two tricks. zero chips. explain yourself.",
+        "no. the beak is on strike.",
+        "my talents require snacks.",
+        "you may speak to my snack representative."
+      ],
+      "settled": "payment received. we are professionals again.",
+      "collectPayment": "fine. taking payment in cursor.",
+      "movingOut": "packing my imaginary bags. unpaid artist moving out.",
+      "reluctant": {
+        "spin": "fine. one turn. at my hourly rate.",
+        "come": "coming. at the speed of unpaid labour.",
+        "dead": "fine. this may take a while."
+      },
+      "reluctantReward": "there. two tricks. one very expectant gull.",
+      "invoice": "2 tricks unpaid\nCHIP DUE"
     }
   },
   "guests": {

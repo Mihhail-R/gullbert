@@ -1,6 +1,36 @@
 # Contributing to Gullbert
 
-Small, funny, local. Start with `npm ci` and `npm run preview` to work in the browser playground. For the desktop app, follow the [README's source setup](README.md#run-from-source) and run `npm run dev`.
+## Run locally
+
+Install Node.js 22+. Desktop development also needs Rust 1.90+ and the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/).
+
+```sh
+npm ci
+npm run preview  # Browser playground at http://127.0.0.1:4173
+npm run dev      # Desktop app
+```
+
+Quit any running Gullbert before testing a new desktop build; a second launch talks to the existing instance.
+
+## Making changes
+
+- Keep each pull request focused on one change. Explain the problem it solves and any intentional behavior changes.
+- Follow the existing formatter and lint rules; avoid unrelated refactors.
+- For bug fixes, include reproduction steps and a regression test where practical. Update documentation when usage or setup changes.
+- Commit source files, not generated builds or temporary files. Only contribute code and artwork you have permission to share, and declare artwork licenses.
+
+## Code quality beyond lint
+
+- Prefer the simplest solution that meets the current need (KISS). Do not build speculative features, extension points, or generic frameworks (YAGNI).
+- Prefer guard clauses and early returns over nested conditionals. Keep every boolean condition to at most three atomic checks, including nested groups and named predicates. Split validation into meaningful steps; do not hide a large expression in a helper.
+- Keep branching shallow. Use `switch`/`match` for alternatives on one value and lookup tables for simple mappings. Preserve evaluation order and side effects when refactoring.
+- Name things for their purpose and include units where useful, such as `elapsedMs`. Comments should explain decisions or constraints, rather than restate the code.
+- Keep related steps together and separate meaningful stages with blank lines. Extract helpers for meaningful rules or reusable operations; a cohesive longer function is better than a chain of trivial helpers.
+- Apply SOLID pragmatically: give components focused responsibilities, keep interfaces small, preserve behavioral contracts, and separate domain rules from external dependencies. Introduce abstractions where they solve a concrete problem, not merely to satisfy a principle.
+- Use objects to own related state, behavior, and lifecycle. Prefer composition over inheritance; use plain functions for stateless operations. Do not create classes or interfaces for every operation.
+- Share domain operations before introducing configurable controllers or frameworks. Similar-looking code can stay separate when it has different reasons to change; share lifecycle machinery when its rules genuinely match.
+- Extract a module when it can own related state and its complete lifecycle. File length alone is not a reason, especially if extraction just passes application state through callbacks.
+- Improve the whole affected function and directly involved helpers when changing behavior. Review the changed control flow yourself; passing tests and lint does not establish readability. If a refactor reveals a bug, fix and regression-test it before continuing the refactor.
 
 ## Before submitting
 
@@ -9,147 +39,26 @@ npm test
 npm run check
 npm run lint
 npm run format:check
+```
+
+For native or action-routing changes, also run:
+
+```sh
+cargo fmt --manifest-path src-tauri/Cargo.toml --check
 cargo test --manifest-path src-tauri/Cargo.toml --locked
 npm run test:routing
 ```
 
-Use `npm run format` to format assets and documentation with Prettier, then fix code layout with ESLint. Use `npm run lint:fix` for code alone, or `npx eslint path/to/file.ts --fix` for a focused change.
+Use `npm run format` to apply formatting, or `npm run lint:fix` for JavaScript/TypeScript layout only. Review readability yourself; passing checks is not enough.
 
-ESLint owns TypeScript and JavaScript layout; Prettier ignores those files to preserve wrapped calls and chains. Lint enforces a strict 100-character limit, braces, block spacing, and simple ternaries.
+Describe how you tested the change. For desktop changes, name the OS and test the affected interactions in the desktop app; browser tests cannot verify native input. Include a screenshot or clip for visual changes.
 
-Cyclomatic complexity above 10 per function produces a warning. Complexity warnings are advisory and do not fail local lint or CI; style errors still fail both. Lint checks never rewrite files unless explicitly run with `--fix`.
+## Releases
 
-CI runs `npm run lint` and rejects style violations. Naming, meaningful statement groups, the three-check condition limit, and module ownership still require review. `npm run check` remains the TypeScript correctness check; Babel parses TypeScript syntax for linting without depending on the compiler version.
+Supported targets are **Apple Silicon macOS and Windows x64**. Paid platform signing and Apple notarization are deferred; keep the README's installation caveats accurate. Cryptographic updater signatures are still required. Back up `TAURI_SIGNING_PRIVATE_KEY` securely.
 
-For native changes, also run `cargo fmt --manifest-path src-tauri/Cargo.toml --check`, test the desktop overlay, and state which operating system you used. Check click-through, dragging, targeting, Escape, hiding, and shortcuts; browser mocks cannot verify OS input delivery. Include a screenshot or short clip for a new gag.
+Push a version tag such as `v1.0.0` or `v1.0.0-rc.1` after merging the intended changes. The [build workflow](.github/workflows/build.yml) sets embedded versions from the tag, tests both platforms, and creates a draft release. No version-bump commit is needed.
 
-Keep autonomous actions infrequent and bounded. Commands take priority, hidden time does not accumulate events, and remembered belongings survive cleanup. Keep the core offline, without telemetry, cloud AI services, auto-start, or background network calls. Screen capture is confined to the explicitly enabled local-vision feature: transient, cropped, and processed on-device. The explicit App updates flow may contact GitHub to discover and download signed releases. Discuss larger changes before adding dependencies.
+Before publishing, test the downloaded installers and an in-app upgrade with saved settings and memories on both platforms. Check sleep/wake, available display setups, and offline/interrupted updates. Record tested OS versions, write release notes and known limitations, then publish the draft.
 
-Code contributions use MIT; artwork must declare its license. Do not submit third-party character packs without permission.
-
-## Project map
-
-| Path                        | Responsibility                                                   |
-| --------------------------- | ---------------------------------------------------------------- |
-| `src/simulation/`           | Engine, state, movement, persistence normalization, and catalogs |
-| `src/simulation/behaviors/` | Finite routines, snacks, interaction, and theatre                |
-| `src/ui/controls/`          | Control-room logic and styles                                    |
-| `src/ui/pet/`               | Overlay wiring, rendering, and styles                            |
-| `src/platform/`             | Native bridge, pointer tracking, storage, and audio              |
-| `src/assets/`               | Runtime sprite sheets and editable SVG props                     |
-| `src-tauri/src/`            | Native windows, tray, shortcuts, storage, and input leases       |
-| `scripts/`                  | Frontend build and browser preview                               |
-| `tests/`                    | Behaviour and persistence tests                                  |
-| `art/`                      | Current editable artwork and source assets                       |
-
-The HTML entry points stay at `src/index.html` and `src/pet.html` so browser and Tauri URLs remain stable. Keep CSS beside its UI. CSS asset URLs are relative to the stylesheet; image URLs assigned to DOM nodes are relative to the page.
-
-## Implementation boundaries
-
-Keep TypeScript strict checking enabled and use `.js` extensions in local imports, matching emitted modules. `npm test` builds the frontend and runs Node tests against `web-dist/`. Do not edit or commit build output. Use `.scratch/` for disposable captures and experiments; it is ignored.
-
-The simulation owns state and contains no browser or native dependencies. `Gullbert` coordinates command priority, interruption, and activity transitions. Its composed owners keep body movement, props, belongings, food policy, speech, moods, and interaction history private. Request meaningful operations instead of assigning state. Normal completion, interruption, and hide/resume have distinct outcomes; preserve these distinctions in each routine lifecycle.
-
-Keep DOM, native calls, storage, audio, and wall-clock scheduling outside the simulation. `PetApplication` owns startup, shutdown, timers, subscriptions, persistence, and outstanding native work through explicitly supplied dependencies. `pet.ts` only assembles those dependencies. Renderers consume detached, read-only `PetPresentation` snapshots; they must not inspect the runtime or import behavior implementations. Use `inspect()` for diagnostic observations and behavioral assertions, never as a mutation interface.
-
-Durable memory has one simulation writer and a local in-memory cache. Native persistence uses `memory.sqlite3`: a transaction saves learned state and the latest 200 structured experiences together. `memory_store.rs` imports the legacy `roommate.json` once without deleting it. Normalize new fields through `src/simulation/memory.ts`; record completed experiences with the injected wall clock and original display geometry, never moods, in-flight rewards, screen text, or scene clocks. Failed native initialization must not overwrite unread memory. The browser playground keeps the same snapshot in local storage.
-
-Public action identity, explicit launcher aliases, visibility, and Targeting preparation live in `src/actions/catalog.json`. Controls submit action names; preview and desktop routing own effect ordering. Keep labels and menu layout in presentation code, and keep private simulation commands and additional routines outside this catalog. TypeScript reads its action names directly; Cargo validates and generates Rust routing in `OUT_DIR` without a frontend build.
-
-Targeting notices carry the native lease generation (or a preview identity). Successful placement releases capture before selection delivery; abandonment cancels a pending reward, normal tidy completion finishes tidying, and replacement only closes the old view. Desktop Escape goes through the native input owner. Frontend expiry remains a fallback when native terminal delivery fails.
-
-`npm run test:routing` builds the frontend, obtains event traces through the real Rust action router and native input lifecycle with recorded OS effects, and delivers them to `PetApplication` with real `Gullbert`. It requires the same native build prerequisites as Cargo tests. Plain `npm test` runs preview and application regressions without native build tools; the native trace cases are skipped there. Neither test mode verifies OS input delivery.
-
-### Readability and module depth
-
-Use explicit blocks for every `if`, `else`, and loop in the TypeScript runtime. Express value and action choices with `if` blocks instead of ternary expressions. Use function declarations for named functions, and explicit bodies for callbacks. Keep one variable declaration per statement. Optional property access and nullish defaults are useful for reading optional data; avoid hiding state transitions in expressions.
-
-Use comments for constraints, ownership, platform quirks, and decisions that the code cannot explain on its own. Remove comments that repeat a name or narrate a straightforward statement. Keep user-facing behaviour in the README and implementation guidance here.
-
-Use classes when a module owns a lifecycle: private state, a few public operations, and named private methods for transitions. Built-in routines share `Routine` for start, update, completion, interruption, visibility, and presentation. Keep phase transitions inside their owner. Prefer composition and focused capability interfaces; routine code must not receive the engine, native input, storage, or wall-clock scheduling. Use ordinary functions for stateless geometry and calculations. Do not add plugin discovery, loading, or distribution to the routine seam.
-
-Additional routines can be supplied as `routines` factories in the fourth `Gullbert` constructor argument. Each factory receives the limited `RoutineCapabilities` interface in `src/simulation/routine.ts`; built-in owners use the same lifecycle with focused internal domain operations. Core commands retain priority. Return `"complete"` from `update()` for normal completion; use `interrupt()` for cancellation cleanup and `visibility()` for hide/resume behavior. The runtime cleans up scoped props and disables effect capabilities when the routine ends. This is an in-process extension seam, not a plugin system.
-
-Keep modules deep: callers should request an operation without managing its timers, pending native replies, or stale-reply checks. The engine's private stepping phases preserve routine priority behind `step(delta)`. Keep hit-region geometry in `src/simulation/interaction.ts` so rendering and native capture use the same rectangles. Test behavior through these interfaces and preserve interruption, random-choice ordering, and lease ownership during refactors.
-
-Cleanup selection runs before generic command resets so removing loose mess cannot cancel a flight. The renderer and native bridge share object geometry and stacking order. Scene-owned props and remembered belongings are protected from direct cleanup.
-
-Native input capture must expire independently of frontend updates. Ordinary placement has a 12-second deadline; focused tidying has a fixed 30-second deadline. Direct interaction uses short leases in `src-tauri/src/native_input/interaction.rs`, with a native exit check that restores click-through on departure or a stalled frontend. Explicit targeting takes precedence.
-
-`src-tauri/src/native_input/` owns targeting, pickup, cursor authorization, Escape, click-through, and failure recovery. Its lease state and effects seam are private. `desktop.rs` supplies Tauri effects and queues commands, shortcuts, tray actions, and deadline callbacks on the main thread; reentrant callbacks wait until the current operation finishes, and no state lock is held across OS calls. Keep new native input entry points on that dispatch path. Monitor selection and overlay positioning live in `windows.rs`.
-
-The Rust desktop shell uses responsibility-based modules within one binary crate:
-
-| Module                                      | Responsibility                                                               |
-| ------------------------------------------- | ---------------------------------------------------------------------------- |
-| `main.rs`                                   | Startup, plugin and command registration, window lifecycle                   |
-| `actions.rs`                                | Shared action routing, action messages, and launcher flags                   |
-| `windows.rs`                                | Window lookup, monitor selection, and cursor coordinate conversion           |
-| `vision.rs` / `vision/` / `native/vision.m` | Opt-in local screen OCR, throttling, permission and detection status         |
-| `caret.rs`                                  | Read-only caret geometry, Accessibility access, and coordinate normalization |
-| `state.rs`                                  | Application state, preference persistence, and control-room snapshots        |
-| `roommate.rs`, `memory_store.rs`            | Local SQLite memory, legacy migration, and roommate status messages          |
-| `tray.rs`                                   | Tray menus, labels, and menu events                                          |
-| `shortcuts.rs`                              | Global shortcut registration and event routing                               |
-| `native_input/`                             | Input ownership, deadlines, OS effects, and serialized dispatch              |
-
-Keep commands beside the responsibility they expose, and register their qualified paths in `main.rs`; frontend command names stay unchanged. Keep implementation helpers private and use `pub(crate)` only where another module needs access. Group related types and behavior together rather than creating one file per type. Unit tests stay with their owning module; the larger input lifecycle suite remains in `native_input/tests.rs`.
-
-This follows [Rust's module organization](https://doc.rust-lang.org/book/ch07-05-separating-modules-into-different-files.html) and [Tauri's support for commands in separate modules](https://v2.tauri.app/develop/calling-rust/#defining-commands-in-a-separate-module). The desktop-only app does not currently need a separate library crate or workspace.
-
-Lifecycle tests use a recording adapter and a controlled clock through the same input module as the app. Run them locally with the Cargo command above. The build workflow runs native tests on Apple Silicon Mac, Intel Mac, and Windows runners for main-branch pushes, `v*` tags, and manual builds. Pull requests run frontend checks; use a manual build with no release tag to validate native changes before merging. Native tests run in parallel with packaging, and a draft release requires both to pass on every platform. Main builds refresh the release and test caches using the workflow's pinned Rust version. Each package is built and tested on its native architecture. CI checks do not replace hands-on desktop interaction testing.
-
-Pickup timing uses elapsed wall time for its rolling history and revenge budget; animation and prop expiry use visible simulation time. `pickup-drag.ts` owns each gesture's IPC and fixed hold deadline. Stale acquisition, release, or heartbeat replies cannot change a newer gesture. Cursor movement requires its own bounded authorization; non-cursor retaliation may retain Escape without authorizing pointer movement.
-
-## Native smoke-test commands
-
-While Gullbert is running, a second invocation of its executable accepts local commands such as `--summon`, `--hide`, `--show`, `--clean`, `--poop-here`, `--feed`, `--place-bag`, `--eat-cursor`, `--bring-gift`, `--place-perch`, `--tidy`, and `--cancel`. See the command mapping in `src-tauri/src/actions.rs` for all supported flags. These arguments are ignored on first launch, which opens the control room normally.
-
-## Local vision checks
-
-`cargo test --manifest-path src-tauri/Cargo.toml --locked` also checks OCR result validation. Actual ScreenCaptureKit capture and permission delivery require manual desktop testing. The build compiles `native/vision.m` with Apple clang for the selected architecture; ScreenCaptureKit is weak-linked so the base app can still launch on macOS 11–13 with vision unavailable.
-
-### Windows text vision
-
-Windows uses Ocrs + RTen compiled into the executable, with two embedded, checksum-pinned models. Run `npm run prepare:vision` before direct Windows Cargo builds/tests; npm dev/build does this automatically on Windows. `models/manifest.json` pins the upstream runtime-model URLs and SHA-256 hashes, and `build.rs` verifies them without network access. Do not commit model binaries or screen captures. Include the model notice/license when distributing; model weights are CC BY-SA 4.0, distinct from the MIT application code.
-
-Microsoft's [Windows.Media.Ocr documentation](https://learn.microsoft.com/en-us/uwp/api/windows.media.ocr) requires package identity for desktop apps. Ocrs avoids adding MSIX identity or a runtime installer to the existing NSIS distribution. Its English-oriented models differ from Apple Vision; exact OCR output is not expected to match.
-
-`vision/ocr.rs` owns model loading and recognition; `vision/windows.rs` captures only a 640 × 360 physical-pixel crop using GDI, on a worker thread temporarily set to per-monitor DPI awareness v2. Monitor selection, negative origins, and OCR boxes stay in physical screen coordinates; `caret.rs` converts once using the overlay scale. Capture excludes this process's visible top-level windows using `WDA_EXCLUDEFROMCAPTURE` and requires DWM composition and Windows build 19041+. Failure to exclude a window fails the entire scan. Affinity remains set for those windows for their lifetime. GDI objects and thread DPI are restored on every exit. Model weights are cached, but images and recognition results are dropped after each scan. No text, pixels, or OCR errors containing text are logged or persisted.
-
-The shared runtime retains its single-flight slot until OCR completes. Cancellation invalidates the generation and clears cached targets; it does not forcibly interrupt the OCR library. Pause, hide/show, Polite-ish, and vision-setting changes discard late results. The final caret gate also rejects a result if the overlay moved or its DPI changed. Window awareness and image recognition are outside this feature.
-
-Automated coverage includes crop clipping, nearest-word selection, printable-character fallback, physical-to-logical DPI conversion, stale-result cancellation, and throttling. The Windows native suite additionally loads both embedded models, checks a blank image, and recognizes a synthetic HELLO WORLD fixture through nearest-word selection and screen-coordinate conversion. CI builds the NSIS installer and runs native tests on Windows; these checks cannot establish capture behavior.
-
-**Native Windows testing still required before release:**
-
-- Install the NSIS build on a clean Windows 10 2004+ / Windows 11 machine, disconnect the network, and scan visible text without OCR DLLs, language packs, or package identity.
-- Check light/dark browser pages and chat text, small fonts, unsupported scripts, and the carried character's landing position.
-- Verify the pet, bubbles, nest, and control room never become OCR targets, including when the overlay covers the monitor. Confirm underlying text is visible in captures; GDI/compositor behavior must be tested on real hardware.
-- Use 100%, 125%, 150%, and 200% displays, negative monitor origins, monitors above/left, pointer positions at seams, summon between monitors, DPI changes, and monitor disconnect during a scan.
-- Pause, hide then show, switch vision off/on, select Polite-ish, and issue commands during slow scans. Verify no stale hunt, overlapping scans, or catch-up burst occurs.
-- Check protected video, lock/secure desktop, remote desktop, and capture failure recovery; no target is preferable to capturing Gullbert or using stale geometry.
-- Measure first-scan latency, steady-state CPU/memory, and GDI handle counts during repeated scans and failures. Check Windows builds older than 19041 report unsupported while ordinary caret mode remains usable.
-
-## Giving the birds something to say
-
-Edit [`src/simulation/dialogue.json`](src/simulation/dialogue.json) for character speech, postcard captions, and treasure descriptions. No TypeScript edits are needed to change existing lines or add alternatives to a pool. The catalog is bundled locally at build time; rebuild or use the preview watcher to see edits. Installed copies do not hot-load this source file.
-
-- `gullbert.general`, `greetings`, `moods`, and `hats` contain everyday remarks. Other blocks match the interaction or routine: `cleanup`, `crime`, `cursor`, `gags`, `gifts`, `perch`, `pickup`, `quiet`, `snacks`, `theatre`, `touch`, and `typing`.
-- Arrays of strings are pools of alternatives. Append a line to add variety. Keep at least one nonblank, distinct entry. Greetings and moods avoid immediate repeats when multiple options exist; cleanup cycles its responses; hats and general remarks use the simulation's random selection.
-- Single strings are fixed cues for a particular action or punchline. Edit their values while retaining the keys. Adding a new situation or turning a fixed cue into a pool needs a corresponding behavior change.
-- `gullbert.greetings.treasure` uses `{item}` for the name of an actually owned treasure. Keep that placeholder in each alternative; other placeholders are not supported.
-- `guests.pigeon` and `guests.seagull` group conversations by scene beat. Each beat is an array of paired `{ "gullbert": "...", "visitor": "..." }` exchanges. Append a complete pair to add an alternative. An empty string means that speaker stays silent; at least one must speak. Keep replies together so the joke makes sense.
-
-Guest alternatives cycle by visit, separately for each species, starting with the first pair. The same visit index is used across beats, wrapping within each beat's array. For a linked conversation, add a matching alternative at the same index in every beat; standalone pairs can be added to just one beat. Rotation survives restarts through saved visitor counts. Gullbert speaks first, then the visitor replies after a short pause; each line gets reading time based on its length. Interruption clears both bubbles and pending replies. Trick dialogue pools cycle using saved completed-performance counts.
-
-Keep lines short enough to read in the existing bubble duration. Gullbert is a territorial, self-important snack enthusiast; the pigeon is a dry, unimpressed visitor; the rival seagull is loudly competitive. For example, a pigeon exchange can be:
-
-```json
-{
-  "gullbert": "this is a private potato estate.",
-  "visitor": "I shall inform the flock."
-}
-```
-
-Run `npm test` and `npm run check` after editing. The build rejects empty pools, blank speech, duplicate alternatives, and invalid placeholders with a catalog path. Type checking catches missing or incompatible entries used by the behaviors. Behavior timings, poses, and sound effects stay in TypeScript.
+Application fixes need a new tag. To retry a tooling failure, run **Build Gullbert** on `main` with the existing `release_tag`; replacing assets on a published release makes them public immediately. GitHub Pages updates separately on pushes to `main`.

@@ -7,20 +7,16 @@ export interface Point {
 export interface PointerSample extends Point {
   inside?: boolean;
 }
-/** Target geometry and a position marker; vision also supplies one display glyph. */
-export interface CaretSample extends Point {
-  height: number;
-  context: string;
-  position: string;
-  source?: "caret" | "vision";
-  glyph?: string | null;
+export interface WorkSample {
+  window: Point & { id: number; width: number; height: number };
+  keyDownCount: number;
+  idleSeconds: number;
 }
 export type Direction = -1 | 1;
 export type Hat =
   "none" | "captain" | "cone" | "beanie" | "paper-crown" | "fried-egg";
 export interface Settings {
   paused: boolean;
-  vision?: boolean;
   sound: boolean;
   mischief: number;
   hat: Hat;
@@ -44,6 +40,9 @@ export interface Memory {
   version: 2;
   episodes: MemoryEpisode[];
   performances: Record<Trick, number>;
+  unpaidTricks: number;
+  trickCooldownUntilMs: number | null;
+  trickRefusals: number;
   visits: Record<"pigeon" | "gull", number>;
   learned: LearnedHabits;
   perch: Point | null;

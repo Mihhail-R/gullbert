@@ -65,6 +65,12 @@ export interface PerchScene extends TimedScene {
   kind: "perch";
   phase: "approach" | "settle" | "loiter";
 }
+export interface WorkScene extends TimedScene {
+  kind: "work";
+  phase: "approach" | "watch";
+  windowId: number;
+  nextRemark: number;
+}
 export interface CapScene extends TimedScene {
   kind: "cap";
   phase: "drop" | "ready" | "chase" | "peck" | "return" | "collect" | "victory";
@@ -80,13 +86,14 @@ export interface CapScene extends TimedScene {
 export interface LearningScene extends TimedScene {
   kind: "trick" | "habit";
   trick: Trick;
-  phase: "consider" | "perform" | "reward" | "check";
+  phase: "consider" | "perform" | "reward" | "check" | "refuse";
   phaseStarted: number;
   target: Point;
   origin: Point;
   facing: Direction;
   practiced: boolean;
   unsolicited: boolean;
+  reluctant: boolean;
 }
 interface TheatreClock extends TimedScene {
   started: number;
@@ -234,31 +241,18 @@ export interface RelocationScene extends TimedScene {
   target: Point;
 }
 export type Scene =
-  | TypingScene
   | RelocationScene
   | CursorScene
   | SnackScene
   | CrimeScene
   | GiftScene
   | PerchScene
+  | WorkScene
   | CapScene
   | LearningScene
   | TheatreScene
   | GuestScene
   | GagScene;
-export interface TypingScene extends TimedScene {
-  kind: "typing";
-  visual?: boolean;
-  source: string;
-  phase: "approach" | "watch" | "pounce" | "carry" | "deposit" | "innocent";
-  resume: "approach" | "watch" | "pounce" | "carry" | "deposit";
-  deadline: number;
-  target: Point;
-  glyph: string;
-  carrying: boolean;
-  steal: boolean;
-  buildNest: boolean;
-}
 export function isTheatre(
   scene: ReadonlyValue<Scene> | null,
 ): scene is ReadonlyValue<TheatreScene> {
