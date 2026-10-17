@@ -496,7 +496,7 @@ fn stale_target_and_cursor_deadlines_do_not_affect_replacements() {
 }
 
 #[test]
-fn pickup_heartbeat_expiry_releases_capture_but_keeps_fixed_deadline_semantics() {
+fn pickup_heartbeat_expiry_releases_capture_and_escape_without_waiting_for_deadline() {
     let mut input = Input::default();
     let effects = Recording::default();
     let id = input.begin_pickup(&effects, rect()).unwrap();
@@ -505,15 +505,50 @@ fn pickup_heartbeat_expiry_releases_capture_but_keeps_fixed_deadline_semantics()
     assert!(effects.capture.get());
     effects.advance(Duration::from_millis(350));
     input.watch(&effects);
-    assert!(!effects.capture.get());
-    assert!(effects.escape.get());
+    effects.assert_released();
+    assert_eq!(effects.actions(), ["cancel"]);
     assert!(input.sync_interaction(&effects, vec![], Some(id)).is_none());
     input.escape(&effects).unwrap();
-    assert!(effects.actions().is_empty());
     effects.advance(Duration::from_millis(29650));
     effects.fire_due(&mut input);
     assert_eq!(effects.actions(), ["cancel"]);
     effects.assert_released();
+}
+
+#[test]
+fn late_heartbeat_or_escape_finishes_expired_pickup_without_canceling_its_replacement() {
+    for trigger in ["heartbeat", "escape"] {
+        let mut input = Input::default();
+        let effects = Recording::default();
+        let old_id = input.begin_pickup(&effects, rect()).unwrap();
+        let old_deadline = effects.latest();
+        effects.advance(Duration::from_millis(350));
+
+        match trigger {
+            "heartbeat" => {
+                assert!(input
+                    .sync_interaction(&effects, vec![], Some(old_id))
+                    .is_none());
+            }
+
+            "escape" => input.escape(&effects).unwrap(),
+
+            _ => unreachable!(),
+        }
+
+        effects.assert_released();
+        assert_eq!(effects.actions(), ["cancel"]);
+        let new_id = input.begin_pickup(&effects, rect()).unwrap();
+        effects.clear();
+        input.expired(&effects, old_deadline);
+        assert!(input.end_pickup(&effects, old_id, true, true).is_none());
+        assert!(effects.actions().is_empty());
+        assert!(effects.capture.get());
+        assert!(effects.escape.get());
+
+        input.end_pickup(&effects, new_id, false, false);
+        effects.assert_released();
+    }
 }
 
 #[test]
