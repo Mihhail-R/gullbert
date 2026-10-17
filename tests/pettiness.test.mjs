@@ -158,6 +158,29 @@ test("accepting a cap invitation clears a snub even before the first round finis
   remainUnprotested(sim, 30);
 });
 
+test("an apology meal clears earlier ignored invitations before the next snub", () => {
+  const sim = new Gullbert(900, 650, () => 0);
+  sim.configure({ paused: true, mischief: 1 });
+  sim.restoreMemory({ learned: { tricks: { spin: 3 } } });
+  advance(sim, 100);
+  sim.configure({ paused: false });
+  waitFor(sim, (view) => view.scene?.kind === "trick" && view.scene.phase === "reward");
+  advance(sim, 21);
+  const ignoredAt = sim.inspect().time;
+
+  sim.action("apology");
+  waitFor(sim, (view) => view.memory.learned.snackSpot?.meals === 1, 20);
+  const meals = sim.exportMemory().episodes.filter((episode) => {
+    return episode.kind === "meal";
+  }).length;
+  assert.equal(meals, 1);
+
+  waitFor(sim, (view) => view.scene?.kind === "trick" && view.scene.phase === "reward");
+  advance(sim, 21);
+  assert.ok(sim.inspect().time - ignoredAt < 570, "the earlier snub has not expired");
+  remainUnprotested(sim, 30);
+});
+
 test("naturally ignored autonomous tricks produce a finite, interruptible protest", () => {
   for (const level of [1, 2]) {
     const sim = secondInvitation(level);

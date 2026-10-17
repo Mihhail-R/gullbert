@@ -68,6 +68,7 @@ type Environment = Pick<
   | "lifecycle"
   | "events"
   | "moods"
+  | "meals"
 >;
 export class SnackRoutine implements SceneOwner {
   #environment: Environment;
@@ -86,6 +87,7 @@ export class SnackRoutine implements SceneOwner {
       "lifecycle",
       "events",
       "moods",
+      "meals",
     ]);
   }
   get scene(): ReadonlyValue<OwnedScene> | null {
@@ -203,45 +205,73 @@ export class SnackRoutine implements SceneOwner {
       return false;
     }
 
-    if (scene.bagId != null && scene.bagId !== sim.objects.snapshot().bag?.id) {
+    const bag = sim.objects.snapshot().bag;
+
+    if (scene.bagId != null && scene.bagId !== bag?.id) {
       sim.lifecycle.complete();
       sim.lifecycle.rest();
       return true;
     }
 
-    const bag = sim.objects.snapshot().bag;
+    switch (scene.phase) {
+      case "approach": {
+        if (!bag) {
+          return true;
+        }
 
-    if (scene.phase === "approach" && bag) {
-      if (sim.body.moveToward(bagGoal(sim), 180, dt)) {
+        if (!sim.body.moveToward(bagGoal(sim), 180, dt)) {
+          if (sim.clock.now >= scene.until) {
+            sim.lifecycle.complete();
+            sim.lifecycle.rest();
+          }
+
+          return true;
+        }
+
         scene.phase = "eat";
         scene.until = sim.clock.now + 2.05;
-        sim.objects.consumeBag(bag.id);
-        sim.food.clearRequest();
-        sim.events.emit("munch");
-        sim.moods.set("snack-minded", sim.clock.now);
-      } else if (sim.clock.now >= scene.until) {
-        sim.lifecycle.complete();
-        sim.lifecycle.rest();
-      }
-    } else if (scene.phase === "search") {
-      sim.body.moveToward(scene.target, 75, dt);
 
-      if (sim.clock.now >= scene.until) {
+        if (sim.objects.consumeBag(bag.id)) {
+          sim.food.clearRequest();
+          sim.events.emit("munch");
+          sim.moods.set("snack-minded", sim.clock.now);
+          sim.meals.consumed({ x: sim.body.x, y: sim.body.y });
+        }
+
+        break;
+      }
+
+      case "search": {
+        sim.body.moveToward(scene.target, 75, dt);
+
+        if (sim.clock.now < scene.until) {
+          return true;
+        }
+
         scene.phase = "disappointed";
         scene.until = sim.clock.now + 2;
         sim.food.failed(sim.clock.now);
         sim.moods.set("snack-minded", sim.clock.now, { speak: false });
 
-        if (sim.objects.snapshot().bag) {
+        if (bag) {
           sim.speech.say(dialogue.gullbert.snacks.aBagOfBetrayal, 2.5);
         } else {
           sim.speech.say(dialogue.gullbert.snacks.noChipsScandalous, 2.5);
         }
+
+        break;
       }
-    } else if (sim.clock.now >= scene.until) {
-      sim.lifecycle.complete();
-      sim.lifecycle.rest(3);
-      sim.food.afterBagActivity(sim.clock.now);
+
+      case "eat":
+      case "disappointed": {
+        if (sim.clock.now >= scene.until) {
+          sim.lifecycle.complete();
+          sim.lifecycle.rest(3);
+          sim.food.afterBagActivity(sim.clock.now);
+        }
+
+        break;
+      }
     }
 
     return true;

@@ -127,9 +127,7 @@ export class Gullbert {
         this.#sounds.push(sound);
       },
       ateChip: (point) => {
-        this.#pettiness.settle();
-        this.#motivation.enjoyed("meal");
-        this.#learning.ateChip(point);
+        this.#ateMeal(point);
       },
       walked: (point) => {
         this.#restAtHangout(point);
@@ -1163,6 +1161,11 @@ export class Gullbert {
       food: this.#food,
       belongings: this.#belongings,
       moods: this.#moods,
+      meals: Object.freeze({
+        consumed(point: Point) {
+          runtime.#ateMeal(point);
+        },
+      }),
       destinations: Object.freeze({
         randomPoint() {
           return runtime.#randomPoint();
@@ -1274,6 +1277,12 @@ export class Gullbert {
       pose,
       frame: frameFor(pose),
     };
+  }
+
+  #ateMeal(point: Point): void {
+    this.#pettiness.settle();
+    this.#motivation.enjoyed("meal");
+    this.#learning.ateMeal(point);
   }
 
   #completeRoutine(): void {

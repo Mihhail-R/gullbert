@@ -68,6 +68,7 @@ type Environment = Pick<
   | "body"
   | "speech"
   | "events"
+  | "meals"
 >;
 export class GiftRoutine implements SceneOwner {
   #environment: Environment;
@@ -84,6 +85,7 @@ export class GiftRoutine implements SceneOwner {
       "body",
       "speech",
       "events",
+      "meals",
     ]);
   }
   get scene(): ReadonlyValue<OwnedScene> | null {
@@ -317,6 +319,7 @@ export class GiftRoutine implements SceneOwner {
 
           if (scene.item === "chip") {
             sim.events.emit("munch");
+            sim.meals.consumed({ x: sim.body.x, y: sim.body.y });
           }
         }
 

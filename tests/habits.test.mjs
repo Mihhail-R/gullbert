@@ -156,6 +156,29 @@ test("meals delay choices and reduce snack checks before appetite recovers", () 
   assert.equal(habits.choose(memory, 333, 0, () => 0.7), "habit_snack");
 });
 
+test("a bag meal postpones autonomous snack checks for ninety visible seconds", () => {
+  const sim = new Gullbert(900, 650, () => 0);
+  sim.configure({ paused: true, mischief: 0 });
+  advance(sim, 100);
+  sim.action("place_bag", { x: 300, y: 300 });
+  reach(sim, "eat");
+  const mealTime = sim.inspect().time;
+  assert.equal(sim.exportMemory().learned.snackSpot.meals, 1);
+  sim.clean();
+
+  advance(sim, mealTime + 89 - sim.inspect().time);
+  sim.configure({ paused: false });
+  sim.step(0.05);
+  assert.notEqual(sim.inspect().scene?.kind, "habit");
+  sim.configure({ paused: true });
+
+  advance(sim, 1.1);
+  sim.action("cancel");
+  sim.configure({ paused: false });
+  sim.step(0.05);
+  assert.equal(sim.inspect().scene.kind, "habit");
+});
+
 test("preferences survive a JSON save round trip and decisions do not mutate memory", () => {
   const memory = normalizeMemory({
     learned: { tricks: { spin: 2 }, snackSpot: { x: 100, y: 100, meals: 1 } },

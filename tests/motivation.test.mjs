@@ -99,6 +99,37 @@ test("hidden and paused time freezes tendencies; saved memory carries no care st
   assert.ok(sim.inspect().motivation.energy > content.energy);
 });
 
+test("every consumed meal restores energy and social interest exactly once", () => {
+  for (const command of ["feed", "place_bag", "chip_toss", "bring_gift", "apology"]) {
+    const expected = new Motivation();
+    expected.enjoyed("meal");
+
+    if (command === "chip_toss") {
+      expected.enjoyed("play");
+    }
+
+    const sim = new Gullbert(900, 650, () => 0.95);
+    sim.configure({ paused: true, mischief: 0 });
+    sim.action(command, { x: 650, y: 480 });
+    assert.deepEqual(sim.inspect().motivation, NEUTRAL_MOTIVATION, command);
+    advance(sim, 20);
+    assert.deepEqual(sim.inspect().motivation, expected.snapshot(), command);
+    advance(sim, 20);
+    assert.deepEqual(sim.inspect().motivation, expected.snapshot(), command);
+  }
+});
+
+test("cancelled meals leave energy and social interest unchanged", () => {
+  for (const command of ["place_bag", "chip_toss", "bring_gift", "apology"]) {
+    const sim = new Gullbert(900, 650, () => 0.95);
+    sim.configure({ paused: true, mischief: 0 });
+    sim.action(command, { x: 650, y: 480 });
+    sim.action("cancel");
+    advance(sim, 20);
+    assert.deepEqual(sim.inspect().motivation, NEUTRAL_MOTIVATION, command);
+  }
+});
+
 test("a completed game changes tendencies, but a cancelled invitation does not", () => {
   const sim = new Gullbert(900, 650, () => 0.5);
   sim.configure({ paused: true, mischief: 0 });
