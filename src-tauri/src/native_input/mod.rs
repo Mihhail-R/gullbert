@@ -127,8 +127,10 @@ impl Input {
         };
         self.interaction.refreshed = Some(effects.now());
         let valid = pickup_id.is_none_or(|id| self.pickup.refresh(id, effects.now()));
+        self.expire_pickup(effects);
         let point = effects.pointer();
         self.reconcile(effects, point.as_ref());
+
         if valid {
             point
         } else {
@@ -377,6 +379,8 @@ impl Input {
     }
 
     fn escape(&mut self, effects: &impl Effects) -> Result<(), String> {
+        self.expire_pickup(effects);
+
         if self.targeting.is_active() {
             self.finish_target(effects);
         } else if self.cursor.armed() || self.pickup.active(effects.now()) {
@@ -384,24 +388,35 @@ impl Input {
             self.replace_target(effects);
             effects.emit("cancel", None, None)?;
         }
+
         Ok(())
     }
 
     fn expired(&mut self, effects: &impl Effects, deadline: Deadline) {
         match deadline {
             Deadline::Target(id) if self.targeting.is_current(id) => self.finish_target(effects),
+
             Deadline::Pickup(id) if self.pickup.id == id => {
                 self.pickup.cancel();
                 self.reconcile(effects, None);
                 self.cancel_cursor(effects);
                 let _ = effects.emit("cancel", None, None);
             }
+
             Deadline::Cursor(id) => self.release_cursor(effects, id),
+
             _ => {}
         }
     }
 
     fn watch(&mut self, effects: &impl Effects) {
+        self.expire_pickup(effects);
         self.reconcile(effects, effects.pointer().as_ref());
+    }
+
+    fn expire_pickup(&mut self, effects: &impl Effects) {
+        if self.pickup.expired(effects.now()) {
+            self.expired(effects, Deadline::Pickup(self.pickup.id));
+        }
     }
 }
