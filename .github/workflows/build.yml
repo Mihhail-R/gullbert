@@ -51,6 +51,21 @@ jobs:
         if: hashFiles('eslint.config.mjs') != ''
         run: npm run lint
       - run: npm run format:check
+      # Retrying an older release tag may check out sources without this suite.
+      - name: Install Chromium for browser smoke tests
+        if: env.RELEASE_TAG == '' || hashFiles('tests/browser/playwright.config.mjs') != ''
+        run: npx playwright install --with-deps chromium
+      - name: Exercise the real browser application
+        if: env.RELEASE_TAG == '' || hashFiles('tests/browser/playwright.config.mjs') != ''
+        run: npm run test:browser
+      - name: Save browser failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-test-results
+          if-no-files-found: ignore
+          retention-days: 7
+          path: test-results/
       - name: Share validated release metadata
         if: env.RELEASE_TAG != ''
         uses: actions/upload-artifact@v4
@@ -66,16 +81,17 @@ jobs:
             src-tauri/Cargo.lock
             src-tauri/tauri.conf.json
   desktop:
-    # Main keeps caches available to future tags. Manual runs can validate the
-    # native pipeline without publishing; pull requests retain frontend checks.
-    if: github.event_name != 'pull_request'
+    # Pull requests exercise native tests on both supported platforms. Main,
+    # tags, and manual runs also build packages and keep release caches warm.
     name: ${{ matrix.platform }} (${{ matrix.task }})
     needs: test
     strategy:
       fail-fast: false
       matrix:
         platform: [mac-apple-silicon, windows-x64]
-        task: [package, test]
+        task: >-
+          ${{ fromJSON(github.event_name == 'pull_request' && '["test"]' ||
+          '["package","test"]') }}
         include:
           - platform: mac-apple-silicon
             os: macos-latest

@@ -39,7 +39,15 @@ npm test
 npm run check
 npm run lint
 npm run format:check
+npx playwright install chromium  # Once, and after Playwright upgrades
+npm run test:browser
 ```
+
+The browser smoke suite starts its own preview server on port 4188 and runs the real
+playground, iframe application, and renderer in Chromium. It checks startup, sprite loading,
+actions, targeting, cleanup, and hide/show, and fails on uncaught errors or failed requests.
+On Linux, use `npx playwright install --with-deps chromium` to install system dependencies too.
+Failed runs save screenshots and traces under `test-results/`.
 
 For native or action-routing changes, also run:
 
