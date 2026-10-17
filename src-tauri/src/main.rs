@@ -5,6 +5,7 @@ mod memory_store;
 mod native_input;
 mod roommate;
 mod shortcuts;
+mod shutdown;
 mod state;
 mod tray;
 mod updates;
@@ -26,6 +27,7 @@ fn prepare_pet(app: tauri::AppHandle) -> Result<Snapshot, String> {
 fn main() {
     tauri::Builder::default()
         .manage(State::default())
+        .manage(shutdown::Runtime::default())
         .manage(updates::Runtime::default())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(native_input::Runtime::default())
@@ -35,6 +37,7 @@ fn main() {
         .plugin(shortcuts::plugin())
         .invoke_handler(tauri::generate_handler![
             state::snapshot,
+            shutdown::shutdown_ready,
             updates::app_version,
             updates::check_update,
             updates::install_update,
@@ -84,5 +87,5 @@ fn main() {
         })
         .build(tauri::generate_context!())
         .expect("Gullbert could not start")
-        .run(|_app, _event| {});
+        .run(|app, event| shutdown::on_exit(app, &event));
 }

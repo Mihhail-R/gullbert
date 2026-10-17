@@ -267,7 +267,12 @@ pub(crate) async fn sync_interaction(
     if window.label() != "pet" {
         return None;
     }
+
     request(app, move |app| {
+        if crate::shutdown::in_progress(app) {
+            return None;
+        }
+
         with_input(app, |input, effects| {
             input.sync_interaction(effects, rects, pickup_id)
         })
@@ -286,7 +291,12 @@ pub(crate) async fn begin_pickup(
     if window.label() != "pet" {
         return None;
     }
+
     request(app, move |app| {
+        if crate::shutdown::in_progress(app) {
+            return None;
+        }
+
         with_input(app, |input, effects| input.begin_pickup(effects, rect))
     })
     .await
@@ -305,9 +315,11 @@ pub(crate) async fn end_pickup(
     if window.label() != "pet" {
         return None;
     }
+
     request(app, move |app| {
+        let interactive = !crate::shutdown::in_progress(app);
         with_input(app, |input, effects| {
-            input.end_pickup(effects, id, retaliate, tug)
+            input.end_pickup(effects, id, retaliate && interactive, tug && interactive)
         })
     })
     .await
@@ -334,7 +346,12 @@ pub(crate) async fn tug_cursor(
     if window.label() != "pet" {
         return false;
     }
+
     request(app, move |app| {
+        if crate::shutdown::in_progress(app) {
+            return false;
+        }
+
         with_input(app, |input, effects| {
             input.tug_cursor(effects, id, Point { x, y })
         })
@@ -351,6 +368,10 @@ pub(crate) async fn target_picked(
     y: f64,
 ) -> Result<(), String> {
     request(app, move |app| {
+        if crate::shutdown::in_progress(app) {
+            return Err("Gullbert is preparing to quit or install an update.".into());
+        }
+
         with_input(app, |input, effects| {
             input.target_picked(effects, id, Point { x, y })
         })
@@ -397,6 +418,16 @@ pub(crate) fn begin_target(
 }
 pub(crate) fn escape(app: &tauri::AppHandle) -> Result<(), String> {
     with_input(app, |input, effects| input.escape(effects))
+}
+
+pub(crate) fn prepare_shutdown(app: &tauri::AppHandle) {
+    with_input(app, quiesce_input);
+}
+
+pub(super) fn quiesce_input(input: &mut Input, effects: &impl Effects) {
+    input.interrupt(effects);
+    input.replace_target(effects);
+    input.sync_interaction(effects, vec![], None);
 }
 
 pub(crate) fn ready(app: &tauri::AppHandle) -> Result<(), String> {

@@ -418,6 +418,9 @@ function renderCollection(collection: Memory["collection"], favourite: Collectib
 
 if (native) {
   let targetId: number | null = null;
+  await native.event.listen("gullbert-shutdown-error", ({ payload }) => {
+    error(payload);
+  });
   await native.event.listen("gullbert-target", ({ payload }) => {
     if (payload.outcome === "started") {
       targetId = payload.id;
