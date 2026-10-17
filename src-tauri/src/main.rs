@@ -9,6 +9,7 @@ mod state;
 mod tray;
 mod updates;
 mod windows;
+mod work_activity;
 
 use actions::report;
 use state::{Snapshot, State};
@@ -43,6 +44,8 @@ fn main() {
             native_input::desktop::target_picked,
             native_input::desktop::cancel_targeting,
             windows::cursor_position,
+            work_activity::work_activity,
+            work_activity::stop_work_activity,
             native_input::desktop::sync_interaction,
             native_input::desktop::begin_pickup,
             native_input::desktop::end_pickup,
@@ -68,6 +71,7 @@ fn main() {
         })
         .setup(|app| {
             native_input::Runtime::watch(app.handle().clone());
+            work_activity::install(app);
 
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);

@@ -154,6 +154,11 @@ impl Effects for Desktop {
             .state::<State>()
             .visible
             .store(visible, Ordering::SeqCst);
+
+        if !visible {
+            crate::work_activity::stop(&self.0);
+        }
+
         let window = pet(&self.0)?;
 
         if visible {

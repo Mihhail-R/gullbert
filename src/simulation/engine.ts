@@ -30,6 +30,7 @@ import type {
   Memory,
   SceneProp,
   Sound,
+  WorkSample,
 } from "./model.js";
 import type { Scene } from "./scenes.js";
 import { Mood } from "./behaviors/moods.js";
@@ -48,6 +49,7 @@ import { CursorRoutine, cursorBeak } from "./behaviors/cursor.js";
 import { SnackRoutine } from "./behaviors/snacks.js";
 import { CapRoutine } from "./behaviors/cap.js";
 import { LearningRoutine } from "./behaviors/learning.js";
+import { WorkRoutine } from "./behaviors/work.js";
 
 const remarks = dialogue.gullbert.general.remarks;
 export class Gullbert {
@@ -67,6 +69,7 @@ export class Gullbert {
   #snacks: SnackRoutine;
   #cap: CapRoutine;
   #learning: LearningRoutine;
+  #work: WorkRoutine;
   #random: () => number;
   #time: number;
   #nextMischief: number;
@@ -131,6 +134,7 @@ export class Gullbert {
     this.#snacks = new SnackRoutine(this.#capabilities);
     this.#cap = new CapRoutine(this.#capabilities);
     this.#learning = new LearningRoutine(this.#capabilities);
+    this.#work = new WorkRoutine(this.#capabilities);
     this.#cleanup = new Cleanup({
       observe: () => {
         return this.#baseObservation();
@@ -271,6 +275,7 @@ export class Gullbert {
     owners.set("guest", this.#guests);
     owners.set("gift", this.#gifts);
     owners.set("perch", this.#perch);
+    owners.set("work", this.#work);
     owners.set("theft", this.#crime);
     owners.set("caper", this.#crime);
     owners.set("cursor", this.#cursor);
@@ -290,6 +295,7 @@ export class Gullbert {
         this.#guests,
         this.#gifts,
         this.#perch,
+        this.#work,
         this.#crime,
         this.#cursor,
         this.#snacks,
@@ -329,6 +335,7 @@ export class Gullbert {
     this.#belongings.restore(data);
   }
   resize(width: number, height: number): void {
+    this.#work.reset();
     this.#body.resize(width, height);
     this.#objects.resize(this.#body.width, this.#body.height);
     this.#gags.resizeGags();
@@ -393,11 +400,20 @@ export class Gullbert {
     this.#cursor.pointerSample(point);
     this.#cap.pointerSample(point);
   }
+  observeWork(sample: WorkSample | null, nowMs: number): void {
+    if (!this.#visible || this.#settings.paused || this.#settings.mischief === 0) {
+      this.#work.reset();
+      return;
+    }
+
+    this.#work.sample(sample, nowMs);
+  }
   setVisible(visible: boolean): void {
     this.#visible = visible;
     this.#registry.visibility(visible);
 
     if (!visible) {
+      this.#work.reset();
       this.#learning.cancelAssociations();
       this.#pickup.cancel();
       this.#touch.reset();
@@ -684,6 +700,10 @@ export class Gullbert {
       return;
     }
 
+    if (this.#work.maybeVisit()) {
+      return;
+    }
+
     if (this.#gags.maybeGag()) {
       return;
     }
@@ -826,6 +846,7 @@ export class Gullbert {
 
     if (settings.paused || settings.mischief === 0) {
       this.#food.clearRequest();
+      this.#work.reset();
     }
 
     let mischiefDelay;
@@ -1158,6 +1179,7 @@ export class Gullbert {
       sound: this.#settings.sound,
       tidying: this.tidying,
       idle: this.#activity.mode === "idle",
+      workEnabled: this.#visible && !this.#settings.paused && this.#settings.mischief > 0,
       animate:
         this.moving ||
         this.tidying ||

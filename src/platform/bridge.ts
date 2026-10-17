@@ -5,6 +5,7 @@ import type {
   Point,
   PointerSample,
   Settings,
+  WorkSample,
 } from "../simulation/model.js";
 
 export interface ActionMessage {
@@ -51,6 +52,8 @@ interface Commands {
   ];
   end_pickup: [{ id: number; retaliate: boolean; tug: boolean }, number | null];
   cursor_position: [undefined, PointerSample | null];
+  work_activity: [undefined, WorkSample | null];
+  stop_work_activity: [undefined, void];
   tug_cursor: [{ id: number; x: number; y: number }, boolean];
   release_cursor: [{ id: number }, void];
   cancel_targeting: [{ id?: number }, void];
