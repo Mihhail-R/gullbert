@@ -131,7 +131,7 @@ impl Effects for Desktop<'_> {
         controls(self.0);
     }
     fn quit(&mut self) {
-        self.0.exit(0);
+        crate::shutdown::request_quit(self.0);
     }
 }
 
@@ -152,6 +152,12 @@ pub(crate) async fn act(app: tauri::AppHandle, action: Action) -> Result<(), Str
     native_input::request(app, move |app| perform_action(app.clone(), action)).await?
 }
 fn perform_action(app: tauri::AppHandle, action: Action) -> Result<(), String> {
+    if crate::shutdown::in_progress(&app) {
+        return Err(
+            "Gullbert is saving before quitting or installing an update. Try again shortly.".into(),
+        );
+    }
+
     action.perform(&mut Desktop(&app))
 }
 pub(crate) fn dispatch_action(app: &tauri::AppHandle, action: Action) {

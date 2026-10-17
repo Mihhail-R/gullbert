@@ -936,3 +936,32 @@ fn public_routing_preserves_pointer_positioning_and_visibility_policy() {
         .unwrap();
     assert!(position < visible && visible < command);
 }
+
+#[test]
+fn shutdown_releases_every_input_mode_and_old_hit_regions_cannot_recapture() {
+    for mode in ["target", "pickup", "cursor"] {
+        let mut input = Input::default();
+        let effects = Recording::default();
+        input.sync_interaction(&effects, vec![rect()], None);
+
+        match mode {
+            "target" => input.begin_target(&effects, Purpose::Tidy, "tidy").unwrap(),
+
+            "pickup" => {
+                input.begin_pickup(&effects, rect()).unwrap();
+            }
+
+            "cursor" => {
+                let id = cursor(&mut input, &effects);
+                assert!(input.tug_cursor(&effects, id, point()));
+            }
+
+            _ => unreachable!(),
+        }
+
+        super::desktop::quiesce_input(&mut input, &effects);
+        effects.assert_released();
+        input.reconcile(&effects, effects.pointer().as_ref());
+        effects.assert_released();
+    }
+}

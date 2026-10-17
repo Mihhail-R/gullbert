@@ -3,6 +3,7 @@ import { dialogue } from "../../simulation/dialogue.js";
 import type { ActionMessage, PreviewMessage } from "../../platform/bridge.js";
 import { createPickupDrag } from "../../platform/pickup-drag.js";
 import { createCursorBiteBridge } from "../../platform/cursor-bite.js";
+import { ShutdownCoordinator } from "../../platform/shutdown.js";
 import { MemoryPersistence } from "../../platform/roommate-store.js";
 import { createPointerTracker } from "../../platform/pointer.js";
 import { WorkObserver } from "../../platform/work-observer.js";
@@ -17,7 +18,7 @@ import type {
 } from "./application-contracts.js";
 import { Targeting } from "./targeting.js";
 
-type Lifecycle = "new" | "starting" | "running" | "disposed";
+type Lifecycle = "new" | "starting" | "running" | "stopping" | "disposed";
 interface CursorLeaseScene {
   token: object;
   phase: CursorScene["phase"];
@@ -33,6 +34,8 @@ export class PetApplication {
   readonly #startupCommands: (() => void)[] = [];
   readonly #unlisteners: (() => void)[] = [];
   #visible = true;
+  #shutdownSettings: Settings | null = null;
+  #shutdownVisibility: boolean | null = null;
   readonly #targeting: Targeting;
   #tidyPoint: Point | null = null;
   #timer: ReturnType<typeof setTimeout> | undefined;
@@ -48,6 +51,7 @@ export class PetApplication {
   #reactionLease: { token: object; id: number } | null = null;
   #pickupReaction: object | null = null;
   readonly #persistence: MemoryPersistence;
+  readonly #desktopShutdown: ShutdownCoordinator;
   readonly #drag: ReturnType<typeof createPickupDrag>;
   readonly #bite: ReturnType<typeof createCursorBiteBridge>;
   readonly #pointer: ReturnType<typeof createPointerTracker>;
@@ -89,6 +93,16 @@ export class PetApplication {
       revision: () => dependencies.simulation.status().memoryRevision,
       snapshot: () => dependencies.simulation.exportMemory(),
       result: (error) => this.#storageResult(error),
+    });
+    this.#desktopShutdown = new ShutdownCoordinator({
+      ready: () => this.#startup ?? Promise.resolve(),
+      pause: () => this.#pauseForShutdown(),
+      flush: () => this.#initialized ? this.#persistence.flush() : Promise.resolve(),
+      resume: () => this.#resumeAfterShutdown(),
+      acknowledge: async (id, error) => {
+        await native?.invoke("shutdown_ready", { id, error });
+      },
+      reportError: dependencies.reportError,
     });
     this.#drag = createPickupDrag({
       acquire: (rect) => {
@@ -240,6 +254,7 @@ export class PetApplication {
       return this.#shutdown;
     }
 
+    this.#desktopShutdown.dispose();
     this.#shutdown = this.#persistence.dispose();
     this.#lifecycle = "disposed";
     this.#startupCommands.length = 0;
@@ -271,6 +286,44 @@ export class PetApplication {
     this.#dependencies.audio.dispose();
     this.#dependencies.view.dispose();
     return this.#shutdown;
+  }
+
+  #pauseForShutdown(): void {
+    if (!this.#running()) {
+      return;
+    }
+
+    this.#cancelDrag();
+    this.#targeting.replace();
+    this.#lifecycle = "stopping";
+    this.#cancelTick();
+    this.#cancelRender();
+    this.#pointer.stop();
+    this.#work?.stop();
+    this.#bite.stop();
+    this.#releaseInteraction();
+  }
+
+  #resumeAfterShutdown(): void {
+    if (this.#lifecycle !== "stopping") {
+      return;
+    }
+
+    this.#lifecycle = "running";
+
+    if (this.#shutdownSettings) {
+      this.#dependencies.simulation.configure(this.#shutdownSettings);
+      this.#shutdownSettings = null;
+    }
+
+    const visible = this.#shutdownVisibility;
+    this.#shutdownVisibility = null;
+
+    if (visible !== null) {
+      this.#changeVisibility(visible);
+    } else {
+      this.#wake();
+    }
   }
 
   #running(): boolean {
@@ -377,6 +430,16 @@ export class PetApplication {
     }
 
     const subscriptions = [
+      () => {
+        return native.listen("gullbert-shutdown-prepare", ({ payload }) => {
+          void this.#desktopShutdown.prepare(payload);
+        });
+      },
+      () => {
+        return native.listen("gullbert-shutdown-cancel", ({ payload }) => {
+          this.#desktopShutdown.cancel(payload);
+        });
+      },
       () => {
         return native.listen("gullbert-roommate-request", () => {
           this.#publishRoommate(true);
@@ -499,7 +562,7 @@ export class PetApplication {
       return;
     }
 
-    if (this.#running()) {
+    if (this.#running() || this.#lifecycle === "stopping") {
       command();
     }
   }
@@ -555,6 +618,11 @@ export class PetApplication {
   }
 
   #configure(settings: Settings): void {
+    if (this.#lifecycle === "stopping") {
+      this.#shutdownSettings = settings;
+      return;
+    }
+
     if (!this.#running()) {
       return;
     }
@@ -797,6 +865,11 @@ export class PetApplication {
   }
 
   #changeVisibility(next: boolean): void {
+    if (this.#lifecycle === "stopping") {
+      this.#shutdownVisibility = next;
+      return;
+    }
+
     if (!this.#running()) {
       return;
     }
