@@ -6,6 +6,7 @@ import { Speech } from "./speech.js";
 import { FoodPolicy } from "./food-policy.js";
 import { Belongings } from "./belongings.js";
 import { Motivation } from "./motivation.js";
+import { Pettiness } from "./pettiness.js";
 import { RoutineRegistry } from "./registry.js";
 import { ScopedRoutine } from "./scoped-routine.js";
 import type {
@@ -38,7 +39,7 @@ import { Mood } from "./behaviors/moods.js";
 import { QuietRoutine } from "./behaviors/quiet.js";
 import { Pickup, canPickup, pickupRect } from "./behaviors/pickup.js";
 import { Touch, canTouch } from "./behaviors/touch.js";
-import { Cleanup, directCleanupTarget } from "./behaviors/cleanup.js";
+import { Cleanup, cleanupObjects, directCleanupTarget } from "./behaviors/cleanup.js";
 import { normalizeHat, hatRemark } from "./behaviors/hats.js";
 import { GagRoutine, gagOffset } from "./behaviors/gags.js";
 import { TheatreRoutine, theatreOffset } from "./behaviors/theatre.js";
@@ -86,6 +87,7 @@ export class Gullbert {
   #speech = new Speech();
   #moods: Mood;
   #motivation = new Motivation();
+  #pettiness = new Pettiness();
   constructor(
     width = 1200,
     height = 800,
@@ -121,6 +123,7 @@ export class Gullbert {
         this.#sounds.push(sound);
       },
       ateChip: (point) => {
+        this.#pettiness.settle();
         this.#motivation.enjoyed("meal");
         this.#learning.ateChip(point);
       },
@@ -161,6 +164,7 @@ export class Gullbert {
     });
     this.#touch = new Touch({
       scratched: () => {
+        this.#pettiness.settle();
         this.#motivation.enjoyed("scratch");
         this.#learning.scratched();
       },
@@ -332,6 +336,7 @@ export class Gullbert {
     return this.#belongings.exportMemory();
   }
   restoreMemory(data: unknown) {
+    this.#pettiness.settle();
     this.#learning.cancelAssociations();
     this.#cancelScene();
     this.#cancelFlight();
@@ -418,6 +423,7 @@ export class Gullbert {
     this.#registry.visibility(visible);
 
     if (!visible) {
+      this.#pettiness.settle();
       this.#work.reset();
       this.#learning.cancelAssociations();
       this.#pickup.cancel();
@@ -427,6 +433,7 @@ export class Gullbert {
     }
   }
   #cancelScene(): void {
+    this.#pettiness.interrupt();
     this.#objects.releaseBag();
     this.#registry.interrupt();
   }
@@ -476,6 +483,7 @@ export class Gullbert {
     );
   }
   clean() {
+    const removedSomething = cleanupObjects(this.#objects.snapshot()).length > 0;
     this.#learning.cancelAssociations();
     this.#objects.clear();
     this.#pickup.cancel();
@@ -487,11 +495,15 @@ export class Gullbert {
 
     this.#activity.clearPendingDrop();
     this.#rest();
-    this.#cleanup.bulk();
+    this.#cleanup.bulk(removedSomething);
   }
   action(name: string, point?: Point) {
     if (point && (!Number.isFinite(point.x) || !Number.isFinite(point.y))) {
       return;
+    }
+
+    if (name === "forget_learning") {
+      this.#pettiness.settle();
     }
 
     if (name === "prepare_chip") {
@@ -707,7 +719,17 @@ export class Gullbert {
 
     const motivation = this.#motivation.snapshot();
 
+    if (this.#stepPettyReaction()) {
+      return;
+    }
+
     if (this.#learning.maybeStart(motivation)) {
+      const kind = this.#registry.scene?.kind;
+
+      if (kind === "trick" || kind === "cap") {
+        this.#pettiness.invited(this.#registry.identity);
+      }
+
       return;
     }
 
@@ -803,6 +825,30 @@ export class Gullbert {
       this.#activity.walk(this.#randomPoint());
     }
   }
+  #stepPettyReaction(): boolean {
+    if (this.#pettiness.waiting(this.#time)) {
+      return true;
+    }
+
+    const action = this.#pettiness.take(this.#time, this.#settings);
+
+    if (!action) {
+      return false;
+    }
+
+    if (this.#time < this.#cleanup.snapshot().suppressUntil) {
+      return false;
+    }
+
+    this.action(action);
+    this.#moods.set("offended", this.#time, { speak: false });
+    const line = action === "poop"
+      ? dialogue.gullbert.pettiness.ignoredMess
+      : dialogue.gullbert.pettiness.ignoredExit;
+    this.#say(line, 4);
+    return true;
+  }
+
   configure(settings: Partial<Settings>) {
     const previousHat = this.#settings.hat;
 
@@ -811,6 +857,7 @@ export class Gullbert {
       (settings.mischief != null &&
         settings.mischief !== this.#settings.mischief)
     ) {
+      this.#pettiness.settle();
       this.#learning.cancelAssociations();
       this.#pickup.cancel();
 
@@ -1130,6 +1177,13 @@ export class Gullbert {
 
   #completeRoutine(): void {
     const scene = this.#registry.scene;
+    this.#pettiness.completed(
+      this.#registry.identity,
+      scene,
+      this.#time,
+      this.#settings,
+      this.#random,
+    );
     let played = false;
 
     switch (scene?.kind) {
@@ -1157,6 +1211,7 @@ export class Gullbert {
     this.#registry.complete();
 
     if (played) {
+      this.#pettiness.settle();
       this.#motivation.enjoyed("play");
       this.#learning.playCompleted();
     }
@@ -1227,7 +1282,13 @@ export class Gullbert {
       return false;
     }
 
-    return this.#cap.flick(point);
+    const flicked = this.#cap.flick(point);
+
+    if (flicked) {
+      this.#pettiness.settle();
+    }
+
+    return flicked;
   }
   beginPickup(point: Point, now: number): boolean {
     return this.#pickup.begin(point, now);
