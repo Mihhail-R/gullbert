@@ -33,7 +33,7 @@ fn build_work_activity() {
             "clang",
             "-arch",
             arch,
-            "-mmacosx-version-min=11.0",
+            "-mmacosx-version-min=12.3",
             "-fobjc-arc",
             "-Wall",
             "-Wextra",
