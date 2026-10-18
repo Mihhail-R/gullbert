@@ -13,27 +13,75 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { collect, merge, checkVersion } from "../scripts/release.mjs";
 
-const versionFiles = [
-  "package.json",
-  "package-lock.json",
-  "src-tauri/Cargo.toml",
-  "src-tauri/Cargo.lock",
-  "src-tauri/tauri.conf.json",
-];
+// Keep dependency and unrelated metadata versions equal to the starting app
+// version. Release stamping must change only the app's own version fields.
+const versionTemplates = {
+  "package.json": `{
+  "name": "gullbert",
+  "version": "APP_VERSION",
+  "description": "1.0.0-beta.2",
+  "dependencies": {
+    "gensync": "1.0.0-beta.2"
+  }
+}
+`,
+  "package-lock.json": `{
+  "name": "gullbert",
+  "version": "APP_VERSION",
+  "lockfileVersion": 3,
+  "packages": {
+    "": {
+      "name": "gullbert",
+      "version": "APP_VERSION",
+      "dependencies": {
+        "gensync": "1.0.0-beta.2"
+      }
+    },
+    "node_modules/gensync": {
+      "version": "1.0.0-beta.2"
+    }
+  }
+}
+`,
+  "src-tauri/Cargo.toml": `[package]
+name = "gullbert"
+version = "APP_VERSION"
+
+[dependencies]
+fixture = "1.0.0-beta.2"
+`,
+  "src-tauri/Cargo.lock": `version = 4
+
+[[package]]
+name = "fixture"
+version = "1.0.0-beta.2"
+
+[[package]]
+name = "gullbert"
+version = "APP_VERSION"
+`,
+  "src-tauri/tauri.conf.json": `{
+  "productName": "Gullbert",
+  "version": "APP_VERSION"
+}
+`,
+};
+const versionFiles = Object.keys(versionTemplates);
+
+function versionContents(version, newline) {
+  return Object.values(versionTemplates)
+    .map((template) => template
+      .replaceAll("APP_VERSION", version)
+      .replaceAll("\n", newline));
+}
 
 function versionFixture(newline = "\n") {
   const directory = mkdtempSync(path.join(tmpdir(), "gullbert-version-"));
   mkdirSync(path.join(directory, "src-tauri"));
+  const contents = versionContents("1.0.0-beta.2", newline);
 
-  for (const file of versionFiles) {
-    writeFileSync(
-      path.join(directory, file),
-      readFileSync(new URL(`../${file}`, import.meta.url), "utf8")
-        .replace(
-          /\r?\n/g,
-          newline,
-        ),
-    );
+  for (const [index, file] of versionFiles.entries()) {
+    writeFileSync(path.join(directory, file), contents[index]);
   }
 
   return directory;
@@ -56,24 +104,21 @@ function prepare(directory, tag, refType = "tag") {
 }
 
 for (const newline of ["\n", "\r\n"]) {
-  test(`release preparation stamps the tag into every version (${JSON.stringify(newline)})`, () => {
+  const description = "release preparation preserves matching dependency versions";
+
+  test(`${description} (${JSON.stringify(newline)})`, () => {
     const directory = versionFixture(newline);
 
     try {
-      const before = versionFiles.map((file) =>
-        readFileSync(path.join(directory, file), "utf8"),);
-      const previous = checkVersion(undefined, directory);
       const result = prepare(directory, "v0.3.0-beta.5");
       assert.equal(result.status, 0, result.stderr);
       assert.equal(checkVersion("v0.3.0-beta.5", directory), "0.3.0-beta.5");
+
       // No dependencies or other config may change, including line endings.
       const after = versionFiles.map((file) =>
         readFileSync(path.join(directory, file), "utf8"),);
-      assert.deepEqual(
-        after,
-        before.map((content) =>
-          content.replaceAll(`"${previous}"`, '"0.3.0-beta.5"'),),
-      );
+      assert.deepEqual(after, versionContents("0.3.0-beta.5", newline));
+
       assert.equal(prepare(directory, "v0.3.0-beta.5", "branch").status, 0);
       assert.deepEqual(
         versionFiles.map((file) =>
