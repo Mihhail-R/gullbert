@@ -12,6 +12,7 @@ interface PersistenceDependencies {
   restore(memory: unknown): void;
   revision(): number;
   snapshot(): Memory;
+  checkpoint?(): void;
   result(error: unknown): void;
 }
 
@@ -93,6 +94,7 @@ export class MemoryPersistence {
 
   /** Flush without disposing: a failed desktop shutdown must remain retryable. */
   flush(): Promise<void> {
+    this.#dependencies.checkpoint?.();
     const revision = this.#dependencies.revision();
 
     if (this.#flushing && this.#flushingRevision === revision) {
@@ -131,6 +133,7 @@ export class MemoryPersistence {
 
     this.#cancelRetry();
     // Capture before application teardown; bypass backoff for the final attempt.
+    this.#dependencies.checkpoint?.();
     this.remember();
     this.#active = false;
     this.#disposed = true;

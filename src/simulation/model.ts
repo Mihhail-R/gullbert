@@ -1,5 +1,6 @@
 import type { Collectible } from "./items.js";
 import type { Preferences } from "./preferences.js";
+import type { LongTermMemory } from "./long-term-memory.js";
 
 export interface Point {
   x: number;
@@ -38,7 +39,8 @@ export interface LearnedHabits {
   scratchesAfterPlay: number;
 }
 export interface Memory {
-  version: 2;
+  version: 3;
+  longTerm: LongTermMemory;
   episodes: MemoryEpisode[];
   performances: Record<Trick, number>;
   unpaidTricks: number;
@@ -68,7 +70,8 @@ export interface MemoryEpisode {
     | "gift"
     | "perch"
     | "visit"
-    | "activity";
+    | "activity"
+    | "recall";
   detail: string;
   location: Point & { width: number; height: number };
 }

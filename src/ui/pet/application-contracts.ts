@@ -87,6 +87,7 @@ export type ApplicationSimulation = Pick<
   | "present"
   | "status"
   | "exportMemory"
+  | "checkpointMemory"
   | "restoreMemory"
   | "drainSounds"
   | "interactionRects"

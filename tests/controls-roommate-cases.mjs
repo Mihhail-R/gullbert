@@ -124,6 +124,22 @@ export function roommateRenderingTests(mode) {
 
   // Rendering is shared; exercise its cases once, with the adapter smoke test above in both modes.
   if (mode === "preview") {
+    test("completed callbacks appear as natural descriptions in the existing history", () => {
+      const episodes = ["snack_spot", "encore:dead", "keepsake:bent_spoon"]
+        .map((detail, index) => ({
+          id: index + 1,
+          kind: "recall",
+          detail,
+          at: Date.UTC(2026, 9, 18, 12, index),
+          location: { x: 100, y: 400, width: 900, height: 600 },
+        }));
+      deliver({ memory: { version: 3, episodes } });
+      assert.match(element("memory-items").textContent, /Revisited his old snack spot/);
+      assert.match(element("memory-items").textContent, /Remembered Play dead/);
+      assert.match(element("memory-items").textContent, /Brought back his old bent spoon/);
+      assert.match(element("today-memories").textContent, /Brought back his old bent spoon/);
+    });
+
     test("journal distinguishes unrewarded performance, learning and practiced tricks", () => {
       deliver({ memory: { performances: { come: 2 } } });
       assert.match(element("lesson-come").textContent, /2 performed.*unrewarded/);

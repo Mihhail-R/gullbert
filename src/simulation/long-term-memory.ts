@@ -33,6 +33,7 @@ export interface KeepsakeMemory {
 }
 export interface LongTermMemory {
   highWaterAtMs: number;
+  migratedOnDay: string | null;
   active: {
     days: number;
     lastDay: EvidenceDay | null;
@@ -76,6 +77,7 @@ export function createLongTermMemory(): LongTermMemory {
   });
   return {
     highWaterAtMs: 0,
+    migratedOnDay: null,
     active: { days: 0, lastDay: null, progressDay: null, progressMs: 0 },
     daily: null,
     lastStart: null,
@@ -378,6 +380,10 @@ export function reserveRecall(
   }
 
   const daily = memory.daily;
+
+  if (memory.migratedOnDay === localMemoryDay(nowMs)) {
+    return null;
+  }
 
   if (!daily || !daily.allowed || daily.used) {
     return null;
