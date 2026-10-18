@@ -28,14 +28,15 @@ function selectionCounts(memory, mischief = 1, motivation) {
   return counts;
 }
 
-test("a first reward influences autonomy without guaranteeing a performance", () => {
-  const fresh = selectionCounts(normalizeMemory());
-  assert.equal(fresh.none, 1000);
-  const first = selectionCounts(normalizeMemory({ learned: { tricks: { spin: 1 } } }));
-  const practiced = selectionCounts(normalizeMemory({ learned: { tricks: { spin: 6 } } }));
-  assert.ok(first.show_spin > 0);
-  assert.ok(practiced.show_spin > first.show_spin);
-  assert.ok(practiced.none > 0);
+test("ordinary habits never select spin or play-dead despite mastery and rewards", () => {
+  const memory = normalizeMemory({
+    learned: { tricks: { spin: 6, dead: 6 } },
+    episodes: [episode(1, "reward", "spin"), episode(2, "reward", "dead")],
+  });
+  const counts = selectionCounts(memory);
+  assert.equal(counts.show_spin, 0);
+  assert.equal(counts.show_dead, 0);
+  assert.equal(counts.none, 1000);
 });
 
 test("energy and social interest change learned choices without overriding their evidence", () => {
@@ -71,32 +72,6 @@ test("curiosity encourages checking familiar places", () => {
     selectionCounts(memory, 0, curious).habit_snack >
     selectionCounts(memory, 0, content).habit_snack,
   );
-});
-
-test("recent reward outcomes outweigh older success even at equal mastery", () => {
-  const episodes = [];
-
-  for (let attempt = 0; attempt < 12; attempt++) {
-    episodes.push(episode(episodes.length + 1, "trick", "spin"));
-
-    if (attempt < 6) {
-      episodes.push(episode(episodes.length + 1, "reward", "spin"));
-    }
-
-    episodes.push(episode(episodes.length + 1, "trick", "dead"));
-
-    if (attempt >= 6) {
-      episodes.push(episode(episodes.length + 1, "reward", "dead"));
-    }
-  }
-
-  const memory = normalizeMemory({
-    learned: { tricks: { spin: 6, dead: 6 } },
-    episodes,
-  });
-  const counts = selectionCounts(memory);
-  assert.ok(counts.show_dead > counts.show_spin);
-  assert.ok(counts.show_spin > 0, "old skills can still be tried");
 });
 
 test("only completed cap games establish invitations; failed games lower their appeal", () => {
@@ -245,7 +220,7 @@ test("forgetting and restoring clear session choices without manufacturing exper
   advance(sim, 100);
   sim.configure({ paused: false });
   sim.step(0.05);
-  assert.equal(sim.inspect().scene.trick, "spin");
+  assert.notEqual(sim.inspect().scene?.kind, "trick");
   assert.equal(sim.exportMemory().learned.tricks.spin, 1);
   assert.equal(sim.exportMemory().performances.spin, performances);
 

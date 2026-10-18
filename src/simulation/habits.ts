@@ -1,9 +1,9 @@
-import type { Memory, MemoryEpisode, Trick } from "./model.js";
+import type { Memory, MemoryEpisode } from "./model.js";
 import type { ReadonlyValue } from "./presentation.js";
 import { NEUTRAL_MOTIVATION, type MotivationState } from "./motivation.js";
 import { FRESH_INTEREST, type BoredomState } from "./boredom.js";
 
-type Habit = "habit_snack" | "show_spin" | "show_dead" | "play_cap";
+type Habit = "habit_snack" | "play_cap";
 interface Evidence {
   command: Habit;
   weight: number;
@@ -22,10 +22,6 @@ function motivationWeight(command: Habit, motivation: Readonly<MotivationState>)
   switch (command) {
     case "habit_snack":
       return 2 ** (2 * (motivation.curiosity - 0.5));
-
-    case "show_spin":
-    case "show_dead":
-      return 2 ** (2 * energy + 3 * company);
 
     case "play_cap":
       return 2 ** (4 * energy + 3 * company);
@@ -46,49 +42,6 @@ function responseRate(outcomes: readonly boolean[]): number {
   }
 
   return successes / total;
-}
-
-function trickEvidence(
-  memory: ReadonlyValue<Memory>,
-  trick: Exclude<Trick, "come">,
-): Evidence {
-  const outcomes: boolean[] = [];
-  let responseId = 0;
-
-  for (const event of memory.episodes) {
-    if (event.detail !== trick) {
-      continue;
-    }
-
-    switch (event.kind) {
-      case "trick":
-        outcomes.push(false);
-        break;
-
-      case "reward":
-        responseId = event.id;
-
-        if (outcomes.length > 0) {
-          outcomes[outcomes.length - 1] = true;
-        }
-
-        break;
-    }
-  }
-
-  const lessons = memory.learned.tricks[trick];
-  let rate = responseRate(outcomes);
-
-  if (outcomes.length === 0) {
-    // Old saves have lesson counts but may have no episode history.
-    rate = (lessons + 1) / (memory.performances[trick] + 2);
-  }
-
-  return {
-    command: trick === "spin" ? "show_spin" : "show_dead",
-    weight: 3 * rate * (lessons / (lessons + 1)),
-    responseId,
-  };
 }
 
 function playEvidence(episodes: readonly ReadonlyValue<MemoryEpisode>[]): Evidence {
@@ -170,10 +123,6 @@ export class Habits {
     }
 
     if (mischief > 0) {
-      if (memory.unpaidTricks < 2) {
-        choices.push(trickEvidence(memory, "spin"), trickEvidence(memory, "dead"));
-      }
-
       choices.push(playEvidence(memory.episodes));
     }
 

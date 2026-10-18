@@ -233,21 +233,6 @@ test(
   }
 );
 
-test("a learned trick is occasionally volunteered and still needs a reward to improve", () => {
-  const sim = setup();
-  sim.restoreMemory({ learned: { tricks: { spin: 3 } } });
-  advance(sim, 100);
-  sim.configure({ paused: false, mischief: 1 });
-  sim.step(0.05);
-  assert.equal(sim.inspect().scene.kind, "trick");
-  assert.equal(sim.inspect().scene.unsolicited, true);
-  reach(sim, "reward");
-  assert.equal(sim.exportMemory().learned.tricks.spin, 3);
-  sim.action("feed");
-  sim.step(0.05);
-  assert.equal(sim.exportMemory().learned.tricks.spin, 4);
-});
-
 test(
   "after-play scratches are learned once per completed game and become an expected " +
   "ritual",

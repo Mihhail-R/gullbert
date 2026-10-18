@@ -148,36 +148,33 @@ function assertNoPettyExit(sim, seconds) {
   }
 }
 
-function secondInvitation(level, kind = "trick") {
+function invitationBird(level) {
   const sim = new Gullbert(900, 650, () => 0);
   sim.configure({ paused: true, mischief: level });
-  let phase = "reward";
-
-  if (kind === "cap") {
-    phase = "ready";
-    sim.restoreMemory({
-      episodes: [{
-        id: 1,
-        kind: "play",
-        detail: "cap",
-        at: 1000,
-        location: { x: 100, y: 100, width: 900, height: 650 },
-      }],
-    });
-  } else {
-    sim.restoreMemory({ learned: { tricks: { spin: 3 } } });
-  }
-
+  sim.restoreMemory({
+    episodes: [{
+      id: 1,
+      kind: "play",
+      detail: "cap",
+      at: 1000,
+      location: { x: 100, y: 100, width: 900, height: 650 },
+    }],
+  });
   advance(sim, 100);
   sim.configure({ paused: false });
-  waitFor(sim, (view) => view.scene?.kind === kind && view.scene.phase === phase);
+  waitFor(sim, (view) => view.scene?.kind === "cap" && view.scene.phase === "ready");
+  return sim;
+}
+
+function secondInvitation(level) {
+  const sim = invitationBird(level);
   advance(sim, 21);
-  waitFor(sim, (view) => view.scene?.kind === kind && view.scene.phase === phase);
+  waitFor(sim, (view) => view.scene?.kind === "cap" && view.scene.phase === "ready");
   return sim;
 }
 
 test("accepting a cap invitation clears a snub even before the first round finishes", () => {
-  const sim = secondInvitation(1, "cap");
+  const sim = secondInvitation(1);
   assert.equal(sim.flickCap(sim.inspect().scene.cap), true);
   assert.equal(sim.inspect().scene.rounds, 0);
   sim.action("cancel");
@@ -186,24 +183,19 @@ test("accepting a cap invitation clears a snub even before the first round finis
 });
 
 test("an apology meal clears earlier ignored invitations before the next snub", () => {
-  const sim = new Gullbert(900, 650, () => 0);
-  sim.configure({ paused: true, mischief: 1 });
-  sim.restoreMemory({ learned: { tricks: { spin: 3 } } });
-  advance(sim, 100);
-  sim.configure({ paused: false });
-  waitFor(sim, (view) => view.scene?.kind === "trick" && view.scene.phase === "reward");
+  const sim = invitationBird(1);
   advance(sim, 21);
   const ignoredAt = sim.inspect().time;
 
   sim.action("apology");
   waitFor(sim, (view) => view.memory.learned.snackSpot?.meals === 1, 20);
-  waitFor(sim, (view) => view.scene?.kind === "trick" && view.scene.phase === "reward");
+  waitFor(sim, (view) => view.scene?.kind === "cap" && view.scene.phase === "ready");
   advance(sim, 21);
   assert.ok(sim.inspect().time - ignoredAt < 570, "the earlier snub has not expired");
   assertNoPettyExit(sim, 30);
 });
 
-test("ignored autonomous tricks produce protests that commands can interrupt", () => {
+test("ignored cap invitations produce protests that commands can interrupt", () => {
   for (const level of [1, 2]) {
     const sim = secondInvitation(level);
     waitFor(sim, (view) => view.mood?.name === "offended", 30);

@@ -68,20 +68,32 @@ test("completed games provide variety; cancelled games do not", () => {
   assert.ok(boredom.snapshot().interest.play_cap < 1);
 });
 
-test("habits actually favor a fresh trick over an equally rewarded repeated one", () => {
+test("repeated cap games lower ordinary invitations while preserving the option", () => {
   const boredom = new Boredom();
-  boredom.observe(Array.from({ length: 6 }, (_, index) => episode(index + 1, "spin")));
-  const memory = normalizeMemory({ learned: { tricks: { spin: 6, dead: 6 } } });
-  const counts = { show_spin: 0, show_dead: 0, none: 0 };
+  const episodes = Array.from({ length: 6 }, (_, index) => episode(index + 1, "cap", "play"));
+  boredom.observe(episodes);
+  const memory = normalizeMemory({ episodes });
+  let freshInvitations = 0;
+  let repeatedInvitations = 0;
 
   for (let draw = 0; draw < 1000; draw++) {
-    const habits = new Habits();
-    const action = habits.choose(memory, 100, 1, () => draw / 1000, undefined, boredom.snapshot());
-    counts[action ?? "none"] += 1;
+    const random = () => draw / 1000;
+
+    if (new Habits()
+      .choose(memory, 100, 1, random) === "play_cap") {
+      freshInvitations += 1;
+    }
+
+    const choice = new Habits()
+      .choose(memory, 100, 1, random, undefined, boredom.snapshot());
+
+    if (choice === "play_cap") {
+      repeatedInvitations += 1;
+    }
   }
 
-  assert.ok(counts.show_dead > counts.show_spin);
-  assert.ok(counts.show_spin > 0);
+  assert.ok(repeatedInvitations > 0);
+  assert.ok(repeatedInvitations < freshInvitations);
 });
 
 test("engine observations count actual performances and freeze while hidden or paused", () => {

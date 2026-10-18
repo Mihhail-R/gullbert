@@ -900,7 +900,7 @@ export class Gullbert {
       return false;
     }
 
-    const recall = this.#belongings.reserveRecall(this.#random, ["snack"]);
+    const recall = this.#belongings.reserveRecall(this.#random, ["snack", "trick"]);
 
     if (!recall) {
       return false;

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { snackRecallFixture, idleFor } from "../recall-fixture.mjs";
+import { snackRecallFixture, encoreFixture, idleFor } from "../recall-fixture.mjs";
 import { reach } from "../simulation-helpers.mjs";
 
 async function renderRecall(page, presentation) {
@@ -25,4 +25,18 @@ test("an old snack recall renders its head tilt and callback line", async ({ pag
   await expect(page.locator("#speech"))
     .toHaveText("Used to be here.");
   await page.screenshot({ path: testInfo.outputPath("old-snack-tilt.png") });
+});
+
+test("an encore renders its pleased look", async ({ page }, testInfo) => {
+  const { sim } = encoreFixture("dead");
+  idleFor(sim, 121);
+  reach(sim, "pleased");
+  await renderRecall(page, sim.present());
+  await expect(page.locator("#gull"))
+    .toHaveAttribute("data-pose", "blink");
+  await expect(page.locator("#speech"))
+    .toHaveText("Still got it.");
+  await expect(page.locator("#bird"))
+    .toHaveCSS("--routine-rotation", "0deg");
+  await page.screenshot({ path: testInfo.outputPath("encore-pleased.png") });
 });

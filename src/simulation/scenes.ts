@@ -106,7 +106,14 @@ export interface SnackRecallScene extends TimedScene {
   target: Point;
   origin: Point;
 }
-export type LearningScene = LessonScene | SnackRecallScene;
+export interface EncoreScene extends Omit<LessonScene, "purpose" | "phase" | "trick"> {
+  kind: "trick";
+  purpose: "encore";
+  recall: RecallReservation;
+  trick: "spin" | "dead";
+  phase: "perform" | "pleased";
+}
+export type LearningScene = LessonScene | SnackRecallScene | EncoreScene;
 interface TheatreClock extends TimedScene {
   started: number;
   deadline: number;
