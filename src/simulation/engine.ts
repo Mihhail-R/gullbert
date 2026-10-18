@@ -409,20 +409,23 @@ export class Gullbert {
     return this.#cleanup.target(point);
   }
   get wantsPointer() {
-    if (this.#visible && this.#registry.scene?.kind === "cap") {
-      return true;
-    }
-
-    if (this.#visible && this.#registry.scene?.kind === "cursor_egg") {
-      return true;
-    }
-
-    if (!this.#visible || this.#settings.paused) {
+    if (!this.#visible) {
       return false;
     }
 
     const scene = this.#registry.scene;
-    return scene?.kind === "cursor" && scene.phase !== "chew";
+
+    switch (scene?.kind) {
+      case "cap":
+      case "cursor_egg":
+        return true;
+
+      case "cursor":
+        return !this.#settings.paused && scene.phase !== "chew";
+
+      default:
+        return false;
+    }
   }
   pointer(point: PointerSample | null): void {
     this.#touch.pointer(point);

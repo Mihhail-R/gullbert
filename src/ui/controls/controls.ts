@@ -443,21 +443,32 @@ if (native) {
     return roommate(e.payload);
   });
   await invoke("request_roommate");
-  await native.event.listen("gullbert-settings", (e) => {
-    settings = e.payload;
+  let receivedSettings = false;
+  let receivedVisibility = false;
+  await native.event.listen("gullbert-settings", (event) => {
+    receivedSettings = true;
+    settings = event.payload;
     render();
   });
-  await native.event.listen("gullbert-visible", (e) => {
-    visible = e.payload;
+  await native.event.listen("gullbert-visible", (event) => {
+    receivedVisibility = true;
+    visible = event.payload;
     render();
   });
 
   try {
-    const s = await invoke("snapshot");
-    settings = s.settings;
-    visible = s.visible;
+    const snapshot = await invoke("snapshot");
 
-    if (s.shortcut_errors.length) {
+    // The snapshot is a startup baseline; delivered events take precedence.
+    if (!receivedSettings) {
+      settings = snapshot.settings;
+    }
+
+    if (!receivedVisibility) {
+      visible = snapshot.visible;
+    }
+
+    if (snapshot.shortcut_errors.length) {
       error(
         "A shortcut is already in use. You can still use the tray and control room.",
       );
@@ -499,27 +510,29 @@ if (native) {
     /* Missing or invalid preferences use the defaults. */
   }
 
-  window.addEventListener("message", (e: MessageEvent<PreviewMessage>) => {
-    if (e.origin !== location.origin || e.source !== frame.contentWindow) {
+  window.addEventListener("message", (event: MessageEvent<PreviewMessage>) => {
+    if (event.origin !== location.origin || event.source !== frame.contentWindow) {
       return;
     }
 
-    if (e.data.type === "roommate") {
-      roommate(e.data);
-    }
+    switch (event.data.type) {
+      case "roommate":
+        roommate(event.data);
+        break;
 
-    if (e.data.type === "visible") {
-      visible = e.data.visible;
-      render();
-    }
+      case "visible":
+        visible = event.data.visible;
+        render();
+        break;
 
-    if (e.data.type === "preview-quit") {
-      error("Preview: in the installed app, this quits Gullbert.");
-    }
+      case "preview-quit":
+        error("Preview: in the installed app, this quits Gullbert.");
+        break;
 
-    if (e.data.type === "ready") {
-      post({ type: "settings", settings });
-      post({ type: "visible", visible });
+      case "ready":
+        post({ type: "settings", settings });
+        post({ type: "visible", visible });
+        break;
     }
   });
   frame.src = "pet.html";
