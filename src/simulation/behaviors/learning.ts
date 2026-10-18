@@ -17,6 +17,8 @@ import type { LearningScene, Scene } from "../scenes.js";
 type Environment = Pick<
   BehaviorCapabilities,
   | "moods"
+  | "motivation"
+  | "pettiness"
   | "body"
   | "clock"
   | "belongings"
@@ -36,7 +38,7 @@ const commands: Partial<Record<string, Trick>> = {
   show_dead: "dead",
 };
 
-/** Reward associations are transient; completed work and snack disputes are durable. */
+/** Owns meal, play, and scratch consequences alongside their transient learned associations. */
 export class LearningRoutine implements SceneOwner {
   #environment: Environment;
   #scene: LearningScene | null = null;
@@ -48,6 +50,8 @@ export class LearningRoutine implements SceneOwner {
   constructor(environment: Environment) {
     this.#environment = scopeCapabilities(environment, [
       "moods",
+      "motivation",
+      "pettiness",
       "body",
       "clock",
       "belongings",
@@ -102,6 +106,9 @@ export class LearningRoutine implements SceneOwner {
 
   ateMeal(point: Point): void {
     const sim = this.#environment;
+    sim.pettiness.settle();
+    sim.motivation.enjoyed("meal");
+
     const wasUnpaid = sim.belongings.snapshot().memory.unpaidTricks >= 2;
 
     sim.belongings.rememberMeal(point);
@@ -132,8 +139,40 @@ export class LearningRoutine implements SceneOwner {
     this.#habits.ate(sim.clock.now);
   }
 
+  /** Records history before scene completion; returns whether play benefits are due afterward. */
+  rememberCompletion(scene: ReadonlyValue<Scene> | null): boolean {
+    if (!scene) {
+      return false;
+    }
+
+    let played = false;
+
+    switch (scene.kind) {
+      case "cap":
+        played = scene.phase === "victory" && scene.rounds >= 3;
+        break;
+
+      case "toss":
+        played = scene.phase === "eat";
+        break;
+
+      case "trick":
+      case "habit":
+      case "guest":
+      case "gift":
+        return false;
+    }
+
+    const sim = this.#environment;
+    sim.belongings.remember(played ? "play" : "activity", scene.kind, sim.body);
+    return played;
+  }
+
   playCompleted(): void {
     const sim = this.#environment;
+    sim.pettiness.settle();
+    sim.motivation.enjoyed("play");
+
     this.#habits.played(sim.clock.now);
     this.#playUntil = sim.clock.now + 18;
     // Leave a quiet, touchable moment after a game, including the first lesson.
@@ -146,6 +185,8 @@ export class LearningRoutine implements SceneOwner {
 
   scratched(): void {
     const sim = this.#environment;
+    sim.pettiness.settle();
+    sim.motivation.enjoyed("scratch");
 
     if (this.#playUntil <= sim.clock.now) {
       return;
