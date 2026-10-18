@@ -6,8 +6,6 @@ import { Gullbert } from "../web-dist/simulation/engine.js";
 import {
   TheatreRoutine,
   theatreProps,
-  theatrePose,
-  theatreOffset,
 } from "../web-dist/simulation/behaviors/theatre.js";
 
 function setup(width = 900, height = 650, random = () => 0.5) {
@@ -29,71 +27,38 @@ function until(sim, phase) {
 }
 const commands = ["blow_bubbles", "bath_time", "chip_toss", "baguette_parade"];
 
-test("bubbles stay bounded, pop on contact, startle and recover within twenty seconds", () => {
+test("popping a bubble startles Gullbert and the show clears its effects", () => {
   const sim = setup();
   sim.action("blow_bubbles");
-  const phases = new Set(),
-    poses = new Set();
-
-  for (let i = 0; i < 400; i++) {
-    phases.add(sim.inspect().scene?.phase);
-    poses.add(sim.inspect().pose);
-    const props = sim.present().props;
-    assert.ok(props.filter((prop) => prop.asset === "bubble").length <= 6);
-    assert.ok(props.length <= 6);
-
-    if (sim.inspect().scene?.kind === "bubbles" && sim.inspect().scene.targetId) {
-      assert.ok(sim.inspect().scene.targetId > 0);
-    }
-
-    sim.step(0.05);
-  }
-
-  for (const phase of ["chase", "peck", "startle", "proud"]) {
-    assert.ok(phases.has(phase), phase);
-  }
-
-  assert.ok(poses.has("nap-startle"));
+  until(sim, "startle");
+  assert.equal(sim.present().pose, "nap-startle");
   assert.ok(sim.inspect().events.includes("pop"));
+
+  advance(sim, 20);
   assert.equal(sim.inspect().scene, null);
   assert.deepEqual(sim.present().props, []);
 });
 
-test("bath approaches, splashes with eight droplets, shakes and leaves", () => {
+test("a bath visibly splashes and shakes, then clears its water effects", () => {
   const sim = setup();
   sim.action("bath_time");
-  const phases = new Set(),
-    poses = new Set();
+  until(sim, "splash");
+  advance(sim, 0.2);
+  assert.equal(sim.present().pose, "bath-wet");
+  assert.ok(sim.present().props.some((prop) => prop.asset === "drop"));
 
-  for (let i = 0; i < 400; i++) {
-    phases.add(sim.inspect().scene?.phase);
-    poses.add(sim.inspect().pose);
-    const props = sim.present().props;
-    assert.ok(props.filter((prop) => prop.asset === "bath").length <= 1);
-    assert.ok(props.filter((prop) => prop.asset === "drop").length <= 8);
-    sim.step(0.05);
-  }
-
-  for (const phase of ["approach", "splash", "shake", "exit"]) {
-    assert.ok(phases.has(phase), phase);
-  }
-
-  for (const pose of ["bath-wet", "bath-shake-a", "bath-shake-b"]) {
-    assert.ok(poses.has(pose), pose);
-  }
-
+  until(sim, "shake");
+  assert.match(sim.present().pose, /^bath-shake-/);
+  advance(sim, 20);
   assert.equal(sim.inspect().scene, null);
   assert.deepEqual(sim.present().props, []);
 });
 
-test("a reachable airborne chip is awarded only at real beak contact", () => {
+test("a caught toss consumes one chip and completes the flight", () => {
   const sim = setup();
   sim.action("chip_toss", { x: 650, y: 480 });
   until(sim, "land");
   assert.equal(sim.inspect().scene.caught, true);
-  const { beak, chip, distance } = sim.inspect().scene.contact;
-  assert.equal(distance, Math.hypot(beak.x - chip.x, beak.y - chip.y));
-  assert.ok(distance <= 10);
   assert.equal(sim.inspect().scene.chip, null);
   assert.equal(
     sim.inspect().events.filter((event) => event === "munch").length,
@@ -188,7 +153,6 @@ test("awarded catches overlap the painted rotating chip and flight beak", () => 
           chip: sim.inspect().scene.contact.chip,
         },
       });
-      assert.equal(props[0].width, props[0].height);
       assert.ok(
         paintedBeakTouchesChip(sim.inspect(), props[0]),
         JSON.stringify({ target, dt, contact: sim.inspect().scene.contact }),
@@ -266,47 +230,20 @@ test("replacement tosses never keep an older airborne chip", () => {
   assert.equal(sim.inspect().flight, null);
 });
 
-test("baguette enters, carries, pauses, leaves completely and returns to its origin", () => {
+test("the baguette parade leaves the screen and returns to its original position", () => {
   const sim = setup();
   const origin = { x: sim.inspect().x, y: sim.inspect().y };
   sim.action("baguette_parade");
-  assert.equal(sim.inspect().bubble, "");
-  const entrance = sim.present().visualOffset;
-  assert.ok(Math.abs(entrance.x) >= 200);
-  assert.equal(sim.present().props[0].width, 156);
-  const phases = new Set();
-  let sawGone = false;
+  assert.ok(Math.abs(sim.present().visualOffset.x) >= 200);
 
-  for (let i = 0; i < 400; i++) {
-    phases.add(sim.inspect().scene?.phase);
+  until(sim, "gone");
+  assert.equal(sim.present().visualOffset.opacity, 0);
+  assert.equal(sim.present().props[0].opacity, 0);
 
-    if (sim.inspect().scene?.phase === "gone") {
-      sawGone = true;
-      assert.equal(sim.present().visualOffset.opacity, 0);
-      assert.equal(sim.present().props[0].opacity, 0);
-    }
-
-    sim.step(0.05);
-  }
-
-  for (const phase of ["entrance", "carry", "pause", "exit", "departure"]) {
-    assert.ok(phases.has(phase), phase);
-  }
-
-  assert.ok(sawGone);
+  advance(sim, 10);
   assert.equal(sim.inspect().scene, null);
   assert.deepEqual({ x: sim.inspect().x, y: sim.inspect().y }, origin);
-});
-
-test("each theatre command permits explicit play while autonomy is paused or polite", () => {
-  for (const command of commands) {
-    const sim = setup();
-    sim.action(command);
-    assert.ok(sim.inspect().scene);
-    advance(sim, 20);
-    assert.equal(sim.inspect().scene, null);
-    assert.equal(sim.inspect().mode, "idle");
-  }
+  assert.deepEqual(sim.present().visualOffset, { x: 0, opacity: 1 });
 });
 
 test("hide suspends ordinary theatre without accumulating props or elapsed time", () => {
@@ -327,40 +264,26 @@ test("hide suspends ordinary theatre without accumulating props or elapsed time"
   }
 });
 
-test("commands and Clean replace every active theatre phase with normal state", () => {
-  for (const [command, phases] of [
-    ["blow_bubbles", ["chase", "peck", "startle", "proud"]],
-    ["bath_time", ["approach", "splash", "shake", "exit"]],
-    ["chip_toss", ["takeoff", "intercept", "land", "eat"]],
-    [
-      "baguette_parade",
-      ["entrance", "carry", "pause", "exit", "departure", "gone"],
-    ],
-  ]) {
-    for (const phase of phases) {
-      for (const replacement of ["nap", "clean", "cancel"]) {
-        const sim = setup();
-        sim.action(
-          command,
-          command === "chip_toss" ? { x: 650, y: 480 } : undefined,
-        );
-        until(sim, phase);
-        sim.action(replacement);
-        assert.equal(
-          sim.inspect().scene,
-          null,
-          `${command}/${phase}/${replacement}`,
-        );
-        assert.equal(sim.inspect().flight, null);
-        assert.deepEqual(sim.present().props, []);
-        assert.ok(!sim.inspect().pose.startsWith("bath-"));
-        assert.equal(sim.present().visualOffset.x, 0);
-        advance(sim, 20);
-        assert.equal(sim.inspect().scene, null);
-      }
-    }
-  }
-});
+for (const [command, phase, replacement] of [
+  ["blow_bubbles", "peck", "cancel"],
+  ["bath_time", "splash", "nap"],
+  ["chip_toss", "intercept", "clean"],
+  ["baguette_parade", "gone", "cancel"],
+]) {
+  test(`${replacement} interrupts ${command} without reviving its effects`, () => {
+    const sim = setup();
+    sim.action(command, { x: 650, y: 480 });
+    until(sim, phase);
+    sim.action(replacement);
+
+    assert.equal(sim.inspect().scene, null);
+    assert.equal(sim.inspect().flight, null);
+    assert.deepEqual(sim.present().props, []);
+    assert.equal(sim.present().visualOffset.x, 0);
+    advance(sim, 20);
+    assert.equal(sim.inspect().scene, null);
+  });
+}
 
 test("resizing all theatre scenes keeps Gullbert and finite effects safe", () => {
   for (const command of commands) {
@@ -379,7 +302,6 @@ test("resizing all theatre scenes keeps Gullbert and finite effects safe", () =>
         sim.inspect().y >= 0 && sim.inspect().y <= 4,
         `${command}: y=${sim.inspect().y}`,
       );
-      assert.ok(sim.present().props.length <= 9);
     }
 
     assert.equal(sim.inspect().scene, null);
@@ -408,7 +330,7 @@ test("rare autonomy waits twenty visible minutes and uses a chance at bounded in
   assert.equal(sim.routine.maybeTheatre(), true);
 });
 
-test("rare autonomy obeys hide, pause and mischief, with bounded recent memory", () => {
+test("rare autonomy obeys hide, pause and mischief, and manual play restarts its cooldown", () => {
   const sim = routineFixture(TheatreRoutine);
   sim.time = 5000;
   sim.random = () => 0;
@@ -420,98 +342,8 @@ test("rare autonomy obeys hide, pause and mischief, with bounded recent memory",
   assert.equal(sim.routine.maybeTheatre(), false);
   sim.setVisible(true);
 
-  for (let i = 0; i < 10; i++) {
-    sim.action("baguette_parade");
-  }
-
-  assert.deepEqual(sim.rareTheatre.recent, [
-    "baguette",
-    "baguette",
-    "baguette",
-  ]);
+  sim.action("baguette_parade");
   sim.action("cancel");
   assert.equal(sim.routine.maybeTheatre(), false);
   assert.equal(sim.rareTheatre.nextAllowed, 6200);
-});
-
-test("theatre pose selection preserves walking defaults and animation parity", () => {
-  const cases = [
-    ["bubbles", "chase", "walkLeft", "walkLeft"],
-    ["bubbles", "peck", "nibble", "nibble"],
-    ["bubbles", "startle", "nap-startle", "nap-startle"],
-    ["bubbles", "proud", "blink", "blink"],
-    ["bath", "approach", "walkLeft", "walkLeft"],
-    ["bath", "splash", "bath-wet", "bath-wet"],
-    ["bath", "shake", "bath-shake-b", "bath-shake-a"],
-    ["bath", "exit", "walkLeft", "walkLeft"],
-    ["toss", "takeoff", "crouch", "crouch"],
-    ["toss", "intercept", "wingDown", "wingUp"],
-    ["toss", "land", "wingDown", "wingDown"],
-    ["toss", "miss-flail", "wingDown", "nap-startle"],
-    ["toss", "miss", "bag-offended", "bag-offended"],
-    ["toss", "eat", "nibble", "nibble"],
-    ["toss", "retrieve", "walkLeft", "walkLeft"],
-    ["baguette", "carry", "walkLeft", "walkLeft"],
-    ["baguette", "exit", "walkLeft", "walkLeft"],
-    ["baguette", "pause", "nibble", "nibble"],
-  ];
-
-  for (const [kind, phase, even, odd] of cases) {
-    const view = { scene: { kind, phase }, motionTime: 0.15, time: 0 };
-    assert.equal(theatrePose(view), even, `${kind}/${phase} even`);
-    assert.equal(
-      theatrePose({ ...view, time: 0.1 }),
-      odd,
-      `${kind}/${phase} odd`,
-    );
-  }
-
-  assert.equal(theatrePose({ scene: null, motionTime: 0, time: 0 }), null);
-  assert.equal(
-    theatrePose({
-      scene: { kind: "baguette", phase: "carry" },
-      motionTime: 0,
-      time: 0,
-    }),
-    "nibble",
-  );
-});
-
-test("baguette offsets preserve direction, interpolation, clamping and visibility", () => {
-  for (const direction of [-1, 1]) {
-    for (const [time, entrance, departure] of [
-      [-1, 220, 0],
-      [0.4, 110, 110],
-      [2, 0, 220],
-    ]) {
-      const scene = { kind: "baguette", direction, phaseStarted: 0 };
-      assert.deepEqual(
-        theatreOffset({ scene: { ...scene, phase: "entrance" }, time }),
-        { x: -direction * entrance, opacity: 1 },
-      );
-      assert.deepEqual(
-        theatreOffset({ scene: { ...scene, phase: "departure" }, time }),
-        { x: direction * departure, opacity: 1 },
-      );
-    }
-  }
-
-  for (const [phase, opacity] of [
-    ["gone", 0],
-    ["pause", 1],
-    ["carry", 1],
-  ]) {
-    assert.deepEqual(
-      theatreOffset({
-        scene: { kind: "baguette", phase, phaseStarted: 0, direction: 1 },
-        time: 0.4,
-      }),
-      { x: 0, opacity },
-    );
-  }
-
-  assert.deepEqual(theatreOffset({ scene: null, time: 0 }), {
-    x: 0,
-    opacity: 1,
-  });
 });

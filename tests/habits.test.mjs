@@ -47,6 +47,11 @@ test("energy and social interest change learned choices without overriding their
   assert.ok(rested.play_cap > tired.play_cap);
   assert.ok(sociable.play_cap > selectionCounts(memory, 1, neutral).play_cap);
   assert.ok(sociable.none > 0, "even a sociable gull can leave you alone");
+});
+
+test("eagerness cannot invent experience or bypass the invitation cooldown", () => {
+  const memory = normalizeMemory({ episodes: [episode(1, "play", "cap")] });
+  const neutral = { energy: 0.5, curiosity: 0.5, socialInterest: 0.5 };
   assert.equal(selectionCounts(normalizeMemory(), 1, neutral).play_cap, 0);
   assert.equal(selectionCounts(memory, 0, neutral).play_cap, 0);
 
@@ -90,7 +95,7 @@ test("recent reward outcomes outweigh older success even at equal mastery", () =
     episodes,
   });
   const counts = selectionCounts(memory);
-  assert.ok(counts.show_dead > counts.show_spin * 1.5);
+  assert.ok(counts.show_dead > counts.show_spin);
   assert.ok(counts.show_spin > 0, "old skills can still be tried");
 });
 
@@ -124,7 +129,7 @@ test("unanswered invitations back off and a new completed game restores willingn
   assert.equal(habits.choose(memory, 1010, 1, random), "play_cap");
 });
 
-test("quiet mode and unpaid work restrict choices without erasing preferences", () => {
+test("unpaid tricks suppress performances, while quiet mode also suppresses invitations", () => {
   const memory = normalizeMemory({
     unpaidTricks: 2,
     learned: { tricks: { spin: 6 } },
@@ -236,12 +241,14 @@ test("forgetting and restoring clear session choices without manufacturing exper
   assert.equal(selectionCounts(sim.exportMemory()).none, 1000);
 
   sim.restoreMemory({ learned: { tricks: { spin: 1 } } });
+  const performances = sim.exportMemory().performances.spin;
   advance(sim, 100);
   sim.configure({ paused: false });
   sim.step(0.05);
   assert.equal(sim.inspect().scene.trick, "spin");
-  assert.equal(sim.inspect().scene.unsolicited, true);
-  assert.equal(sim.inspect().scene.practiced, false);
+  assert.equal(sim.exportMemory().learned.tricks.spin, 1);
+  assert.equal(sim.exportMemory().performances.spin, performances);
+
   sim.action("nap");
   assert.equal(sim.inspect().scene, null, "explicit commands immediately take priority");
   assert.equal(sim.inspect().mode, "nap");

@@ -47,3 +47,33 @@ test("targeting and hiding capture nothing; attached props and belongings remain
   sim.setVisible(false);
   assert.deepEqual(sim.present().hitRegions, []);
 });
+
+test("native hit testing releases a cleaned splat without disabling pickup", () => {
+  const sim = new Gullbert(900, 650, () => 0.5);
+  const point = { x: 300, y: 300 };
+  sim.splat(point);
+  assert.equal(sim.directCleanupAt(point), true);
+  assert.equal(sim.interactionRects()
+    .some((rect) => contains(rect, point)), true);
+
+  sim.action("direct_pick", point);
+  assert.equal(sim.directCleanupAt(point), false);
+  assert.equal(sim.interactionRects()
+    .some((rect) => contains(rect, point)), false);
+  assert.equal(sim.canPickup(), true);
+});
+
+test("hidden native hit testing rejects pickup and cleanup until the pet returns", () => {
+  const sim = new Gullbert(900, 650, () => 0.5);
+  const point = { x: 300, y: 300 };
+  sim.splat(point);
+  sim.setVisible(false);
+
+  assert.deepEqual(sim.interactionRects(), []);
+  assert.equal(sim.canPickup(), false);
+  assert.equal(sim.directCleanupAt(point), false);
+
+  sim.setVisible(true);
+  assert.equal(sim.canPickup(), true);
+  assert.equal(sim.directCleanupAt(point), true);
+});

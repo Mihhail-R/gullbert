@@ -112,3 +112,26 @@ test("page cleanup stops listening to OS appearance changes", (t) => {
   fixture.systemChange(true);
   fixture.assertTheme("system", "light");
 });
+
+test("a failed appearance save keeps the chosen theme usable and allows retry", (t) => {
+  const fixture = appearanceFixture(t);
+  const storage = fixture.window.Storage.prototype;
+  const original = storage.setItem;
+  storage.setItem = () => {
+    throw new Error("Storage unavailable");
+  };
+
+  try {
+    fixture.choose("dark");
+    fixture.assertTheme("dark", "dark");
+    const error = fixture.window.document.getElementById("theme-error");
+    assert.equal(error.hidden, false);
+    assert.match(error.textContent, /Could not save appearance/);
+  } finally {
+    storage.setItem = original;
+  }
+
+  fixture.choose("light");
+  assert.equal(fixture.window.localStorage.getItem(appearanceKey), "light");
+  assert.equal(fixture.window.document.getElementById("theme-error").hidden, true);
+});

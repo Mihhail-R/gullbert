@@ -39,23 +39,34 @@ test("behavior level changes the odds, and declining a protest consumes its cool
   }
 });
 
-test("interruptions, stale identities and partial participation are not snubs", () => {
-  const pettiness = new Pettiness();
-
-  for (let attempt = 0; attempt < 3; attempt++) {
+test("interrupted or replaced invitations cannot add a snub", () => {
+  for (const interruption of ["interrupt", "replace"]) {
+    const pettiness = new Pettiness();
+    ignore(pettiness, 100);
     const identity = {};
     pettiness.invited(identity);
-    pettiness.interrupt();
-    pettiness.completed(identity, { kind: "cap", rounds: 0 }, 100, settings, () => 0);
-    pettiness.invited({});
-    pettiness.completed(identity, { kind: "cap", rounds: 0 }, 100, settings, () => 0);
-    pettiness.invited(identity);
-    pettiness.completed(identity, { kind: "cap", rounds: 1 }, 100, settings, () => 0);
-  }
 
-  assert.equal(pettiness.take(104, settings), null);
-  ignore(pettiness, 200);
-  assert.equal(pettiness.take(204, settings), null);
+    if (interruption === "interrupt") {
+      pettiness.interrupt();
+    } else {
+      pettiness.invited({});
+    }
+
+    pettiness.completed(identity, { kind: "cap", rounds: 0 }, 200, settings, () => 0);
+    assert.equal(pettiness.take(204, settings), null, interruption);
+    ignore(pettiness, 300);
+    assert.equal(pettiness.take(304, settings), "pretend_leave", interruption);
+  }
+});
+
+test("playing a round clears an earlier ignored invitation", () => {
+  const pettiness = new Pettiness();
+  ignore(pettiness, 100);
+  const identity = {};
+  pettiness.invited(identity);
+  pettiness.completed(identity, { kind: "cap", rounds: 1 }, 200, settings, () => 0);
+  ignore(pettiness, 300);
+  assert.equal(pettiness.take(304, settings), null);
 });
 
 test("only an expired trick reward window counts, and completion cannot count twice", () => {
@@ -71,20 +82,34 @@ test("only an expired trick reward window counts, and completion cannot count tw
   assert.equal(pettiness.take(404, settings), "pretend_leave");
 });
 
-test("offence fades, queued reactions expire, and settling needs no payment", () => {
+test("old snubs fade before they can combine with a new ignored invitation", () => {
   const pettiness = new Pettiness();
   ignore(pettiness, 100);
   ignore(pettiness, 701);
   assert.equal(pettiness.take(705, settings), null);
   ignore(pettiness, 800);
-  assert.equal(pettiness.take(821, settings), null);
-  const settled = new Pettiness();
-  ignore(settled, 100);
-  ignore(settled, 300);
-  settled.settle();
-  assert.equal(settled.take(304, settings), null);
-  ignore(settled, 1000);
-  assert.equal(settled.take(1004, settings), null);
+  assert.equal(pettiness.take(804, settings), "pretend_leave");
+});
+
+test("a protest expires when the bird cannot act on it soon enough", () => {
+  const pettiness = new Pettiness();
+  ignore(pettiness, 100);
+  ignore(pettiness, 300);
+  assert.equal(pettiness.take(321, settings), null);
+});
+
+test("settling discards both queued protests and earlier ignored invitations", () => {
+  const pending = new Pettiness();
+  ignore(pending, 100);
+  ignore(pending, 300);
+  pending.settle();
+  assert.equal(pending.take(304, settings), null);
+
+  const earlier = new Pettiness();
+  ignore(earlier, 100);
+  earlier.settle();
+  ignore(earlier, 300);
+  assert.equal(earlier.take(304, settings), null);
 });
 
 test("pause and lower behavior levels discard queued protests", () => {
@@ -114,10 +139,12 @@ function waitFor(sim, predicate, seconds = 500) {
   assert.fail("Expected behavior did not occur");
 }
 
-function remainUnprotested(sim, seconds) {
+function assertNoPettyExit(sim, seconds) {
   for (let tick = 0; tick < seconds * 20; tick++) {
     sim.step(0.05);
-    assert.doesNotMatch(sim.inspect().bubble, /audience is elsewhere|receive a response/);
+    const view = sim.inspect();
+    const protesting = view.scene?.kind === "pretend_leave" && view.mood?.name === "offended";
+    assert.equal(protesting, false);
   }
 }
 
@@ -155,7 +182,7 @@ test("accepting a cap invitation clears a snub even before the first round finis
   assert.equal(sim.inspect().scene.rounds, 0);
   sim.action("cancel");
   waitFor(sim, (view) => view.scene?.kind === "cap" && view.scene.phase === "ready");
-  remainUnprotested(sim, 30);
+  assertNoPettyExit(sim, 30);
 });
 
 test("an apology meal clears earlier ignored invitations before the next snub", () => {
@@ -170,22 +197,16 @@ test("an apology meal clears earlier ignored invitations before the next snub", 
 
   sim.action("apology");
   waitFor(sim, (view) => view.memory.learned.snackSpot?.meals === 1, 20);
-  const meals = sim.exportMemory().episodes.filter((episode) => {
-    return episode.kind === "meal";
-  }).length;
-  assert.equal(meals, 1);
-
   waitFor(sim, (view) => view.scene?.kind === "trick" && view.scene.phase === "reward");
   advance(sim, 21);
   assert.ok(sim.inspect().time - ignoredAt < 570, "the earlier snub has not expired");
-  remainUnprotested(sim, 30);
+  assertNoPettyExit(sim, 30);
 });
 
-test("naturally ignored autonomous tricks produce a finite, interruptible protest", () => {
+test("ignored autonomous tricks produce protests that commands can interrupt", () => {
   for (const level of [1, 2]) {
     const sim = secondInvitation(level);
-    waitFor(sim, (view) => /audience is elsewhere|receive a response/.test(view.bubble), 30);
-    assert.equal(sim.inspect().mood.name, "offended");
+    waitFor(sim, (view) => view.mood?.name === "offended", 30);
     assert.equal(sim.exportMemory().unpaidTricks, 0);
 
     if (level === 1) {
@@ -204,16 +225,21 @@ test("hiding or cancelling an unanswered invitation never leaves a deferred prot
   for (const operation of ["hide", "cancel", "pause", "forget_learning"]) {
     const sim = secondInvitation(1);
 
-    if (operation === "hide") {
-      sim.setVisible(false);
-      advance(sim, 1000);
-      sim.setVisible(true);
-    } else if (operation === "pause") {
-      sim.configure({ paused: true });
-    } else {
-      sim.action(operation);
+    switch (operation) {
+      case "hide":
+        sim.setVisible(false);
+        advance(sim, 1000);
+        sim.setVisible(true);
+        break;
+
+      case "pause":
+        sim.configure({ paused: true });
+        break;
+
+      default:
+        sim.action(operation);
     }
 
-    remainUnprotested(sim, 30);
+    assertNoPettyExit(sim, 30);
   }
 });

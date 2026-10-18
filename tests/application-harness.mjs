@@ -106,8 +106,8 @@ export function harness(options = {}) {
     },
     releaseCursor() {},
     authorizeCursor() {},
-    action(name) {
-      calls.push(["action", name]);
+    action(name, point) {
+      calls.push(["action", name, point]);
       tidying = name === "tidy";
     },
     configure() {},

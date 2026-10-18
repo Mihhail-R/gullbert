@@ -8,11 +8,10 @@ test("native shutdown freezes changes and waits for queued memory commits", asyn
   await h.app.start();
   h.changeMemory();
   const prepare = h.nativeListeners.get("gullbert-shutdown-prepare");
-  assert.equal(typeof prepare, "function");
   prepare({ payload: 1 });
   prepare({ payload: 1 });
   await settle();
-  h.nativeListeners.get("gullbert-action")({ payload: { action: "spin" } });
+  h.nativeListeners.get("gullbert-action")({ payload: { action: "trick_spin" } });
   assert.equal(h.calls.some(([name]) => name === "shutdown_ready"), false);
   assert.equal(h.calls.some(([name]) => name === "action"), false);
   pending.resolve();
@@ -27,21 +26,27 @@ test("native shutdown freezes changes and waits for queued memory commits", asyn
 
 test("failed shutdown leaves memory live and a retry can commit successfully", async () => {
   let fail = false;
-  const h = harness({ native: true, save() {
-    if (fail) {
-      throw new Error("disk full");
-    }
-  } });
+  const h = harness({
+    native: true,
+    save() {
+      if (fail) {
+        throw new Error("disk full");
+      }
+    },
+  });
   await h.app.start();
   await settle();
   h.changeMemory();
+
   fail = true;
   h.nativeListeners.get("gullbert-shutdown-prepare")({ payload: 1 });
   await settle();
   assert.match(h.calls.find(([name]) => name === "shutdown_ready")[1].error, /disk full/);
+
   h.nativeListeners.get("gullbert-shutdown-cancel")({ payload: 1 });
-  h.nativeListeners.get("gullbert-action")({ payload: { action: "spin" } });
-  assert.ok(h.calls.some(([name]) => name === "action"));
+  h.nativeListeners.get("gullbert-action")({ payload: { action: "trick_spin" } });
+  assert.ok(h.calls.some(([name, action]) => name === "action" && action === "trick_spin"));
+
   fail = false;
   h.nativeListeners.get("gullbert-shutdown-prepare")({ payload: 2 });
   await settle();
@@ -126,19 +131,24 @@ test("disposal invalidates a shutdown waiting for its memory commit", async () =
 });
 
 test("an uncertain acknowledgment waits for native cancellation before resuming", async () => {
-  const h = harness({ native: true, invoke(name) {
-    if (name === "shutdown_ready") {
-      throw new Error("IPC reply unavailable");
-    }
-  } });
+  const h = harness({
+    native: true,
+    invoke(name) {
+      if (name === "shutdown_ready") {
+        throw new Error("IPC reply unavailable");
+      }
+    },
+  });
   await h.app.start();
   h.nativeListeners.get("gullbert-shutdown-prepare")({ payload: 1 });
   await settle();
-  h.nativeListeners.get("gullbert-action")({ payload: { action: "spin" } });
+
+  h.nativeListeners.get("gullbert-action")({ payload: { action: "trick_spin" } });
   assert.equal(h.calls.some(([name]) => name === "action"), false);
   assert.match(String(h.errors.at(-1)), /IPC reply unavailable/);
+
   h.nativeListeners.get("gullbert-shutdown-cancel")({ payload: 1 });
-  h.nativeListeners.get("gullbert-action")({ payload: { action: "spin" } });
-  assert.ok(h.calls.some(([name]) => name === "action"));
+  h.nativeListeners.get("gullbert-action")({ payload: { action: "trick_spin" } });
+  assert.ok(h.calls.some(([name, action]) => name === "action" && action === "trick_spin"));
   await h.app.dispose();
 });

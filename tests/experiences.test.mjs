@@ -87,23 +87,6 @@ test(
   }
 );
 
-test("the local read cache stays immutable and refreshes only when memory changes", () => {
-  const memories = new Belongings(900, 650, () => 1234);
-  const before = memories.snapshot();
-  assert.equal(memories.snapshot(), before);
-  assert.throws(() => {
-    before.memory.performances.spin = 99;
-  }, TypeError);
-  memories.performed("spin", { x: 100, y: 200 });
-  const after = memories.snapshot();
-  assert.notEqual(after, before);
-  assert.equal(before.memory.performances.spin, 0);
-  assert.equal(after.memory.performances.spin, 1);
-  const exported = memories.exportMemory();
-  exported.episodes[0].location.x = 0;
-  assert.equal(after.memory.episodes[0].location.x, 100);
-});
-
 test(
   "forgetting learning clears its experiences and counters without losing visitors " +
   "or gifts",

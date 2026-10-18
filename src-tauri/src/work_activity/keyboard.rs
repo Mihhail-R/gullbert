@@ -235,9 +235,11 @@ mod tests {
         let mut counter = Counter::default();
         counter.renew(now);
         counter.press(now + POLL_LEASE);
-        assert_eq!(counter.count, 0);
-        assert_eq!(counter.last_press, None);
-        assert_eq!(counter.lease_until, None);
+
+        let resumed = now + POLL_LEASE + Duration::from_millis(1);
+        assert_eq!(counter.renew(resumed), (true, None));
+        counter.press(resumed);
+        assert_eq!(counter.renew(resumed), (false, Some((1, 0.0))));
     }
 
     #[test]

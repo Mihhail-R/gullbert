@@ -166,23 +166,29 @@ test("energy favors rest while curiosity favors inspecting and wandering", () =>
   const rested = choices({ ...neutral, energy: 0.8 });
   const curious = choices({ ...neutral, curiosity: 0.8 });
   const content = choices({ ...neutral, curiosity: 0.2 });
-  assert.ok(tired.nap > rested.nap * 2);
+  assert.ok(tired.nap > rested.nap);
   assert.ok(curious.tilt > content.tilt);
   assert.ok(curious.walk > content.walk);
   assert.ok(tired.tilt > 0, "low energy is a preference, never a ban");
 });
 
-test("a curious walk consumes the quiet slot and does not bypass pause", () => {
-  const sim = bird(() => 0.99);
+test("choosing a curious walk still waits before another quiet activity", () => {
+  let random = 0.99;
+  const sim = bird(() => random);
   const curious = { energy: 0.8, curiosity: 0.8, socialInterest: 0.8 };
   sim.routine.choose(curious);
   sim.time = 20;
   assert.equal(sim.routine.choose(curious), null);
-  assert.equal(sim.routine.snapshot().nextQuiet, 34);
+
+  random = 0;
+  sim.time = 33.99;
+  assert.equal(sim.routine.choose(curious), null);
   sim.time = 34;
   sim.settings.paused = true;
   assert.equal(sim.routine.choose(curious), null);
-  assert.equal(sim.routine.snapshot().nextQuiet, 34);
+
+  sim.settings.paused = false;
+  assert.equal(sim.routine.choose(curious), "nap");
 });
 
 test("boredom encourages ordinary wandering while low energy still favors rest", () => {

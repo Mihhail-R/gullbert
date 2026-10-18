@@ -26,26 +26,30 @@ test("pointing notices, head contact relaxes, a parked cursor eventually release
   sim.step(0.1);
   assert.equal(sim.inspect().touch.zone, "");
 });
-test("three pokes ruffle him, a poke wakes a nap, commands and hiding reset touch", () => {
+test("a poke wakes a sleeping gull", () => {
   const sim = bird();
   const point = { x: sim.inspect().x + 45, y: sim.inspect().y + 65 };
   sim.action("nap");
   sim.action("direct_pick", point);
-  assert.equal(sim.inspect().mode, "idle");
-  assert.equal(sim.inspect().pose, "nap-startle");
 
-  for (let n = 0; n < 2; n++) {
+  assert.equal(sim.inspect().mode, "idle");
+  assert.equal(sim.present().pose, "nap-startle");
+});
+
+test("three pokes ruffle Gullbert, and feeding settles the reaction", () => {
+  const sim = bird();
+  const point = { x: sim.inspect().x + 45, y: sim.inspect().y + 65 };
+
+  for (let poke = 0; poke < 3; poke++) {
     hover(sim, point, 0.4);
     sim.action("direct_pick", point);
   }
 
-  assert.equal(sim.inspect().touch.reaction, "ruffled");
-  assert.equal(sim.inspect().pose, "bag-offended");
+  assert.equal(sim.present().pose, "bag-offended");
   sim.action("feed");
   assert.equal(sim.inspect().touch.reaction, "");
-  sim.setVisible(false);
-  assert.equal(sim.inspect().touch.point, null);
 });
+
 test("hover and pokes do not replace an active show, including paused play", () => {
   const sim = bird();
   sim.action("bath_time");
@@ -99,7 +103,7 @@ test("direct cleanup ignores empty space and carried/scene-owned objects", () =>
 test("direct cleanup groups quick clicks, finishes automatically, and hide clears it", () => {
   const sim = bird();
   dropAt(sim, { x: 200, y: 200 });
-  const second = dropAt(sim, { x: 300, y: 200 });
+  dropAt(sim, { x: 300, y: 200 });
   sim.action("direct_pick", { x: 200, y: 200 });
   sim.action("direct_pick", { x: 300, y: 200 });
   assert.equal(sim.inspect().cleanup.session.removals, 2);

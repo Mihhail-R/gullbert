@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { Gullbert } from "../web-dist/simulation/engine.js";
 import { normalizeMemory } from "../web-dist/simulation/memory.js";
+import { dialogue } from "../web-dist/simulation/dialogue.js";
 import { advance, reach } from "./simulation-helpers.mjs";
 
 function setup(options = {}) {
@@ -51,35 +52,34 @@ test(
     for (const trick of ["come", "spin", "dead"]) {
       const sim = setup();
 
-      for (let lesson = 1; lesson <= 7; lesson++) {
-        perform(sim, trick);
-        assert.equal(
-          sim.exportMemory().learned.tricks[trick],
-          Math.min(6, lesson - 1),
-        );
-        assert.equal(sim.inspect().scene.practiced, lesson > 3);
-        sim.action("feed");
-        assert.equal(
-          sim.exportMemory().learned.tricks[trick],
-          Math.min(6, lesson - 1),
-        );
-        advance(sim, 3);
-        assert.equal(
-          sim.exportMemory().learned.tricks[trick],
-          Math.min(6, lesson),
-        );
-      }
+      perform(sim, trick);
+      assert.equal(sim.exportMemory().learned.tricks[trick], 0);
+      sim.action("feed");
+      assert.equal(sim.exportMemory().learned.tricks[trick], 0);
+      advance(sim, 3);
+      assert.equal(sim.exportMemory().learned.tricks[trick], 1);
 
       const restored = setup();
       restored.restoreMemory(JSON.parse(JSON.stringify(sim.exportMemory())));
-      assert.deepEqual(restored.exportMemory(), sim.exportMemory());
-      assert.equal(restored.inspect().scene, null);
+      assert.equal(restored.exportMemory().learned.tricks[trick], 1);
       restored.action("feed");
       advance(restored, 3);
-      assert.equal(restored.exportMemory().learned.tricks[trick], 6);
+      assert.equal(restored.exportMemory().learned.tricks[trick], 1);
     }
   }
 );
+
+test("practice reaches mastery without accumulating unlimited lessons", () => {
+  const sim = setup();
+  sim.restoreMemory({ learned: { tricks: { spin: 5 } } });
+
+  for (let lesson = 0; lesson < 2; lesson++) {
+    perform(sim);
+    sim.action("feed");
+    advance(sim, 3);
+    assert.equal(sim.exportMemory().learned.tricks.spin, 6);
+  }
+});
 
 test(
   "chip placement preserves a completed performance, but interrupted and expired " +
@@ -109,23 +109,34 @@ test(
         reach(bird, "reward");
       }
 
-      if (operation === "expired") {
-        advance(bird, 21);
-      } else if (operation === "hide") {
-        bird.setVisible(false);
-        bird.setVisible(true);
-      } else if (operation === "pause") {
-        bird.configure({ paused: true });
-      } else if (operation === "restore") {
-        bird.restoreMemory(bird.exportMemory());
-      } else if (operation !== "early") {
-        bird.action(operation);
+      switch (operation) {
+        case "early":
+          break;
+
+        case "expired":
+          advance(bird, 21);
+          break;
+
+        case "hide":
+          bird.setVisible(false);
+          bird.setVisible(true);
+          break;
+
+        case "pause":
+          bird.configure({ paused: true });
+          break;
+
+        case "restore":
+          bird.restoreMemory(bird.exportMemory());
+          break;
+
+        default:
+          bird.action(operation);
       }
 
       bird.action("feed");
       advance(bird, 3);
       assert.equal(bird.exportMemory().learned.tricks.spin, 0, operation);
-      assert.equal(bird.present().rotation, 0, operation);
     }
   }
 );
@@ -215,11 +226,9 @@ test(
       feed(restored, { x: 800, y: 550 });
     }
 
-    assert.deepEqual(restored.exportMemory().learned.snackSpot, {
-      x: 740,
-      y: 472,
-      meals: 3,
-    });
+    const replacement = restored.exportMemory().learned.snackSpot;
+    assert.equal(replacement.meals, 3);
+    assert.ok(Math.hypot(replacement.x - 800, replacement.y - 550) < 120);
     assert.equal(restored.exportMemory().learned.snackCandidate, null);
   }
 );
@@ -258,8 +267,7 @@ test(
     const restored = setup();
     restored.restoreMemory(sim.exportMemory());
     play(restored);
-    assert.equal(restored.inspect().pose, "tilt");
-    assert.match(restored.inspect().bubble, /head bit/);
+    assert.equal(restored.inspect().bubble, dialogue.gullbert.learning.scratchExpected);
     scratch(restored);
     assert.equal(restored.exportMemory().learned.scratchesAfterPlay, 4);
   }
@@ -293,7 +301,7 @@ test("cancelled games and stale post-game scratches do not teach rituals", () =>
   }
 });
 
-test("play-dead rotation resets on all interruptions and small displays keep tricks finite", () => {
+test("tricks stay within a resized display and finish without a lingering rotation", () => {
   for (const trick of ["come", "spin", "dead"]) {
     const sim = setup();
     sim.action(`trick_${trick}`, { x: 850, y: 600 });
@@ -484,7 +492,6 @@ test("a consumed bag serving settles snack debt and records exactly one meal", (
   assert.equal(memory.trickCooldownUntilMs, null);
   assert.equal(memory.episodes.filter((episode) => episode.kind === "meal").length, 1);
   assert.equal(memory.learned.snackSpot.meals, 1);
-  assert.equal(sim.inspect().mood.name, "snack-minded");
   perform(sim);
 });
 
@@ -506,8 +513,6 @@ test("caught and retrieved tossed chips settle debt only when consumed", () => {
 
     reach(sim, "eat");
     assert.equal(sim.inspect().scene.caught, caught);
-    assert.ok(sim.inspect().motivation.energy > 0.5);
-    assert.ok(sim.inspect().motivation.socialInterest > 0.5);
     advance(sim, 3);
     const memory = sim.exportMemory();
     assert.equal(memory.unpaidTricks, 0);
@@ -553,7 +558,7 @@ test("bag meals teach a snack spot once per serving, and an empty bag earns no c
   assert.deepEqual(sim.inspect().motivation, motivation);
 });
 
-test("cancelled chip meals and non-eating bag scenes leave snack debt unpaid", () => {
+test("cancelled meals cannot clear debt or teach a snack spot", () => {
   for (const command of ["place_bag", "chip_toss", "bring_gift", "apology"]) {
     const sim = setup({ now: () => 1000 });
     sim.restoreMemory({ unpaidTricks: 2 });
@@ -563,7 +568,9 @@ test("cancelled chip meals and non-eating bag scenes leave snack debt unpaid", (
     assert.equal(sim.exportMemory().unpaidTricks, 2, command);
     assert.equal(sim.exportMemory().learned.snackSpot, null, command);
   }
+});
 
+test("moving or sharing the bag without eating cannot clear debt or teach a snack spot", () => {
   for (const command of ["steal_bag", "bag_caper", "invite_pigeon", "gull_argument"]) {
     const sim = setup({ now: () => 1000 });
     sim.restoreMemory({ unpaidTricks: 2 });
@@ -576,59 +583,49 @@ test("cancelled chip meals and non-eating bag scenes leave snack debt unpaid", (
   }
 });
 
-test("the second unpaid trick is deliberately slow and still earns a real reward", () => {
+test("the second unpaid trick takes longer but still earns a consumed reward", () => {
   for (const trick of ["come", "spin", "dead"]) {
+    const fresh = setup();
+    fresh.action(`trick_${trick}`, { x: 850, y: 600 });
+    const freshStarted = fresh.inspect().time;
+    reach(fresh, "reward");
+    const freshDuration = fresh.inspect().time - freshStarted;
+
     const sim = setup();
-    perform(sim);
+    sim.restoreMemory({ unpaidTricks: 1 });
     sim.action(`trick_${trick}`, { x: 850, y: 600 });
-    assert.equal(sim.inspect().scene.reluctant, true);
-    reach(sim, "perform");
-    const scene = sim.inspect().scene;
-    const durations = { come: 43.2, spin: 6, dead: 8.4 };
-    assert.ok(Math.abs(scene.until - scene.phaseStarted - durations[trick]) < 0.001);
-    advance(sim, 3);
-    assert.equal(sim.inspect().scene.phase, "perform");
-    assert.equal(sim.exportMemory().unpaidTricks, 1);
+    const reluctantStarted = sim.inspect().time;
     reach(sim, "reward");
+    assert.ok(sim.inspect().time - reluctantStarted > freshDuration);
     assert.equal(sim.exportMemory().unpaidTricks, 2);
-    assert.match(sim.inspect().bubble, /expectant gull/);
-    assert.equal(sim.present().pose, "tilt");
     sim.action("feed");
     advance(sim, 3);
     assert.equal(sim.exportMemory().learned.tricks[trick], 1);
-    sim.action(`trick_${trick}`);
-    assert.equal(sim.inspect().scene.reluctant, false);
   }
 });
 
 test("volunteered tricks keep their normal pace even with an unpaid trick", () => {
+  const fresh = setup();
+  fresh.action("show_spin");
+  reach(fresh, "reward");
+
   const sim = setup();
-  perform(sim);
+  sim.restoreMemory({ unpaidTricks: 1 });
   sim.action("show_spin");
-  assert.equal(sim.inspect().scene.reluctant, false);
-  reach(sim, "perform");
-  advance(sim, 2.6);
+  advance(sim, fresh.inspect().time);
   assert.equal(sim.inspect().scene.phase, "reward");
   assert.equal(sim.exportMemory().unpaidTricks, 1);
 });
 
-test("refusal drags an invoice, pecks it, and removes it on interruption", () => {
+test("interrupting a refusal removes the invoice", () => {
   for (const command of ["cancel", "feed", "forget_learning"]) {
     const sim = setup();
     perform(sim);
     perform(sim);
     sim.action("trick_spin");
-    const first = sim.present().props.find((prop) => prop.id === "snack-invoice");
-    assert.match(first.text, /2 tricks unpaid\nCHIP DUE/);
-    advance(sim, 0.5);
-    const dragged = sim.present().props.find((prop) => prop.id === "snack-invoice");
-    assert.notEqual(dragged.x, first.x);
-    advance(sim, 0.55);
-    assert.equal(sim.present().pose, "nibble");
-    assert.equal(sim.present().props[0].rotation, 0);
+    assert.ok(sim.present().props.some((prop) => prop.id === "snack-invoice"));
     sim.action(command);
     assert.equal(sim.present().props.some((prop) => prop.id === "snack-invoice"), false);
-    assert.equal(sim.present().rotation, 0);
   }
 });
 

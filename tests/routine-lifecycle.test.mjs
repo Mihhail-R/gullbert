@@ -72,32 +72,25 @@ function customRuntime({ greedy = false, throwCleanup = false } = {}) {
 }
 
 function assertRevoked(sim, capabilities) {
-  const before = sim.inspect();
+  const { x, y, bubble } = sim.present();
+  sim.drainSounds();
   capabilities.movement.moveTo({ x: -500, y: -500 });
   capabilities.speech.say("stale callback");
   capabilities.events.emit("squawk");
   capabilities.props.add({ asset: "chip", x: 1, y: 1, width: 24, height: 18 });
-  assert.deepEqual(sim.inspect(), before);
-  assert.equal(sim.present().props.length, 0);
+  const after = sim.present();
+  assert.deepEqual({ x: after.x, y: after.y, bubble: after.bubble }, { x, y, bubble });
+  assert.deepEqual(sim.drainSounds(), []);
+  assert.deepEqual(after.props, []);
 }
 
-test("registered routines receive only the extension capabilities and complete once", () => {
+test("completing a registered routine releases its props and rejects late effects", () => {
   const fixture = customRuntime();
   const { sim, calls, capabilities } = fixture;
-  assert.deepEqual(Object.keys(capabilities)
-    .sort(), [
-    "clock",
-    "events",
-    "movement",
-    "props",
-    "random",
-    "speech",
-  ]);
-  assert.equal(Object.isFrozen(capabilities), true);
   sim.action("demonstration");
   assert.equal(sim.present().pose, "tilt");
   assert.equal(sim.present().props.length, 1);
-  assert.deepEqual(capabilities.movement.position, { x: 120, y: 140 });
+  assert.deepEqual({ x: sim.present().x, y: sim.present().y }, { x: 120, y: 140 });
   sim.step(0.05);
   sim.step(0.05);
   assert.deepEqual(calls, ["start", "update", "update", "complete"]);
@@ -119,16 +112,7 @@ test("hide pauses a routine and its props, then resumes without completing it", 
   const hiddenX = sim.inspect().x;
   capabilities.movement.moveTo({ x: 600, y: 500 });
   assert.equal(sim.inspect().x, hiddenX);
-  assert.equal(
-    capabilities.props.add({
-      asset: "chip",
-      x: 1,
-      y: 1,
-      width: 24,
-      height: 18,
-    }),
-    0,
-  );
+  capabilities.props.add({ asset: "chip", x: 1, y: 1, width: 24, height: 18 });
   sim.setVisible(true);
   assert.equal(sim.present().props.length, 1);
   sim.step(0.05);

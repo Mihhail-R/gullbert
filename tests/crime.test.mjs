@@ -56,55 +56,21 @@ test("theft grips the existing bag, freezes when caught, resumes and releases", 
   assert.equal(sim.inspect().bag.attached, false);
 });
 
-test("caper has inspect, trapped, running, shaking, and offended beats", () => {
+test("a bag caper traps Gullbert, sends him running and releases the same empty bag", () => {
   const sim = setup();
   emptyBag(sim);
   const bagId = sim.inspect().bag.id;
   sim.action("bag_caper");
-  const phases = new Set(),
-    poses = new Set(),
-    panicPositions = new Set();
+  until(sim, "trapped");
+  assert.equal(sim.inspect().bag.attached, true);
+  assert.equal(sim.present().pose, "bag-trapped");
 
-  for (let i = 0; i < 520; i++) {
-    phases.add(sim.inspect().scene?.phase);
-    poses.add(sim.inspect().pose);
+  until(sim, "panic");
+  const position = sim.inspect().x;
+  advance(sim, 0.5);
+  assert.notEqual(sim.inspect().x, position);
 
-    if (sim.inspect().scene?.phase === "panic") {
-      panicPositions.add(Math.round(sim.inspect().x));
-    }
-
-    sim.step(0.05);
-    assert.ok(
-      sim.inspect().x >= 0 && sim.inspect().x <= sim.inspect().width - 96,
-    );
-    assert.ok(
-      sim.inspect().y >= 0 && sim.inspect().y <= sim.inspect().height - 96,
-    );
-    assert.ok(
-      sim.inspect().bag.x >= 0 &&
-        sim.inspect().bag.x <= sim.inspect().width - 48,
-    );
-    assert.ok(
-      sim.inspect().bag.y >= 0 &&
-        sim.inspect().bag.y <= sim.inspect().height - 48,
-    );
-  }
-
-  for (const phase of ["inspect", "trapped", "panic", "shake", "offended"]) {
-    assert.ok(phases.has(phase), phase);
-  }
-
-  for (const pose of [
-    "bag-inspect",
-    "bag-trapped",
-    "bag-panic",
-    "bag-shake",
-    "bag-offended",
-  ]) {
-    assert.ok(poses.has(pose), pose);
-  }
-
-  assert.ok(panicPositions.size > 20);
+  advance(sim, 20);
   assert.equal(sim.inspect().scene, null);
   assert.equal(sim.inspect().bag.id, bagId);
   assert.equal(sim.inspect().bag.attached, false);
@@ -124,43 +90,35 @@ test("short thefts at either display edge still pause suspiciously", () => {
   }
 });
 
-test("every attached crime beat can be replaced or cleaned without a stale prop", () => {
-  for (const [action, phases] of [
-    ["steal_bag", ["grab", "drag", "suspicious"]],
-    ["bag_caper", ["trapped", "panic", "shake"]],
-  ]) {
-    for (const phase of phases) {
-      for (const replacement of ["feed", "place_bag", "clean", "nap"]) {
-        const sim = setup();
-        sim.action(action);
-        until(sim, phase);
-        const oldBag = sim.inspect().bag;
-        sim.action(replacement);
+for (const [action, phase, replacement] of [
+  ["steal_bag", "drag", "feed"],
+  ["steal_bag", "suspicious", "place_bag"],
+  ["bag_caper", "trapped", "clean"],
+  ["bag_caper", "panic", "nap"],
+]) {
+  test(`${replacement} releases the bag during ${action}`, () => {
+    const sim = setup();
+    sim.action(action);
+    until(sim, phase);
+    const oldBagId = sim.inspect().bag.id;
+    sim.action(replacement);
 
-        if (sim.inspect().bag) {
-          assert.equal(sim.inspect().bag.attached, false);
-        }
-
-        assert.notEqual(sim.inspect().scene?.kind, "theft");
-        assert.notEqual(sim.inspect().scene?.kind, "caper");
-
-        if (replacement === "clean") {
-          assert.equal(sim.inspect().bag, null);
-        }
-
-        if (replacement === "place_bag") {
-          assert.notEqual(sim.inspect().bag.id, oldBag.id);
-        }
-
-        advance(sim, 20);
-        assert.notEqual(sim.inspect().scene?.kind, "theft");
-        assert.notEqual(sim.inspect().scene?.kind, "caper");
-      }
+    if (replacement === "clean") {
+      assert.equal(sim.inspect().bag, null);
+    } else {
+      assert.equal(sim.inspect().bag.attached, false);
     }
-  }
-});
 
-test("crime actions without a bag give feedback, and resize bounds attached props", () => {
+    if (replacement === "place_bag") {
+      assert.notEqual(sim.inspect().bag.id, oldBagId);
+    }
+
+    advance(sim, 20);
+    assert.equal(sim.inspect().scene, null);
+  });
+}
+
+test("crime actions without a bag give feedback without starting a routine", () => {
   const sim = setup();
   sim.action("clean");
 
@@ -169,8 +127,11 @@ test("crime actions without a bag give feedback, and resize bounds attached prop
     assert.equal(sim.inspect().scene, null);
     assert.ok(sim.inspect().bubble);
   }
+});
 
+test("resizing while a bag is attached keeps it on screen and eventually releases it", () => {
   for (const action of ["steal_bag", "bag_caper"]) {
+    const sim = setup();
     sim.action("place_bag");
     sim.action(action);
     until(sim, action === "steal_bag" ? "drag" : "panic");

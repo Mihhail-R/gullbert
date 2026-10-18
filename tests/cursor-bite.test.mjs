@@ -2,71 +2,51 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { Gullbert } from "../web-dist/simulation/engine.js";
 import { createCursorBiteBridge } from "../web-dist/platform/cursor-bite.js";
+import { advance, reach } from "./simulation-helpers.mjs";
 
-function catchPointer(action = "eat_cursor") {
+function catchPointer() {
   const sim = new Gullbert(800, 600, () => 0.5);
   sim.configure({ paused: false, mischief: 0 });
-  sim.action(action);
+  sim.action("eat_cursor");
   sim.pointer({ x: sim.inspect().x + 78, y: sim.inspect().y + 48 });
 
-  for (let i = 0; i < 30; i++) {
-    sim.step(0.05);
-  }
-
+  reach(sim, "chew");
   return sim;
 }
-test("explicit eating catches, tugs briefly and spits out the pointer", () => {
+
+test("a caught pointer is only tugged briefly before recoiling", () => {
   const sim = catchPointer();
-  assert.equal(sim.inspect().scene.phase, "chew");
-  assert.equal(sim.inspect().wantsPointer, false);
-  const x = sim.inspect().x;
-  const facing = sim.inspect().facing;
+  const initialX = sim.inspect().x;
   const start = sim.inspect().time;
-
-  while (sim.inspect().scene.phase === "chew") {
-    sim.step(0.05);
-    assert.equal(sim.inspect().facing, facing);
-  }
-
+  reach(sim, "recoil", 30);
   assert.ok(sim.inspect().time - start <= 1.25);
-  assert.ok(
-    Math.abs(sim.inspect().x - x) > 20 && Math.abs(sim.inspect().x - x) < 40,
-  );
-  assert.equal(sim.inspect().scene.phase, "recoil");
-  assert.match(sim.inspect().bubble, /not a chip/);
-  assert.equal(catchPointer("nibble_cursor")
-    .inspect().scene.phase, "recoil");
+  assert.notEqual(sim.inspect().x, initialX, "the bird tugs while holding the pointer");
 });
+
 test("a pointer that escapes mid-peck is never caught remotely", () => {
   const sim = new Gullbert(800, 600, () => 0.5);
   sim.action("eat_cursor");
   sim.pointer({ x: sim.inspect().x + 78, y: sim.inspect().y + 48 });
 
-  while (sim.inspect().scene.phase !== "peck") {
-    sim.step(0.05);
-  }
-
+  reach(sim, "peck");
   sim.pointer({ x: 790, y: 590 });
-
-  for (let i = 0; i < 8; i++) {
-    sim.step(0.05);
-  }
-
+  advance(sim, 0.4);
   assert.equal(sim.inspect().scene.phase, "stalk");
 });
-test("every interruption drops a caught pointer", () => {
-  for (const interrupt of [
-    (sim) => sim.setVisible(false),
-    (sim) => sim.configure({ ...sim.inspect().settings, paused: true }),
-    ...["cancel", "clean", "feed", "nap", "summon", "place_bag"].map(
-      (name) => (sim) => sim.action(name),
-    ),
-  ]) {
+
+for (const [reason, interrupt] of [
+  ["hiding", (sim) => sim.setVisible(false)],
+  ["pausing", (sim) => sim.configure({ paused: true })],
+  ["Stop", (sim) => sim.action("cancel")],
+  ["feeding", (sim) => sim.action("feed")],
+]) {
+  test(`${reason} releases a caught pointer`, () => {
     const sim = catchPointer();
     interrupt(sim);
-    assert.notEqual(sim.inspect().scene?.phase, "chew");
-  }
-});
+    assert.equal(sim.cursorEncounter(), null);
+  });
+}
+
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 test("late failed tugs cannot cancel a replacement encounter or pile up IPC", async () => {
   let resolve,

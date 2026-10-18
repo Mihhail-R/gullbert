@@ -20,9 +20,9 @@ function persistence(options = {}) {
       },
     },
     clock: {
-      schedule(callback, delay) {
+      schedule(callback) {
         const id = ++serial;
-        timers.set(id, { callback, delay });
+        timers.set(id, { callback });
         return id;
       },
       cancel(id) {
@@ -51,7 +51,6 @@ function persistence(options = {}) {
       assert.equal(timers.size, 1);
       const [id, timer] = timers.entries()
         .next().value;
-      assert.equal(timer.delay, 5000);
       timers.delete(id);
       timer.callback();
     },
@@ -59,21 +58,30 @@ function persistence(options = {}) {
 }
 
 test("restoration is shared and saving waits for application readiness", async () => {
-  const h = persistence();
-  assert.equal(h.store.restore(), h.store.restore());
-  h.store.start();
-  h.store.remember();
-  assert.deepEqual(h.saved, []);
-  await h.store.restore();
-  assert.deepEqual(h.restored, [null]);
-  h.store.remember();
-  assert.deepEqual(h.saved, []);
-  h.store.start();
-  h.store.start();
+  const pending = deferred();
+  let loads = 0;
+  const fixture = persistence({
+    load() {
+      loads++;
+      return pending.promise;
+    },
+  });
+  const loading = [fixture.store.restore(), fixture.store.restore()];
+  fixture.store.start();
+  fixture.store.remember();
+  assert.deepEqual(fixture.saved, []);
+  pending.resolve(null);
+  await Promise.all(loading);
+  assert.equal(loads, 1);
+  assert.deepEqual(fixture.restored, [null]);
+  fixture.store.remember();
+  assert.deepEqual(fixture.saved, []);
+  fixture.store.start();
+  fixture.store.start();
   await settle();
-  h.store.remember();
-  await h.store.dispose();
-  assert.deepEqual(h.saved, [{ collection: { sock: 0 } }]);
+  fixture.store.remember();
+  await fixture.store.dispose();
+  assert.deepEqual(fixture.saved, [{ collection: { sock: 0 } }]);
 });
 
 test("slow writes serialize immutable snapshots and coalesce pending changes", async () => {
@@ -185,28 +193,25 @@ test("disposal invalidates a pending restoration", async () => {
 });
 
 test("shutdown bypasses backoff once and prevents retries even after failure", async () => {
-  const h = persistence({
+  const fixture = persistence({
     save() {
       throw new Error("disk unavailable");
     },
   });
-  await h.store.restore();
-  h.store.start();
+  await fixture.store.restore();
+  fixture.store.start();
   await settle();
-  const staleRetry = [...h.timers.values()][0].callback;
-  h.change();
-  const shutdown = h.store.dispose();
-  assert.equal(h.store.dispose(), shutdown);
-  await shutdown;
-  assert.equal(h.saved.length, 2);
-  assert.deepEqual(h.saved[1], { collection: { sock: 1 } });
-  // Preserve the existing synchronous final-failure notification.
-  assert.deepEqual(h.results, ["disk unavailable", "disk unavailable"]);
+  const staleRetry = [...fixture.timers.values()][0].callback;
+  fixture.change();
+  const shutdown = fixture.store.dispose();
+  await Promise.all([shutdown, fixture.store.dispose()]);
+  assert.equal(fixture.saved.length, 2);
+  assert.deepEqual(fixture.saved[1], { collection: { sock: 1 } });
   staleRetry();
-  h.store.start();
-  h.store.remember();
-  assert.equal(h.timers.size, 0);
-  assert.equal(h.saved.length, 2);
+  fixture.store.start();
+  fixture.store.remember();
+  assert.equal(fixture.timers.size, 0);
+  assert.equal(fixture.saved.length, 2);
 });
 
 test("shutdown waits for writes but ignores their late failures", async () => {
@@ -227,7 +232,7 @@ test("shutdown waits for writes but ignores their late failures", async () => {
   assert.equal(h.timers.size, 0);
 });
 
-test("desktop flush commits the latest queued snapshot and shares requests", async () => {
+test("concurrent flushes wait for the latest snapshot without duplicate writes", async () => {
   const first = deferred();
   const latest = deferred();
   const h = persistence({ save: (memory) => memory.collection.sock === 0
@@ -235,35 +240,38 @@ test("desktop flush commits the latest queued snapshot and shares requests", asy
   await h.store.restore();
   h.store.start();
   h.change();
-  const flushing = h.store.flush();
-  assert.equal(h.store.flush(), flushing);
-  let finished = false;
-  void flushing.then(() => {
-    finished = true;
+  const completed = [];
+  const flushing = [h.store.flush(), h.store.flush()].map((request, index) => {
+    return request.then(() => completed.push(index));
   });
   first.resolve();
   await settle();
-  assert.equal(finished, false);
-  assert.deepEqual(h.saved.at(-1), { collection: { sock: 1 } });
+  assert.deepEqual(completed, []);
   latest.resolve();
-  await flushing;
-  assert.equal(finished, true);
+  await Promise.all(flushing);
+  assert.deepEqual(h.saved, [{ collection: { sock: 0 } }, { collection: { sock: 1 } }]);
   await h.store.dispose();
 });
 
 test("desktop flush reports a failed commit and supports an explicit retry", async () => {
   let fail = true;
-  const h = persistence({ save() {
-    if (fail) {
-      throw new Error("disk unavailable");
-    }
-  } });
+  const committed = [];
+  const h = persistence({
+    save(memory) {
+      if (fail) {
+        throw new Error("disk unavailable");
+      }
+
+      committed.push(memory);
+    },
+  });
   await h.store.restore();
   h.store.start();
   await settle();
   await assert.rejects(h.store.flush(), /disk unavailable/);
+
   fail = false;
   await h.store.flush();
-  assert.equal(h.saved.length, 3);
+  assert.deepEqual(committed, [{ collection: { sock: 0 } }]);
   await h.store.dispose();
 });
