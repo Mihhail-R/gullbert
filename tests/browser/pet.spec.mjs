@@ -36,6 +36,93 @@ async function openPet(page, path = "/") {
   return pet;
 }
 
+test("pet menus are suppressed without swallowing pointer or keyboard input", async ({ page }) => {
+  const pet = await openPet(page, "/index.html");
+  const prevented = await pet.locator("body")
+    .evaluate((body) => {
+      const contextMenu = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+      const pointer = new PointerEvent("pointerdown", {
+        bubbles: true,
+        cancelable: true,
+        button: 2,
+      });
+      const escape = new KeyboardEvent("keydown", {
+        bubbles: true,
+        cancelable: true,
+        key: "Escape",
+      });
+      body.dispatchEvent(contextMenu);
+      body.dispatchEvent(pointer);
+      body.dispatchEvent(escape);
+      return [contextMenu.defaultPrevented, pointer.defaultPrevented, escape.defaultPrevented];
+    });
+  expect(prevented)
+    .toEqual([true, false, false]);
+
+  const controlsMenuPrevented = await page.locator("body")
+    .evaluate((body) => {
+      const event = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+      body.dispatchEvent(event);
+      return event.defaultPrevented;
+    });
+  expect(controlsMenuPrevented)
+    .toBe(false);
+});
+
+test("desktop startup waits for browser protection before loading the pet", async ({ page }) => {
+  await page.addInitScript(() => {
+    if (location.pathname !== "/pet-bootstrap.html") {
+      return;
+    }
+
+    window.__TAURI__ = {
+      core: {
+        invoke: (command) => {
+          window.preparationCommand = command;
+          return new Promise((resolve) => {
+            window.finishPreparation = resolve;
+          });
+        },
+      },
+    };
+  });
+  await page.goto("/pet-bootstrap.html");
+  await expect.poll(() => page.evaluate(() => window.preparationCommand))
+    .toBe("prepare_pet_browser");
+  await expect(page)
+    .toHaveURL(/\/pet-bootstrap\.html$/);
+  await expect(page.locator("#world"))
+    .toHaveCount(0);
+
+  await page.evaluate(() => window.finishPreparation());
+  await expect(page)
+    .toHaveURL(/\/pet\.html$/);
+  await expect(page.locator("#gull"))
+    .toHaveAttribute("data-pose", /.+/);
+});
+
+// This test expects a rejected startup promise, so it owns its page-error check.
+base("failed browser protection never loads the interactive pet", async ({ page }) => {
+  const failures = [];
+  page.on("pageerror", (error) => {
+    failures.push(error.message);
+  });
+  await page.addInitScript(() => {
+    window.__TAURI__ = {
+      core: {
+        invoke: () => Promise.reject(new Error("Browser settings unavailable")),
+      },
+    };
+  });
+  await page.goto("/pet-bootstrap.html");
+  await expect.poll(() => failures)
+    .toEqual(["Browser settings unavailable"]);
+  await expect(page)
+    .toHaveURL(/\/pet-bootstrap\.html$/);
+  await expect(page.locator("#world"))
+    .toHaveCount(0);
+});
+
 test("the playground boots the real pet iframe and displays its sprite", async ({ page }) => {
   const pet = await openPet(page);
   const sprite = pet.locator(".sprite");

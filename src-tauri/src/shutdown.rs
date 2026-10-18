@@ -109,6 +109,13 @@ pub(crate) async fn prepare(app: &tauri::AppHandle) -> Result<Prepared, String> 
         app: app.clone(),
         id,
     };
+
+    // A hidden bootstrap page has no running simulation or unsaved memories.
+    // Quit must still work if browser configuration fails or has not finished.
+    if !crate::pet_browser::is_ready(app) {
+        return Ok(prepared);
+    }
+
     native_input::request(app.clone(), move |app| {
         // Updater and OS exits need the same input cleanup as the Quit action.
         native_input::desktop::prepare_shutdown(app);
@@ -117,6 +124,7 @@ pub(crate) async fn prepare(app: &tauri::AppHandle) -> Result<Prepared, String> 
             .map_err(|e| e.to_string())
     })
     .await??;
+
     tauri::async_runtime::spawn_blocking(move || wait_for_save(reply, SAVE_TIMEOUT))
         .await
         .map_err(|e| e.to_string())??;

@@ -1,3 +1,4 @@
+import "./browser-policy.js";
 import { Gullbert } from "../../simulation/engine.js";
 import { native, invoke } from "../../platform/bridge.js";
 import { createAudioPlayer } from "../../platform/audio.js";

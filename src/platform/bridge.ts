@@ -36,6 +36,7 @@ interface Commands {
   update_settings: [{ settings: Settings }, void];
   snapshot: [undefined, Snapshot];
   pet_ready: [undefined, Snapshot];
+  prepare_pet_browser: [undefined, void];
   load_roommate: [undefined, unknown];
   save_roommate: [{ memory: Memory }, void];
   publish_roommate: [{ status: RoommateStatus }, void];

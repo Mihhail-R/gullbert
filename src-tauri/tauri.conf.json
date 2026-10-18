@@ -16,7 +16,7 @@
       {
         "label": "pet",
         "title": "Gullbert overlay",
-        "url": "pet.html",
+        "url": "pet-bootstrap.html",
         "width": 800,
         "height": 600,
         "visible": false,

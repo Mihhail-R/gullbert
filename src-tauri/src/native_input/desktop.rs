@@ -107,16 +107,26 @@ impl Effects for Desktop {
         windows::cursor_position(self.0.clone())
     }
     fn capture(&self, enabled: bool) -> Result<(), String> {
+        if enabled {
+            crate::pet_browser::ensure_ready(&self.0)?;
+        }
+
         pet(&self.0)?
             .set_ignore_cursor_events(!enabled)
             .map_err(|error| error.to_string())
     }
     fn focusable(&self, enabled: bool) -> Result<(), String> {
+        if enabled {
+            crate::pet_browser::ensure_ready(&self.0)?;
+        }
+
         pet(&self.0)?
             .set_focusable(enabled)
             .map_err(|error| error.to_string())
     }
     fn focus(&self) -> Result<(), String> {
+        crate::pet_browser::ensure_ready(&self.0)?;
+
         pet(&self.0)?.set_focus().map_err(|error| error.to_string())
     }
     fn all_workspaces(&self) -> Result<(), String> {
@@ -150,6 +160,10 @@ impl Effects for Desktop {
             .map_err(|error| error.to_string())
     }
     fn visibility(&self, visible: bool) -> Result<(), String> {
+        if visible {
+            crate::pet_browser::ensure_ready(&self.0)?;
+        }
+
         self.0
             .state::<State>()
             .visible
