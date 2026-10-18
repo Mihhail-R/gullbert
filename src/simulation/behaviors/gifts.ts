@@ -2,12 +2,12 @@ import { dialogue } from "../dialogue.js";
 import { observe } from "../observation.js";
 import type { ReadonlyValue } from "../presentation.js";
 import { scopeCapabilities } from "../capabilities.js";
-import type { Collectible } from "../items.js";
+import type { RecallReservation } from "../long-term-memory.js";
 import type { Pose } from "../poses.js";
 import type { Point } from "../model.js";
 import type { SimulationView, BehaviorCapabilities } from "../capabilities.js";
 import type { SceneOwner } from "../routine.js";
-import type { Scene, GiftScene as OwnedScene } from "../scenes.js";
+import type { Scene, GiftPurpose, GiftScene as OwnedScene } from "../scenes.js";
 import { ITEMS } from "../items.js";
 
 export function giftPose(
@@ -158,9 +158,6 @@ export class GiftRoutine implements SceneOwner {
     sim.lifecycle.complete();
     sim.lifecycle.rest(delay);
   }
-  #collect(item: Collectible) {
-    this.#environment.belongings.collect(item, this.#environment.body);
-  }
   #startGift(name: string) {
     const sim = this.#environment;
 
@@ -168,6 +165,37 @@ export class GiftRoutine implements SceneOwner {
       return false;
     }
 
+    this.#beginGift({
+      purpose: "discovery",
+      item: sim.belongings.chooseGift(sim.random),
+    });
+    return true;
+  }
+
+  startRecall(recall: RecallReservation): boolean {
+    const memory = recall.memory;
+
+    if (memory.kind !== "treasure") {
+      return false;
+    }
+
+    const collection = this.#environment.belongings.snapshot().memory.collection;
+
+    if ((collection[memory.item] ?? 0) <= 0) {
+      return false;
+    }
+
+    this.#beginGift({
+      purpose: "retrieve-keepsake",
+      item: memory.item,
+      recall: structuredClone(recall),
+    });
+    this.#identity = Object.freeze({});
+    return true;
+  }
+
+  #beginGift(gift: GiftPurpose): void {
+    const sim = this.#environment;
     let side: -1 | 1;
 
     if (sim.body.x < sim.body.width / 2) {
@@ -179,7 +207,7 @@ export class GiftRoutine implements SceneOwner {
     this.#scene = {
       kind: "gift",
       phase: "takeoff",
-      item: sim.belongings.chooseGift(sim.random),
+      ...gift,
       carrying: false,
       origin: sim.body.safePoint({ x: sim.body.x, y: sim.body.y }),
       side: side,
@@ -188,8 +216,10 @@ export class GiftRoutine implements SceneOwner {
       speed: Math.max(360, sim.body.width / 1.8),
     };
     sim.activity.beginRoutine("gift");
-    sim.speech.say(dialogue.gullbert.gifts.backSoonExcellentJudgementAwaits, 2);
-    return true;
+    const line = gift.purpose === "retrieve-keepsake"
+      ? dialogue.gullbert.gifts.fetchingSomething
+      : dialogue.gullbert.gifts.backSoonExcellentJudgementAwaits;
+    sim.speech.say(line, 2);
   }
   #flyTo(target: Point, speed: number, dt: number) {
     const sim = this.#environment;
@@ -223,6 +253,24 @@ export class GiftRoutine implements SceneOwner {
     });
     return false;
   }
+  #reveal(scene: OwnedScene): void {
+    const sim = this.#environment;
+
+    if (scene.purpose === "retrieve-keepsake") {
+      const line = scene.item === "bent_spoon"
+        ? dialogue.gullbert.gifts.stillAnExcellentSpoon
+        : dialogue.gullbert.gifts.keptThis;
+      sim.speech.say(line, 3);
+      return;
+    }
+
+    const favourite = sim.belongings.favouriteTreasure();
+    const line = scene.item === favourite
+      ? dialogue.gullbert.gifts.myFavourite
+      : ITEMS[scene.item].reveal;
+    sim.speech.say(line, 3);
+  }
+
   #stepGift(dt: number) {
     const sim = this.#environment;
     const scene = this.#scene;
@@ -286,7 +334,10 @@ export class GiftRoutine implements SceneOwner {
           }
 
           sim.body.place({ x: sim.body.x, y: airborneY });
-          sim.speech.say(dialogue.gullbert.gifts.beholdMyImpeccableTaste, 2);
+          const line = scene.purpose === "retrieve-keepsake"
+            ? dialogue.gullbert.gifts.keptThis
+            : dialogue.gullbert.gifts.beholdMyImpeccableTaste;
+          sim.speech.say(line, 2);
         }
 
         break;
@@ -311,11 +362,7 @@ export class GiftRoutine implements SceneOwner {
         if (sim.clock.now >= scene.until) {
           scene.phase = "reveal";
           scene.until = sim.clock.now + 1.8;
-          const favourite = sim.belongings.favouriteTreasure();
-          const line = scene.item === favourite
-            ? dialogue.gullbert.gifts.myFavourite
-            : ITEMS[scene.item].reveal;
-          sim.speech.say(line, 3);
+          this.#reveal(scene);
 
           if (scene.item === "chip") {
             sim.events.emit("munch");
@@ -328,8 +375,10 @@ export class GiftRoutine implements SceneOwner {
 
       case "reveal": {
         if (sim.clock.now >= scene.until) {
-          if (scene.item !== "chip") {
-            this.#collect(scene.item);
+          if (scene.purpose === "retrieve-keepsake") {
+            sim.belongings.completeRecall(scene.recall, sim.body);
+          } else if (scene.item !== "chip") {
+            sim.belongings.collect(scene.item, sim.body);
           }
 
           this.#finish();

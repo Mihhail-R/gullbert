@@ -1,6 +1,6 @@
 import type { ReadonlyValue } from "./presentation.js";
 import type { Point, Direction, Trick } from "./model.js";
-import type { Item } from "./items.js";
+import type { Collectible, Item } from "./items.js";
 import type { RecallReservation } from "./long-term-memory.js";
 
 // Each routine owns its state. Narrow on kind before reading routine-specific fields.
@@ -52,16 +52,19 @@ export interface CrimeScene extends TimedScene {
   dragged: number;
   direction: Direction;
 }
-export interface GiftScene extends TimedScene {
+export type GiftPurpose =
+  | { purpose: "discovery"; item: Item }
+  | { purpose: "retrieve-keepsake"; item: Collectible; recall: RecallReservation };
+
+export type GiftScene = TimedScene & GiftPurpose & {
   kind: "gift";
   phase: "takeoff" | "depart" | "away" | "return" | "land" | "reveal";
-  item: Item;
   carrying: boolean;
   origin: Point;
   side: Direction;
   deadline: number;
   speed: number;
-}
+};
 export interface PerchScene extends TimedScene {
   kind: "perch";
   phase: "approach" | "settle" | "loiter";

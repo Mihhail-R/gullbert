@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { snackRecallFixture, encoreFixture, idleFor } from "../recall-fixture.mjs";
+import {
+  snackRecallFixture,
+  encoreFixture,
+  keepsakeRecallFixture,
+  idleFor,
+} from "../recall-fixture.mjs";
 import { reach } from "../simulation-helpers.mjs";
 
 async function renderRecall(page, presentation) {
@@ -39,4 +44,20 @@ test("an encore renders its pleased look", async ({ page }, testInfo) => {
   await expect(page.locator("#bird"))
     .toHaveCSS("--routine-rotation", "0deg");
   await page.screenshot({ path: testInfo.outputPath("encore-pleased.png") });
+});
+
+test("a keepsake reveal renders the owned spoon and recall line", async ({ page }, testInfo) => {
+  const { sim } = keepsakeRecallFixture();
+  idleFor(sim, 121);
+  reach(sim, "reveal");
+  await renderRecall(page, sim.present());
+  await expect(page.locator("#carried-treasure"))
+    .toBeVisible();
+  await expect(page.locator("#carried-treasure"))
+    .toHaveAttribute("data-item", "bent_spoon");
+  await expect(page.locator("#speech"))
+    .toHaveText("still an excellent spoon.");
+  await expect(page.locator("#gull"))
+    .toHaveAttribute("data-pose", "blink");
+  await page.screenshot({ path: testInfo.outputPath("keepsake-spoon-reveal.png") });
 });
