@@ -9,7 +9,6 @@ import { createPointerTracker } from "../../platform/pointer.js";
 import { WorkObserver } from "../../platform/work-observer.js";
 import { contains } from "../../simulation/behaviors/touch.js";
 import type { Point, PointerSample, Settings } from "../../simulation/model.js";
-import type { CursorScene } from "../../simulation/scenes.js";
 import type {
   ApplicationDependencies,
   ApplicationEvents,
@@ -19,11 +18,6 @@ import type {
 import { Targeting } from "./targeting.js";
 
 type Lifecycle = "new" | "starting" | "running" | "stopping" | "disposed";
-interface CursorLeaseScene {
-  token: object;
-  phase: CursorScene["phase"];
-  cursorId?: number;
-}
 
 /** Owns the overlay lifecycle; dependencies never need to manage its pending work. */
 export class PetApplication {
@@ -39,17 +33,12 @@ export class PetApplication {
   readonly #targeting: Targeting;
   #tidyPoint: Point | null = null;
   #timer: ReturnType<typeof setTimeout> | undefined;
-  #biteTimer: ReturnType<typeof setTimeout> | undefined;
   #last = 0;
   #frame: number | undefined;
   #renderFrame: number | undefined;
   #initialized = false;
   #statusKey = "";
   #storageError = "";
-  #chewingToken: object | null = null;
-  #cursorLeaseScene: CursorLeaseScene | null = null;
-  #reactionLease: { token: object; id: number } | null = null;
-  #pickupReaction: object | null = null;
   readonly #persistence: MemoryPersistence;
   readonly #desktopShutdown: ShutdownCoordinator;
   readonly #drag: ReturnType<typeof createPickupDrag>;
@@ -148,51 +137,20 @@ export class PetApplication {
           this.#dependencies.simulation.currentReaction(reaction)
         );
       },
-      armed: (reaction, id) => {
-        if (
-          this.#running() &&
-          this.#dependencies.simulation.armReaction(reaction, id)
-        ) {
-          this.#reactionLease = { token: reaction, id };
-        } else {
-          this.#releaseCursorLease(id);
-        }
-      },
-      discard: (id) => {
-        this.#releaseCursorLease(id);
-      },
+      armed: (reaction, id) => this.#bite.armReaction(reaction, id),
+      discard: (id) => this.#bite.discard(id),
       schedule: this.#dependencies.clock.schedule,
       cancel: this.#dependencies.clock.cancel,
     });
     this.#bite = createCursorBiteBridge({
-      tug: (id, point) => {
-        const native = this.#dependencies.native;
-
-        if (!native || id == null || !this.#running()) {
-          return Promise.resolve(false);
-        }
-
-        return native.invoke("tug_cursor", { id, ...point });
+      simulation: dependencies.simulation,
+      schedule: dependencies.clock.schedule,
+      cancel: dependencies.clock.cancel,
+      tug: native ? (id, point) => native.invoke("tug_cursor", { id, ...point }) : null,
+      release: async (id) => {
+        await native?.invoke("release_cursor", { id });
       },
-      release: (id) => {
-        const native = this.#dependencies.native;
-
-        if (native) {
-          return native.invoke("release_cursor", { id });
-        }
-
-        return Promise.resolve();
-      },
-      failed: (scene) => {
-        if (!this.#running()) {
-          return;
-        }
-
-        const owned = scene as CursorLeaseScene;
-        this.#dependencies.simulation.releaseCursor(
-          dialogue.gullbert.cursor.tooSlippery,
-          owned.token,
-        );
+      changed: () => {
         this.#render();
         this.#syncPointer();
       },
@@ -262,20 +220,13 @@ export class PetApplication {
     this.#cancelTick();
     this.#cancelRender();
     this.#targeting.stopDeadline();
-    this.#dependencies.clock.cancel(this.#biteTimer);
     this.#timer = undefined;
-    this.#biteTimer = undefined;
     this.#cancelDrag();
     this.#dependencies.simulation.setVisible(false);
     this.#pointer.stop();
     this.#work?.stop();
     this.#releaseInteraction();
     this.#bite.stop();
-
-    if (this.#reactionLease) {
-      this.#releaseCursorLease(this.#reactionLease.id);
-      this.#reactionLease = null;
-    }
 
     this.#targeting.dispose();
 
@@ -906,10 +857,8 @@ export class PetApplication {
 
     const sim = this.#dependencies.simulation;
 
-    if (!this.#drag.active && !sim.cursorEncounter()) {
-      if (!this.#pickupReaction || !sim.currentReaction(this.#pickupReaction)) {
-        return;
-      }
+    if (!this.#drag.active && !sim.cursorEncounter() && !this.#bite.reacting) {
+      return;
     }
 
     this.#cancelDrag();
@@ -1042,7 +991,7 @@ export class PetApplication {
       cancelled,
       this.#dependencies.clock.wallNow(),
     );
-    this.#pickupReaction = reaction;
+    this.#bite.trackReaction(reaction);
     this.#render();
     this.#syncPointer();
     return reaction;
@@ -1154,78 +1103,7 @@ export class PetApplication {
       return;
     }
 
-    const sim = this.#dependencies.simulation;
-
-    if (
-      this.#reactionLease &&
-      !sim.currentReaction(this.#reactionLease.token)
-    ) {
-      const id = this.#reactionLease.id;
-      this.#reactionLease = null;
-      this.#releaseCursorLease(id);
-    }
-
-    let encounter = sim.cursorEncounter();
-
-    if (!this.#visible || this.#targeting.active) {
-      encounter = null;
-    }
-
-    let token = null;
-
-    if (encounter?.phase === "chew") {
-      token = encounter.token;
-    }
-
-    if (this.#chewingToken !== token) {
-      this.#dependencies.clock.cancel(this.#biteTimer);
-      this.#biteTimer = undefined;
-      this.#chewingToken = token;
-
-      if (token) {
-        const chewingToken = token;
-        this.#biteTimer = this.#dependencies.clock.schedule(() => {
-          const current = sim.cursorEncounter();
-
-          if (
-            this.#running() &&
-            current?.token === chewingToken &&
-            current.phase === "chew"
-          ) {
-            sim.releaseCursor(undefined, chewingToken);
-            this.#render();
-            this.#syncPointer();
-          }
-        }, 1200);
-      }
-    }
-
-    if (this.#dependencies.native) {
-      if (encounter?.cursorId != null) {
-        if (this.#cursorLeaseScene?.token !== encounter.token) {
-          this.#cursorLeaseScene = {
-            token: encounter.token,
-            phase: encounter.phase,
-            cursorId: encounter.cursorId,
-          };
-        } else {
-          this.#cursorLeaseScene.phase = encounter.phase;
-          this.#cursorLeaseScene.cursorId = encounter.cursorId;
-        }
-
-        let point = null;
-
-        if (encounter.phase === "chew") {
-          point = encounter.beak;
-        }
-
-        this.#bite.sync(this.#cursorLeaseScene, point);
-      } else {
-        this.#cursorLeaseScene = null;
-        this.#bite.sync(null);
-      }
-    }
-
+    this.#bite.sync(this.#visible && !this.#targeting.active);
     this.#updateView();
   }
 
@@ -1239,14 +1117,6 @@ export class PetApplication {
 
     if (native) {
       this.#runNative(native.invoke("sync_interaction", { rects: [] }));
-    }
-  }
-
-  #releaseCursorLease(id: number): void {
-    const native = this.#dependencies.native;
-
-    if (native) {
-      this.#runNative(native.invoke("release_cursor", { id }));
     }
   }
 
