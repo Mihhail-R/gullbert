@@ -57,6 +57,7 @@ export function harness(options = {}) {
     exportMemory() {
       return { collection: { sock: revision } };
     },
+    checkpointMemory() {},
     restoreMemory(memory) {
       restored.push(memory);
     },

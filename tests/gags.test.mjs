@@ -255,8 +255,14 @@ test("apology carries and offers one chip for two seconds then eats it without a
   assert.equal(saved.episodes.at(-1).detail, "apology");
   assert.equal(saved.episodes.filter((episode) => episode.kind === "meal").length, 1);
   assert.equal(saved.learned.snackSpot.meals, 1);
+  assert.equal(saved.longTerm.snack.candidate.days, 1);
   assert.deepEqual(saved.learned.tricks, memory.learned.tricks);
-  assert.deepEqual({ ...saved, episodes: [], learned: memory.learned }, memory);
+  assert.deepEqual({
+    ...saved,
+    episodes: [],
+    learned: memory.learned,
+    longTerm: memory.longTerm,
+  }, memory);
   assert.ok(sim.inspect().memoryRevision > revision);
   assert.deepEqual(sim.inspect().events, ["munch"]);
 });

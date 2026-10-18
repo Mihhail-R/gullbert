@@ -43,7 +43,8 @@ function validDay(value: unknown): value is string {
     return false;
   }
 
-  return parsed.toISOString().slice(0, 10) === value;
+  return parsed.toISOString()
+    .slice(0, 10) === value;
 }
 
 export function validRecallDetail(detail: unknown): detail is string {
@@ -118,6 +119,36 @@ function laterTimestamp(value: unknown, earliestMs: number): number | null {
   return value;
 }
 
+function validRecallKey(value: unknown): value is string {
+  if (typeof value !== "string") {
+    return false;
+  }
+
+  const parts = value.split(":");
+
+  if (parts.length !== 2) {
+    return false;
+  }
+
+  const [kind, detail] = parts;
+
+  switch (kind) {
+    case "snack": {
+      const atMs = Number(detail);
+      return validMemoryTime(atMs) && String(atMs) === detail;
+    }
+
+    case "trick":
+      return detail === "spin" || detail === "dead";
+
+    case "treasure":
+      return isCollectible(detail);
+
+    default:
+      return false;
+  }
+}
+
 /** Normalize the bounded summary independently of the evictable episode history. */
 export function normalizeSummaries(data: unknown): LongTermMemory {
   const source = object(data);
@@ -160,28 +191,9 @@ export function normalizeSummaries(data: unknown): LongTermMemory {
   }
 
   const lastStart = object(source.lastStart);
-  let validKey = false;
 
-  if (typeof lastStart.key === "string") {
-    const [kind, detail] = lastStart.key.split(":");
-
-    switch (kind) {
-      case "snack":
-        validKey = validMemoryTime(Number(detail));
-        break;
-
-      case "trick":
-        validKey = detail === "spin" || detail === "dead";
-        break;
-
-      case "treasure":
-        validKey = isCollectible(detail);
-        break;
-    }
-  }
-
-  if (validKey && validMemoryTime(lastStart.atMs)) {
-    memory.lastStart = { key: lastStart.key as string, atMs: lastStart.atMs };
+  if (validRecallKey(lastStart.key) && validMemoryTime(lastStart.atMs)) {
+    memory.lastStart = { key: lastStart.key, atMs: lastStart.atMs };
     timestamps.push(lastStart.atMs);
 
     if (memory.daily && localMemoryDay(lastStart.atMs) === memory.daily.day) {
@@ -267,7 +279,10 @@ export function normalizeSummaries(data: unknown): LongTermMemory {
   return memory;
 }
 
-export function migrateSummaries(episodes: readonly MemoryEpisode[], nowMs: number): LongTermMemory {
+export function migrateSummaries(
+  episodes: readonly MemoryEpisode[],
+  nowMs: number,
+): LongTermMemory {
   const memory = createLongTermMemory();
   const chronological = [...episodes]
     .sort((first, second) => first.at - second.at || first.id - second.id);

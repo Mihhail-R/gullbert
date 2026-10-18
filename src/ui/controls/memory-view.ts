@@ -81,7 +81,8 @@ export function memoryDescription(event: MemoryEpisode): string {
       const item = event.detail.slice(9);
 
       if (isCollectible(item)) {
-        return `Brought back his old ${ITEMS[item].name.toLowerCase()}`;
+        const name = item === "sock" ? "sock" : ITEMS[item].name.toLowerCase();
+        return `Brought back his old ${name}`;
       }
 
       return "Remembered an old treasure";

@@ -50,13 +50,15 @@ fn validate(memory: &Value) -> Result<Vec<Episode>, String> {
     if !memory.is_object() || memory.to_string().len() > MAX_BYTES {
         return Err("Invalid roommate memory".into());
     }
+
     if memory
         .get("version")
         .and_then(Value::as_u64)
-        .is_some_and(|v| v > 2)
+        .is_some_and(|v| v > 3)
     {
         return Err("Memory snapshot was created by a newer Gullbert".into());
     }
+
     let episodes: Vec<Episode> = serde_json::from_value(
         memory
             .get("episodes")
@@ -64,43 +66,74 @@ fn validate(memory: &Value) -> Result<Vec<Episode>, String> {
             .unwrap_or_else(|| serde_json::json!([])),
     )
     .map_err(|e| e.to_string())?;
+
     if episodes.len() > HISTORY_LIMIT {
         return Err("Memory history is too large".into());
     }
+
     let mut ids = HashSet::new();
+
     for event in &episodes {
-        let p = &event.location;
+        let position = &event.location;
+
         if event.id <= 0 || event.id > 9_007_199_254_740_991 {
             return Err("Invalid memory experience ID".into());
         }
+
         let unique = ids.insert(event.id);
+
         if !unique {
             return Err("Duplicate memory experience ID".into());
         }
+
         if event.at < 0 || event.at > 8_640_000_000_000_000 {
             return Err("Invalid memory experience timestamp".into());
         }
-        if event.detail.is_empty() || event.detail.chars().count() > 80 {
+
+        if event.detail.trim().is_empty() || event.detail.chars().count() > 80 {
             return Err("Invalid memory experience detail".into());
         }
+
         match event.kind.as_str() {
             "trick" | "reward" | "meal" | "play" | "scratch" | "gift" | "perch" | "visit"
             | "activity" => {}
+
+            "recall" => match event.detail.as_str() {
+                "snack_spot"
+                | "encore:spin"
+                | "encore:dead"
+                | "keepsake:bottle_cap"
+                | "keepsake:bent_spoon"
+                | "keepsake:sock"
+                | "keepsake:glass_diamond"
+                | "keepsake:parking_ticket" => {}
+
+                _ => return Err("Invalid recall experience detail".into()),
+            },
+
             _ => return Err("Invalid memory experience kind".into()),
         }
-        if ![p.x, p.y, p.width, p.height].iter().all(|n| n.is_finite()) {
+
+        if ![position.x, position.y, position.width, position.height]
+            .iter()
+            .all(|n| n.is_finite())
+        {
             return Err("Invalid memory experience coordinates".into());
         }
-        if p.width <= 0.0 || p.height <= 0.0 {
+
+        if position.width <= 0.0 || position.height <= 0.0 {
             return Err("Invalid memory experience display size".into());
         }
-        if p.x < 0.0 || p.x > p.width {
+
+        if position.x < 0.0 || position.x > position.width {
             return Err("Memory experience x is outside the display".into());
         }
-        if p.y < 0.0 || p.y > p.height {
+
+        if position.y < 0.0 || position.y > position.height {
             return Err("Memory experience y is outside the display".into());
         }
     }
+
     Ok(episodes)
 }
 
@@ -263,6 +296,33 @@ mod tests {
         save(&dir.0, &next).unwrap();
         assert_eq!(load(&dir.0).unwrap(), next);
         assert_eq!(next["preferences"]["seed"], saved["preferences"]["seed"]);
+    }
+    #[test]
+    fn version_three_summaries_and_recall_history_survive_reopening() {
+        let dir = Directory::new();
+        let mut saved = memory();
+        saved["version"] = serde_json::json!(3);
+        saved["longTerm"] = serde_json::json!({
+            "active": {"days": 5, "progressMs": 5900},
+            "tricks": {"spin": {"days": 3, "qualifiedAtMs": 1_792_100_000_000_i64}},
+            "daily": {"day": "2026-10-18", "allowed": true, "used": true}
+        });
+        saved["episodes"][0]["kind"] = serde_json::json!("recall");
+        saved["episodes"][0]["detail"] = serde_json::json!("keepsake:bent_spoon");
+        save(&dir.0, &saved).unwrap();
+        assert_eq!(load(&dir.0).unwrap(), saved);
+
+        for detail in ["encore:come", "keepsake:chip", "keepsake:unknown"] {
+            let mut invalid = saved.clone();
+            invalid["episodes"][0]["detail"] = serde_json::json!(detail);
+            assert!(save(&dir.0, &invalid).is_err());
+            assert_eq!(load(&dir.0).unwrap(), saved);
+        }
+
+        let mut future = saved.clone();
+        future["version"] = serde_json::json!(4);
+        assert!(save(&dir.0, &future).is_err());
+        assert_eq!(load(&dir.0).unwrap(), saved);
     }
     #[test]
     fn imports_legacy_once_and_preserves_original() {

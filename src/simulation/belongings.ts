@@ -42,7 +42,7 @@ export class Belongings {
     this.#width = width;
     this.#height = height;
     this.#now = now;
-    this.#memory = normalizeMemory(null, width, height);
+    this.#memory = normalizeMemory(null, width, height, now());
     this.#memory.preferences.seed = this.#initialSeed;
   }
 

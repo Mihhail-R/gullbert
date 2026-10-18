@@ -2,10 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { normalizeMemory } from "../web-dist/simulation/memory.js";
 import { Gullbert } from "../web-dist/simulation/engine.js";
+import { createLongTermMemory } from "../web-dist/simulation/long-term-memory.js";
 
 test("missing and malformed snapshots produce fresh, empty durable memories", () => {
   const expected = {
-    version: 2,
+    version: 3,
+    longTerm: createLongTermMemory(),
     episodes: [],
     unpaidTricks: 0,
     trickCooldownUntilMs: null,
@@ -74,7 +76,7 @@ test("only finite supported treasure counts and bounded greeting data survive", 
     scene: { kind: "gift" },
     settings: { paused: true },
   });
-  assert.equal(memory.version, 2);
+  assert.equal(memory.version, 3);
   assert.deepEqual(memory.collection, { bottle_cap: 3, bent_spoon: 999 });
   assert.equal(memory.greetings.seen, false);
   assert.equal(memory.greetings.lastAt, 0);
