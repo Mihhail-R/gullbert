@@ -900,14 +900,28 @@ export class Gullbert {
       return false;
     }
 
-    const recall = this.#belongings.reserveRecall(this.#random, ["snack", "trick"]);
+    const recall = this.#belongings.reserveRecall(this.#random, ["snack", "trick", "treasure"]);
 
     if (!recall) {
       return false;
     }
 
-    this.#learning.startRecall(recall);
-    this.#registry.install(this.#learning.scene!);
+    switch (recall.memory.kind) {
+      case "treasure":
+        if (!this.#gifts.startRecall(recall)) {
+          return false;
+        }
+
+        this.#registry.install(this.#gifts.scene!);
+        break;
+
+      case "snack":
+      case "trick":
+        this.#learning.startRecall(recall);
+        this.#registry.install(this.#learning.scene!);
+        break;
+    }
+
     return true;
   }
 
