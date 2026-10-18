@@ -62,10 +62,11 @@ test("work polling rejects old replies across restart without overlapping reads"
   await fixture.advance(500);
   assert.equal(reads, 2);
   fixture.tracker.stop();
-  assert.equal(fixture.timers.size, 0);
+  await fixture.advance(2000);
+  assert.equal(reads, 2);
 });
 
-test("slow and failed work reads produce absence and continue bounded polling", async () => {
+test("polling recovers after slow and failed reads without delivering stale activity", async () => {
   const pending = deferred();
   let reads = 0;
   const fixture = observer(() => {
@@ -75,7 +76,11 @@ test("slow and failed work reads produce absence and continue bounded polling", 
       return pending.promise;
     }
 
-    return Promise.reject(new Error("unavailable"));
+    if (reads === 2) {
+      return Promise.reject(new Error("unavailable"));
+    }
+
+    return { current: true };
   });
   fixture.tracker.start();
   await fixture.advance(500);
@@ -85,7 +90,8 @@ test("slow and failed work reads produce absence and continue bounded polling", 
   assert.deepEqual(fixture.samples, [null]);
   await fixture.advance(500);
   assert.deepEqual(fixture.samples, [null, null]);
-  assert.equal(fixture.timers.size, 1);
+  await fixture.advance(500);
+  assert.deepEqual(fixture.samples, [null, null, { current: true }]);
   fixture.tracker.stop();
 });
 

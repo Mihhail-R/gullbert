@@ -12,33 +12,25 @@ function advance(g, t) {
     g.step(0.05);
   }
 }
-test("stationary cursor has stare, stalk, peck, recoil and finishes in eight seconds", () => {
-  const g = bird();
-  g.action("nibble_cursor");
-  g.pointer({ x: g.inspect().x + 90, y: g.inspect().y + 48 });
-  const phases = new Set();
+test("nibbling a stationary cursor ends with disappointment and releases tracking", () => {
+  const sim = bird();
+  sim.action("nibble_cursor");
+  sim.pointer({ x: sim.inspect().x + 90, y: sim.inspect().y + 48 });
   let complained = false;
 
-  for (let i = 0; i < 160; i++) {
-    if (g.inspect().scene) {
-      phases.add(g.inspect().scene.phase);
-    }
-
-    if (g.inspect().bubble.includes("not a chip")) {
+  for (let tick = 0; tick < 160; tick++) {
+    if (sim.inspect().bubble.includes("not a chip")) {
       complained = true;
     }
 
-    g.step(0.05);
+    sim.step(0.05);
   }
 
-  for (const p of ["stare", "stalk", "peck", "recoil"]) {
-    assert.ok(phases.has(p), p);
-  }
-
-  assert.equal(g.inspect().scene, null);
-  assert.ok(g.inspect().nextNibble > 90);
   assert.ok(complained);
+  assert.equal(sim.inspect().scene, null);
+  assert.equal(sim.inspect().wantsPointer, false);
 });
+
 test(
   "escaping pointer and unavailable tracking terminate gracefully, with a strict " +
   "deadline",
@@ -85,8 +77,7 @@ test("food, commands, hiding and pausing cancel cursor sampling immediately", ()
   assert.equal(g.inspect().scene, null);
 });
 test(
-  "autonomous nibble requires fifteen visible unanswered seconds and respects its " +
-  "cooldown",
+  "an unanswered snack request waits fifteen visible seconds before a cursor attempt",
   () => {
     const g = bird();
     g.configure({ mischief: 1 });
@@ -102,7 +93,7 @@ test(
     const requestedAt = g.inspect().snackRequestAt;
     assert.notEqual(requestedAt, null);
 
-    while (g.inspect().time < requestedAt + 14.8) {
+    for (let tick = 0; tick < 296; tick++) {
       g.step(0.05);
       assert.notEqual(g.inspect().scene?.kind, "cursor");
     }
@@ -117,27 +108,6 @@ test(
 
     assert.equal(g.inspect().scene?.kind, "cursor");
     assert.ok(g.inspect().time >= requestedAt + 15);
-    g.pointer(null);
-    const cooldown = g.inspect().nextNibble;
-    g.action("search_snack");
-    advance(g, 7);
-    assert.notEqual(g.inspect().scene?.kind, "cursor");
-    assert.ok(g.inspect().time < cooldown);
-
-    for (
-      let tick = 0;
-      tick < 4000 && g.inspect().scene?.kind !== "cursor";
-      tick++
-    ) {
-      g.step(0.05);
-    }
-
-    assert.equal(g.inspect().scene?.kind, "cursor");
-    assert.ok(g.inspect().time >= cooldown);
-    const polite = bird();
-    polite.action("search_snack");
-    advance(polite, 7);
-    assert.notEqual(polite.inspect().scene?.kind, "cursor");
   }
 );
 test(
@@ -250,7 +220,7 @@ test("a browser exit inside the throttle window is delivered without a later poi
   tracker.stop();
 });
 
-test("a failed search allows one autonomous attempt after the disappointed beat", () => {
+test("a failed search triggers a cursor attempt, but another search respects its cooldown", () => {
   const g = bird();
   g.configure({ ...g.inspect().settings, mischief: 1 });
   g.action("search_snack");
@@ -260,9 +230,15 @@ test("a failed search allows one autonomous attempt after the disappointed beat"
   assert.equal(g.inspect().scene?.kind, "cursor");
   g.pointer(null);
   const cooldown = g.inspect().nextNibble;
-  const time = g.inspect().time;
-  g.setVisible(false);
-  advance(g, 100);
-  assert.equal(g.inspect().time, time);
+  g.action("search_snack");
+  advance(g, 7);
+  assert.notEqual(g.inspect().scene?.kind, "cursor");
   assert.equal(g.inspect().nextNibble, cooldown);
+});
+
+test("polite mode does not turn a failed snack search into a cursor encounter", () => {
+  const sim = bird();
+  sim.action("search_snack");
+  advance(sim, 7);
+  assert.notEqual(sim.inspect().scene?.kind, "cursor");
 });

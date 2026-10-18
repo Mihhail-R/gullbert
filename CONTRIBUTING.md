@@ -32,6 +32,31 @@ Quit any running Gullbert before testing a new desktop build; a second launch ta
 - Extract a module when it can own related state and its complete lifecycle. File length alone is not a reason, especially if extraction just passes application state through callbacks.
 - Improve the whole affected function and directly involved helpers when changing behavior. Review the changed control flow yourself; passing tests and lint does not establish readability. If a refactor reveals a bug, fix and regression-test it before continuing the refactor.
 
+## Focused tests
+
+Choose a concrete failure the test should catch: a lost preference, an interrupted action that
+still produces effects, an expired native request affecting a new interaction, or a routine
+that never finishes. Name the scenario and assert the outcome that distinguishes it from the bug.
+
+- Test behavior through the smallest useful public boundary. Use the simulation for behavior,
+  adapters for delivery and races, and DOM tests for controls the user interacts with.
+- Keep each case independent, with its own state and bounded simulation waits. A test should pass
+  when run by itself.
+- Assert relevant results and side effects. Avoid private object shape, freezing mechanisms,
+  RNG draw order, exact DOM structure, incidental dialogue, or every intermediate animation phase.
+  Check timing, geometry, ordering, and text when they are the behavior under test.
+- Keep representative success, failure, and boundary cases. Use a table when its rows describe
+  distinct risks; avoid multiplying every action by every phase, interruption, and random seed.
+- Put shared rendering and domain rules in one suite. Adapter tests should prove delivery through
+  that adapter without repeating the full domain suite. Test count and coverage are not goals.
+
+Run a focused case after building the frontend:
+
+```sh
+npm run build:web
+node --test --test-name-pattern="failed preference saves" tests/controls-native.test.mjs
+```
+
 ## Before submitting
 
 ```sh

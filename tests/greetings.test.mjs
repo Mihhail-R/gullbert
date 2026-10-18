@@ -2,28 +2,25 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { Gullbert } from "../web-dist/simulation/engine.js";
 import { GREETING_COOLDOWN_MS } from "../web-dist/simulation/belongings.js";
+import { dialogue } from "../web-dist/simulation/dialogue.js";
+import { advance } from "./simulation-helpers.mjs";
 
 function bird() {
   const sim = new Gullbert(800, 600, () => 0);
   sim.configure({ paused: true, mischief: 0, sound: false });
   return sim;
 }
-function advance(sim, seconds) {
-  for (let i = 0; i < seconds * 20; i++) {
-    sim.step(0.05);
-  }
-}
 
 test("first launch and ordinary returns vary and persist a wall-time cooldown", () => {
   const sim = bird();
   assert.equal(sim.greet(1000), true);
-  assert.match(sim.inspect().bubble, /Gullbert/);
+  assert.ok(dialogue.gullbert.greetings.first.includes(sim.inspect().bubble));
   const restored = bird();
   restored.restoreMemory(sim.exportMemory());
   assert.equal(restored.greet(1001), false);
   assert.equal(restored.greet(1000 + GREETING_COOLDOWN_MS), true);
   const previous = restored.inspect().bubble;
-  assert.match(previous, /hello again/);
+  assert.ok(dialogue.gullbert.greetings.return.includes(previous));
   assert.equal(restored.greet(1000 + GREETING_COOLDOWN_MS * 2), true);
   assert.notEqual(restored.inspect().bubble, previous);
 });
@@ -34,7 +31,6 @@ test("a return after delivery refers only to an actually owned treasure", () => 
   sim.action("bring_gift");
   advance(sim, 26);
   assert.equal(sim.inspect().memory.collection.bottle_cap, 1);
-  assert.equal(sim.inspect().memory.greetings.lastDiscovery, "bottle_cap");
   const restored = bird();
   restored.restoreMemory(sim.exportMemory());
   restored.greet(GREETING_COOLDOWN_MS);
@@ -42,29 +38,32 @@ test("a return after delivery refers only to an actually owned treasure", () => 
   assert.deepEqual(restored.inspect().memory.collection, { bottle_cap: 1 });
 });
 
-test("missing or stale history cannot invent discoveries or punish absence", () => {
+test("stale discovery history falls back to an ordinary return greeting", () => {
   const sim = bird();
   sim.restoreMemory({
     collection: {},
     greetings: { seen: true, lastDiscovery: "sock" },
   });
   sim.greet(10 ** 12);
-  assert.doesNotMatch(sim.inspect().bubble, /sock|missed|hungry|neglect/);
+  assert.ok(dialogue.gullbert.greetings.return.includes(sim.inspect().bubble));
   assert.deepEqual(sim.inspect().memory.collection, {});
+});
+
+test("owned treasure can be mentioned without a recorded discovery", () => {
+  const sim = bird();
   sim.restoreMemory({ collection: { glass_diamond: 1 } });
-  assert.equal(sim.greet(100), true);
-  assert.equal(sim.inspect().memory.greetings.seen, true);
-  assert.equal(sim.inspect().memory.collection.glass_diamond, 1);
-  assert.equal(sim.greet(100 + GREETING_COOLDOWN_MS), true);
+  sim.greet(100);
+  sim.greet(100 + GREETING_COOLDOWN_MS);
   assert.match(sim.inspect().bubble, /diamond/);
+  assert.equal(sim.inspect().memory.collection.glass_diamond, 1);
 });
 
 test("hiding and repeated summons do not bypass cooldown or record hidden greetings", () => {
   const sim = bird();
   sim.setVisible(false);
-  const revision = sim.inspect().memoryRevision;
+  const memory = sim.exportMemory();
   assert.equal(sim.greet(), false);
-  assert.equal(sim.inspect().memoryRevision, revision);
+  assert.deepEqual(sim.exportMemory(), memory);
   sim.setVisible(true);
   assert.equal(sim.greet(), true);
   const lastAt = sim.inspect().memory.greetings.lastAt;

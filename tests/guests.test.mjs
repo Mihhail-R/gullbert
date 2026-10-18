@@ -51,21 +51,14 @@ function assertFixtureGone(sim) {
   assert.equal(guestSpeech(sim), null);
 }
 
-test("pigeon inspects the existing usable bag, faces off, judges and leaves", () => {
+test("a pigeon asks about an existing snack bag and leaves without eating it", () => {
   const sim = setup();
   sim.action("place_bag", { x: 400, y: 400 });
   const bag = sim.inspect().bag;
   sim.action("invite_pigeon");
-  assert.equal(sim.inspect().scene.species, "pigeon");
-  assert.equal(sim.inspect().scene.bagId, bag.id);
-  assert.equal(sim.inspect().scene.hasSnack, true);
-  assert.equal(sim.present().props.length, 1);
-  const phases = new Set();
   const guestLines = new Set();
 
-  for (let i = 0; i < 1800; i++) {
-    phases.add(sim.inspect().scene?.phase);
-
+  for (let tick = 0; tick < 1800 && sim.inspect().scene; tick++) {
     if (sim.present().guestSpeech) {
       guestLines.add(sim.present().guestSpeech.text);
     }
@@ -73,22 +66,9 @@ test("pigeon inspects the existing usable bag, faces off, judges and leaves", ()
     sim.step(0.05);
   }
 
-  for (const phase of [
-    "arrival",
-    "inspect",
-    "faceoff",
-    "judgment",
-    "departure",
-  ]) {
-    assert.ok(phases.has(phase), phase);
-  }
-
   assert.ok(guestLines.has("communal chips?"));
   assert.deepEqual(sim.inspect().bag, bag);
-  assert.equal(bag.servings, 3);
   assertGone(sim);
-  assert.equal(sim.inspect().bubble, "");
-  assert.equal(sim.inspect().mode, "idle");
 });
 
 test("absent, empty, and vanished bags produce judgment without creating snacks", () => {
@@ -129,157 +109,64 @@ test("absent, empty, and vanished bags produce judgment without creating snacks"
   }
 });
 
-test("gull argument alternates visual reactions over one chip and ignores five", () => {
+test("the gulls argue over one chip and the visitor takes it, leaving the others alone", () => {
   const sim = setup();
   sim.action("gull_argument");
-  assert.equal(sim.inspect().scene.species, "gull");
-  assert.equal(
-    sim.present().props.filter((prop) => prop.asset === "chip").length,
-    6,
-  );
-  const phases = new Set();
-  let sawMainSquawk = false;
-  let sawGuestSquawk = false;
-  let sawSnatchedChip = false;
-  let sawContact = false;
+  until(sim, "squawk-main");
+  assert.equal(sim.inspect().bubble, "MINE.");
+  assert.equal(sim.present().guestSpeech, null);
 
-  for (let i = 0; i < 1800; i++) {
-    const phase = sim.inspect().scene?.phase;
-    phases.add(phase);
-    const props = sim.present().props;
+  until(sim, "squawk-guest");
+  assert.equal(sim.inspect().bubble, "");
+  assert.equal(sim.present().guestSpeech.text, "MINE, ACTUALLY.");
 
-    if (sim.inspect().scene?.kind === "guest") {
-      assert.equal(
-        props.filter((prop) => prop.id.startsWith("ignored-chip-")).length,
-        5,
-      );
-      assert.equal(props.filter((prop) => prop.id === "visitor").length, 1);
-      assert.equal(props.length, 7);
-    }
+  until(sim, "snatch");
+  advance(sim, 0.65);
+  const chip = sim.present().props.find((prop) => prop.id === "disputed-chip");
+  assert.ok(Math.abs(sim.inspect().scene.guest.x + 18 - (chip.x + 12)) < 1);
+  assert.ok(Math.abs(sim.inspect().scene.guest.y + 47 - (chip.y + 9)) < 1);
 
-    if (phase === "squawk-main") {
-      sawMainSquawk = true;
-      assert.equal(sim.inspect().pose, "squawk");
-      assert.equal(sim.inspect().bubble, "MINE.");
-      assert.equal(sim.present().guestSpeech, null);
-    }
+  until(sim, "reaction");
+  const props = sim.present().props;
+  assert.ok(props.some((prop) => prop.id === "snatched-chip"));
+  assert.equal(props.filter((prop) => prop.id.startsWith("ignored-chip-")).length, 5);
+  assert.equal(props.some((prop) => prop.id === "disputed-chip"), false);
 
-    if (phase === "squawk-guest") {
-      sawGuestSquawk = true;
-      assert.equal(props[0].asset, "guest-squawk");
-      assert.equal(sim.inspect().bubble, "");
-      assert.equal(sim.present().guestSpeech.text, "MINE, ACTUALLY.");
-    }
-
-    if (
-      phase === "snatch" &&
-      sim.inspect().time - sim.inspect().scene.phaseStarted >= 0.6
-    ) {
-      const chip = props.find((prop) => prop.id === "disputed-chip");
-      assert.ok(Math.abs(sim.inspect().scene.guest.x + 18 - (chip.x + 12)) < 1);
-      assert.ok(Math.abs(sim.inspect().scene.guest.y + 47 - (chip.y + 9)) < 1);
-      assert.equal(sim.inspect().scene.chipTaken, false);
-      sawContact = true;
-    }
-
-    if (phase === "reaction") {
-      sawSnatchedChip = true;
-      assert.ok(props.some((prop) => prop.id === "snatched-chip"));
-      assert.ok(!props.some((prop) => prop.id === "disputed-chip"));
-    }
-
-    sim.step(0.05);
-  }
-
-  for (const phase of [
-    "arrival",
-    "stare",
-    "posture",
-    "squawk-main",
-    "squawk-guest",
-    "snatch",
-    "reaction",
-    "departure",
-  ]) {
-    assert.ok(phases.has(phase), phase);
-  }
-
-  assert.ok(sawMainSquawk, "Gullbert squawked");
-  assert.ok(sawGuestSquawk, "The guest squawked");
-  assert.ok(sawSnatchedChip, "The chip was snatched");
-  assert.ok(sawContact, "The birds made contact");
+  advance(sim, 60);
   assertGone(sim);
   assert.equal(sim.inspect().bubble, "");
 });
 
-test("guests replace each other with only one visitor and no previous props", () => {
+test("inviting a pigeon replaces an argument and removes its chips", () => {
   const sim = setup();
+  sim.action("gull_argument");
+  until(sim, "squawk-guest");
+  sim.action("invite_pigeon");
 
-  for (const command of [
-    "invite_pigeon",
-    "gull_argument",
-    "invite_pigeon",
-    "gull_argument",
-  ]) {
-    const previous = sim.inspect().scene;
+  assert.equal(sim.inspect().scene.species, "pigeon");
+  assert.deepEqual(sim.present().props.map((prop) => prop.id), ["visitor"]);
+  assert.equal(sim.present().guestSpeech, null);
+});
+
+for (const [command, phase, replacement] of [
+  ["invite_pigeon", "faceoff", "feed"],
+  ["gull_argument", "squawk-guest", "nap"],
+  ["gull_argument", "snatch", "clean"],
+]) {
+  test(`${replacement} interrupts ${command} without deferred dialogue or props`, () => {
+    const sim = setup();
     sim.action(command);
-    assert.notDeepEqual(sim.inspect().scene, previous);
-    assert.equal(sim.inspect().scene.phase, "arrival");
-    assert.equal(
-      sim.present().props.filter((prop) => prop.id === "visitor").length,
-      1,
-    );
-    assert.equal(
-      sim.present().props.length,
-      command === "invite_pigeon" ? 1 : 7,
-    );
-    advance(sim, 4);
-  }
-});
+    until(sim, phase);
+    sim.action(replacement, { x: 750, y: 550 });
+    assertGone(sim);
 
-test("commands and Clean interrupt every guest beat without lingering dialogue or props", () => {
-  for (const [command, phases] of [
-    [
-      "invite_pigeon",
-      ["arrival", "inspect", "faceoff", "judgment", "departure"],
-    ],
-    [
-      "gull_argument",
-      [
-        "arrival",
-        "stare",
-        "posture",
-        "squawk-main",
-        "squawk-guest",
-        "snatch",
-        "reaction",
-        "departure",
-      ],
-    ],
-  ]) {
-    for (const phase of phases) {
-      for (const replacement of [
-        "feed",
-        "clean",
-        "cancel",
-        "nap",
-        "place_bag",
-      ]) {
-        const sim = setup();
-        sim.action(command);
-        until(sim, phase);
-        sim.action(replacement, { x: 750, y: 550 });
-        assertGone(sim);
-        const nextBubble = sim.inspect().bubble;
-        sim.step(0.05);
-        assertGone(sim);
-        assert.equal(sim.inspect().bubble, nextBubble);
-        advance(sim, 31);
-        assertGone(sim);
-      }
-    }
-  }
-});
+    const nextBubble = sim.inspect().bubble;
+    sim.step(0.05);
+    assert.equal(sim.inspect().bubble, nextBubble);
+    advance(sim, 31);
+    assertGone(sim);
+  });
+}
 
 test("hide cancels both guests, freezes time and cannot revive their scenes", () => {
   for (const command of ["invite_pigeon", "gull_argument"]) {

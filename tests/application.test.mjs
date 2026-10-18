@@ -9,16 +9,12 @@ import {
 
 test("application starts once and disposes all browser resources and scheduled work", async () => {
   const h = harness();
-  assert.equal(h.app.start(), h.app.start());
-  await h.app.start();
+  await Promise.all([h.app.start(), h.app.start()]);
   assert.equal(h.greeted, 1);
   assert.equal(h.restored.length, 1);
-  assert.ok(h.activeListeners > 0);
-  assert.ok(h.timers.size > 0);
   const callbacks = [...h.timers.values()].map((timer) => timer.callback);
   const before = h.calls.length;
-  assert.equal(h.app.dispose(), h.app.dispose());
-  await h.app.dispose();
+  await Promise.all([h.app.dispose(), h.app.dispose()]);
   assert.equal(h.activeListeners, 0);
   assert.equal(h.timers.size, 0);
   assert.equal(h.viewDisposed, 1);
@@ -62,7 +58,6 @@ test("native commands received during memory restore survive startup in order", 
   };
   const startup = h.app.start();
   await settle();
-  assert.ok(h.calls.some(([name]) => name === "pet_ready"));
   const settings = { sound: false, paused: true, mischief: 1, hat: "none" };
   h.nativeListeners.get("gullbert-settings")({ payload: settings });
   h.nativeListeners.get("gullbert-visible")({ payload: false });
@@ -83,9 +78,9 @@ test("native commands received during memory restore survive startup in order", 
   assert.equal(h.updates.at(-1).visible, false);
   assert.equal(h.updates.at(-1).targeting, false);
   assert.deepEqual(h.calls.filter(([name]) => name === "action"), [
-    ["action", "feed"],
-    ["action", "cancel"],
-    ["action", "poop"],
+    ["action", "feed", undefined],
+    ["action", "cancel", undefined],
+    ["action", "poop", { x: 200, y: 300 }],
   ]);
   await h.app.dispose();
 });
@@ -302,11 +297,11 @@ test("target placement never flicks a cap under the selected point", async () =>
   await h.app.start();
   h.emit("message", { type: "action", action: "target" });
   h.emit("pointerdown", pointerEvent());
-  assert.ok(
-    h.calls.some(([name, action]) => {
-      return name === "action" && action === "poop";
-    }),
-  );
+  assert.deepEqual(h.calls.find(([name, action]) => name === "action" && action === "poop"), [
+    "action",
+    "poop",
+    { x: 20, y: 20 },
+  ]);
   await h.app.dispose();
 });
 
@@ -321,11 +316,11 @@ test("chip placement keeps the reward window available and Escape cancels it", a
     ),
   );
   h.emit("pointerdown", pointerEvent());
-  assert.ok(
-    h.calls.some(
-      ([name, action]) => name === "action" && action === "feed_here",
-    ),
-  );
+  assert.deepEqual(h.calls.find(([name, action]) => name === "action" && action === "feed_here"), [
+    "action",
+    "feed_here",
+    { x: 20, y: 20 },
+  ]);
   assert.equal(h.updates.at(-1).targeting, false);
   h.emit("message", { type: "action", action: "feed_here" });
   h.emit("keydown", "Escape");

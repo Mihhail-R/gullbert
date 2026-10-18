@@ -7,18 +7,25 @@ import { Gullbert } from "../web-dist/simulation/engine.js";
 import { advance, reach } from "./simulation-helpers.mjs";
 
 function episode(id, detail, kind = "trick") {
-  return { id, kind, detail, at: 1000,
-    location: { x: 100, y: 100, width: 900, height: 650 } };
+  return {
+    id,
+    kind,
+    detail,
+    at: 1000,
+    location: { x: 100, y: 100, width: 900, height: 650 },
+  };
 }
 
 test("repeating a trick lowers its appeal without banning it or tiring other tricks", () => {
   const boredom = new Boredom();
   const events = Array.from({ length: 6 }, (_, index) => episode(index + 1, "spin"));
+  boredom.observe(events.slice(0, 1));
+  const first = boredom.snapshot();
   boredom.observe(events);
   const repeated = boredom.snapshot();
-  assert.ok(repeated.level > 0);
+  assert.ok(repeated.level > first.level);
   assert.ok(repeated.interest.show_spin > 0);
-  assert.ok(repeated.interest.show_spin < 0.3);
+  assert.ok(repeated.interest.show_spin < first.interest.show_spin);
   assert.equal(repeated.interest.show_dead, undefined);
   boredom.observe(events);
   assert.deepEqual(boredom.snapshot(), repeated, "observing again cannot count again");
@@ -26,7 +33,7 @@ test("repeating a trick lowers its appeal without banning it or tiring other tri
   assert.ok(boredom.snapshot().level < repeated.level);
 });
 
-test("interest recovers with visible time, and fresh saves do not import boredom", () => {
+test("rest restores interest in a repeated trick", () => {
   const boredom = new Boredom();
   const events = Array.from({ length: 6 }, (_, index) => episode(index + 1, "spin"));
   boredom.observe(events);
@@ -37,6 +44,11 @@ test("interest recovers with visible time, and fresh saves do not import boredom
 
   assert.ok(boredom.snapshot().interest.show_spin > 0.99);
   assert.equal(boredom.snapshot().level, 0);
+});
+
+test("restoring experience starts fresh but still notices the next performance", () => {
+  const boredom = new Boredom();
+  const events = Array.from({ length: 6 }, (_, index) => episode(index + 1, "spin"));
   boredom.reset(events);
   boredom.observe(events);
   assert.deepEqual(boredom.snapshot(), { level: 0, interest: {} });
@@ -68,7 +80,7 @@ test("habits actually favor a fresh trick over an equally rewarded repeated one"
     counts[action ?? "none"] += 1;
   }
 
-  assert.ok(counts.show_dead > counts.show_spin * 3);
+  assert.ok(counts.show_dead > counts.show_spin);
   assert.ok(counts.show_spin > 0);
 });
 

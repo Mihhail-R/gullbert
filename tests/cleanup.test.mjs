@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import { Gullbert } from "../web-dist/simulation/engine.js";
 import { emptyBag } from "./simulation-helpers.mjs";
 import {
-  cleanupObjects,
   cleanupTarget,
   Cleanup,
 } from "../web-dist/simulation/behaviors/cleanup.js";
@@ -76,19 +75,22 @@ function cleanupFixture() {
     say(text) {
       this.bubble = text;
     },
-    exportMemory() {
-      return { version: 1, perch: null, collection: {} };
-    },
     cleanupTarget(point) {
       return cleanupTarget(this, point);
     },
     action(name, point) {
-      if (name === "tidy") {
-        this.owner.begin();
-      } else if (name === "tidy_pick") {
-        this.owner.pick(point);
-      } else if (name === "tidy_done") {
-        this.owner.finish();
+      switch (name) {
+        case "tidy":
+          this.owner.begin();
+          break;
+
+        case "tidy_pick":
+          this.owner.pick(point);
+          break;
+
+        case "tidy_done":
+          this.owner.finish();
+          break;
       }
     },
   };
@@ -194,13 +196,7 @@ test("shared rectangles select topmost eligible object with an eight pixel halo"
     { id: 3, x: 112, y: 112, born: 0 },
   ];
   sim.cones = [{ id: 4, x: 114, y: 136, born: 0 }];
-  const memory = sim.exportMemory();
   sim.action("tidy");
-  assert.deepEqual(
-    cleanupObjects(sim)
-      .map((o) => o.kind),
-    ["bag", "chip", "splat", "splat", "cone"],
-  );
 
   for (const id of [4, 3, 2]) {
     assert.equal(sim.cleanupTarget({ x: 105, y: 105 }).id, id);
@@ -213,7 +209,6 @@ test("shared rectangles select topmost eligible object with an eight pixel halo"
   sim.action("tidy_pick", { x: 105, y: 105 });
   sim.action("tidy_pick", { x: 105, y: 105 });
   assert.equal(sim.cleanupTarget({ x: 105, y: 105 }), null);
-  assert.deepEqual(sim.exportMemory(), memory);
   assert.equal(sim.cleanup.session.removals, 5);
 });
 
@@ -232,8 +227,6 @@ test("removals escalate within twenty visible seconds, supervise the pointer and
   advance(sim, 1);
   assert.ok(sim.inspect().x < x);
   sim.action("tidy_done");
-  const away = sim.inspect().cleanup.away;
-  assert.equal(sim.inspect().facing, away);
   advance(sim, 2);
   assert.ok(sim.inspect().cleanup.sulkUntil > sim.inspect().time);
   advance(sim, 8.1);
@@ -292,17 +285,28 @@ test("repeated short cleanup sessions provoke a level-appropriate bounded reacti
     assert.equal(sim.inspect().cleanup.retaliation?.kind ?? null, expected);
     advance(sim, 5.1);
 
-    if (level === 1) {
-      assert.equal(sim.inspect().scene.kind, "pretend_leave");
-      assert.match(sim.inspect().bubble, /not appreciated/);
-    } else if (level === 2) {
-      assert.equal(sim.inspect().splats.length, 1);
-      assert.equal(sim.inspect().cleanup.retaliation, null);
+    switch (level) {
+      case 0:
+        assert.equal(sim.inspect().splats.length, 0);
+        assert.notEqual(sim.inspect().scene?.kind, "pretend_leave");
+        break;
+
+      case 1:
+        assert.equal(sim.inspect().scene.kind, "pretend_leave");
+        assert.match(sim.inspect().bubble, /not appreciated/);
+        advance(sim, 20);
+        assert.equal(sim.inspect().scene, null);
+        break;
+
+      case 2:
+        assert.equal(sim.inspect().splats.length, 1);
+        assert.equal(sim.inspect().cleanup.retaliation, null);
+        break;
     }
   }
 });
 
-test("cleanup history fades, and empty picks do not teach a grudge", () => {
+test("removals more than two minutes apart do not accumulate a protest", () => {
   const sim = cleanupFixture();
 
   for (let removal = 0; removal < 3; removal++) {
@@ -310,10 +314,25 @@ test("cleanup history fades, and empty picks do not teach a grudge", () => {
     sim.splats.push({ id: removal, x: 100, y: 100, born: sim.time });
     sim.owner.begin();
     sim.owner.pick({ x: 100, y: 100 });
-    sim.owner.pick({ x: 100, y: 100 });
+    assert.deepEqual(sim.splats, [], "each session must actually remove its splat");
     sim.owner.finish();
     assert.equal(sim.cleanup.retaliation, null);
   }
+});
+
+test("empty clicks cannot turn one removal into a cleanup protest", () => {
+  const sim = bird(2);
+  sim.splat({ x: 300, y: 100 });
+  sim.action("tidy");
+  pick(sim, "splat");
+  assert.deepEqual(sim.inspect().splats, []);
+
+  for (let click = 0; click < 3; click++) {
+    sim.action("tidy_pick", { x: 300, y: 100 });
+  }
+
+  sim.action("tidy_done");
+  assert.equal(sim.inspect().cleanup.retaliation, null);
 });
 
 test("more recent cleanup modestly raises the chance of a protest", () => {
@@ -456,38 +475,18 @@ test(
   }
 );
 
-test("successful cleanup lines do not repeat across each category's four-line cycle", () => {
-  const sim = cleanupFixture();
+test("repeatedly removing the same kind of mess varies the cleanup response", () => {
+  const sim = bird(0);
+  const lines = [];
   sim.action("tidy");
 
-  for (const kind of ["splat", "chip", "bag", "cone"]) {
-    const said = new Set();
-
-    for (let i = 0; i < 4; i++) {
-      const id = ++sim.serial;
-
-      if (kind === "splat") {
-        sim.splats.push({ id, x: 100, y: 100, born: sim.time });
-      }
-
-      if (kind === "chip") {
-        sim.crumb = { x: 100, y: 100 };
-      }
-
-      if (kind === "bag") {
-        sim.bag = { id, x: 100, y: 100, servings: 0, attached: false };
-      }
-
-      if (kind === "cone") {
-        sim.cones.push({ id, x: 100, y: 120, born: sim.time });
-      }
-
-      sim.action("tidy_pick", { x: 100, y: 100 });
-      said.add(sim.bubble);
-    }
-
-    assert.equal(said.size, 4, kind);
+  for (let removal = 0; removal < 3; removal++) {
+    sim.splat({ x: 100, y: 100 });
+    pick(sim, "splat");
+    lines.push(sim.inspect().bubble);
   }
+
+  assert.equal(new Set(lines).size, lines.length);
 });
 
 test(
@@ -522,19 +521,9 @@ test("Menace restores only a removed empty bag, never converts a full bag into r
 });
 
 test(
-  "cones expire during active tidying, while hidden time cannot consume retaliation " +
-  "cooldown",
+  "hidden time does not consume the retaliation cooldown",
   () => {
     const sim = bird(1);
-    sim.configure({ paused: true });
-    sim.action("municipal_gull");
-    reachPhase(sim, "inspect");
-    const expiry = Math.max(...sim.inspect().cones.map((cone) => cone.born)) + 90;
-    advance(sim, expiry - sim.inspect().time - 0.5);
-    sim.configure({ paused: false });
-    sim.action("tidy");
-    advance(sim, 1.1);
-    assert.equal(sim.inspect().cones.length, 0);
     removeTwo(sim);
     sim.action("tidy_done");
     const cooldown = sim.inspect().cleanup.retaliationAllowedAt;
@@ -596,15 +585,6 @@ test("tidying a gull argument preserves all six loose chips, including the dispu
   assert.equal(props.length, 6);
   sim.action("tidy");
   assert.deepEqual(sim.inspect().looseChips.map(geometry), props.map(geometry));
-  assert.equal(
-    new Set(sim.inspect().looseChips.map((chip) => chip.id)).size,
-    6,
-  );
-  assert.equal(
-    sim.present().cleanupObjects.filter((object) => object.kind === "chip")
-      .length,
-    6,
-  );
   const ids = sim.inspect().looseChips.map((chip) => chip.id);
   sim.action("tidy_done");
   sim.action("tidy");
@@ -613,13 +593,13 @@ test("tidying a gull argument preserves all six loose chips, including the dispu
     ids,
   );
 
-  while (sim.inspect().looseChips.length) {
+  for (let remaining = 6; remaining > 0; remaining--) {
     const chip = sim.inspect().looseChips.at(-1);
     sim.action("tidy_pick", {
       x: chip.x + chip.width / 2,
       y: chip.y + chip.height / 2,
     });
-    assert.ok(!sim.inspect().looseChips.some((other) => other.id === chip.id));
+    assert.equal(sim.inspect().looseChips.length, remaining - 1);
   }
 
   assert.equal(sim.inspect().cleanup.session.removals, 6);

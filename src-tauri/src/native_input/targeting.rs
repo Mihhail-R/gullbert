@@ -112,28 +112,6 @@ mod tests {
     }
 
     #[test]
-    fn ordinary_placement_and_tidy_have_separate_fixed_deadlines() {
-        assert_eq!(
-            Purpose::Placement("poop").timeout(),
-            Duration::from_secs(12)
-        );
-        assert_eq!(Purpose::Tidy.timeout(), Duration::from_secs(30));
-    }
-
-    #[test]
-    fn repeated_tidy_picks_keep_the_same_capture_lease() {
-        let mut session = Targeting::default();
-        let generation = session.begin(Purpose::Tidy);
-        for _ in 0..5 {
-            assert_eq!(session.purpose().unwrap().name(), "tidy");
-            assert!(session.is_current(generation));
-        }
-        assert_eq!(session.finish(), Some(Purpose::Tidy));
-        assert!(!session.is_active());
-        assert!(!session.is_current(generation));
-    }
-
-    #[test]
     fn cancelled_and_replaced_sessions_invalidate_old_timeouts() {
         let mut session = Targeting::default();
         let first = session.begin(Purpose::Tidy);

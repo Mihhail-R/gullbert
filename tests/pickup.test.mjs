@@ -47,13 +47,15 @@ test("five-minute history expires individually even while hidden, never persists
   const sim = bird(0);
   drag(sim, 0);
   drag(sim, 60000, { x: 500, y: 300 });
+  const restored = bird(0);
+  restored.restoreMemory(sim.exportMemory());
+  assert.deepEqual(restored.inspect().pickup.recent, []);
+
   sim.setVisible(false);
   sim.updatePickupClock(300100);
   assert.deepEqual(sim.inspect().pickup.recent, [60100]);
   sim.updatePickupClock(360100);
   assert.deepEqual(sim.inspect().pickup.recent, []);
-  assert.equal(JSON.stringify(sim.exportMemory())
-    .includes("recent"), false);
 });
 test("Polite-ish remains cooperative through repeated handling", () => {
   const sim = bird(0, 0);
@@ -96,31 +98,18 @@ test(
     assert.equal(sim.inspect().rubbish.length, 0);
   }
 );
-test("Public enemy keeps every reaction available as repeated handling increases mess", () => {
-  const outcomes = [];
+test("repeated handling can escalate a cursor reaction into a larger mess", () => {
+  const sim = bird(2, 0.75);
+  drag(sim, 0);
+  assert.equal(sim.inspect().scene.revenge, "trail");
 
-  for (const pickupCount of [1, 3, 8]) {
-    const counts = { chase: 0, trail: 0, big: 0, trash: 0 };
-
-    for (let sample = 0; sample < 100; sample++) {
-      const sim = bird(2, (sample + 0.5) / 100);
-
-      for (let pickup = 0; pickup < pickupCount; pickup++) {
-        drag(sim, pickup * 500, { x: 200 + (pickup % 2) * 200, y: 250 });
-      }
-
-      counts[sim.inspect().scene.revenge]++;
-    }
-
-    for (const [reaction, count] of Object.entries(counts)) {
-      assert.ok(count > 0, `${reaction} stays available after ${pickupCount} pickups`);
-    }
-
-    assert.ok(counts.chase + counts.trail > 50, "cursor encounters remain the majority");
-    outcomes.push(counts);
+  for (let pickup = 1; pickup < 4; pickup++) {
+    drag(sim, pickup * 500, { x: 200 + (pickup % 2) * 200, y: 250 });
   }
 
-  assert.ok(outcomes[2].big + outcomes[2].trash > outcomes[0].big + outcomes[0].trash);
+  advance(sim, 1);
+  assert.equal(sim.inspect().splats.length, 1);
+  assert.equal(sim.inspect().splats[0].scale, 2.5);
 });
 
 test("Public enemy speech follows the chosen reaction and giant poop stays cleanable", () => {
@@ -301,6 +290,9 @@ test("a click on overlapping mess cleans it while a drag still carries the gull"
   sim.finishPickup(false, 300);
   assert.equal(sim.inspect().splats.length, 1);
   assert.equal(sim.inspect().pickup.recent.length, 1);
+});
+
+test("revenge rubbish stays reachable after a display shrink", () => {
   const littered = bird(1, 0);
   drag(littered, 0, { x: 800, y: 600 });
   drag(littered, 1000, { x: 750, y: 550 });

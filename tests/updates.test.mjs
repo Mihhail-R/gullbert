@@ -5,9 +5,10 @@ import { UpdateController } from "../web-dist/ui/controls/update-controller.js";
 test("update checks show notes, progress, and restart only on explicit install", async () => {
   let state;
   let installs = 0;
+  const checkedChannels = [];
   const controller = new UpdateController({
     check: async (beta) => {
-      assert.equal(beta, true);
+      checkedChannels.push(beta);
       return { version: "0.4.0-beta.1", notes: "New hats" };
     },
     install: async () => {
@@ -24,6 +25,7 @@ test("update checks show notes, progress, and restart only on explicit install",
   await controller.install();
   assert.equal(installs, 0);
   await controller.check(true);
+  assert.deepEqual(checkedChannels, [true]);
   assert.equal(installs, 0);
   assert.equal(state.notes, "New hats");
   assert.equal(state.available, true);
@@ -39,7 +41,10 @@ test("a failed install requires a fresh check and allows retry", async () => {
     check: async () => ({ version: "0.4.0", notes: "" }),
     install: async () => {
       installs++;
-      throw new Error("Invalid signature");
+
+      if (installs === 1) {
+        throw new Error("Invalid signature");
+      }
     },
     render: (next) => {
       state = next;
@@ -53,12 +58,33 @@ test("a failed install requires a fresh check and allows retry", async () => {
   await controller.install();
   assert.equal(installs, 1);
   await controller.check(false);
-  assert.equal(state.available, true);
-  controller.reset();
-  assert.equal(state.available, false);
+  await controller.install();
+  assert.equal(installs, 2);
+  assert.match(state.status, /Restarting/);
 });
 
-test("overlapping checks are ignored and failed checks clear stale availability", async () => {
+test("changing update channels clears the old offer before another check", async () => {
+  let state;
+  let installs = 0;
+  const controller = new UpdateController({
+    check: async () => ({ version: "0.4.0", notes: "Stable release" }),
+    install: async () => {
+      installs++;
+    },
+    render: (next) => {
+      state = next;
+    },
+  });
+  await controller.check(false);
+  controller.reset();
+  await controller.install();
+
+  assert.equal(installs, 0);
+  assert.equal(state.available, false);
+  assert.equal(state.notes, "");
+});
+
+test("overlapping checks make one request and show its result", async () => {
   let resolve;
   let state;
   let checks = 0;

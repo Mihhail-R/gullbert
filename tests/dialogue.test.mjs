@@ -5,6 +5,7 @@ import { validateDialogue } from "../scripts/dialogue.mjs";
 import { dialogue } from "../web-dist/simulation/dialogue.js";
 import { Gullbert } from "../web-dist/simulation/engine.js";
 import { Mood } from "../web-dist/simulation/behaviors/moods.js";
+import { reach } from "./simulation-helpers.mjs";
 import {
   Belongings,
   GREETING_COOLDOWN_MS,
@@ -17,14 +18,9 @@ const authored = JSON.parse(
   ),
 );
 
-test("the browser build embeds the complete authored catalog as ordinary ESM", () => {
+test("built dialogue matches the validated authored catalog", () => {
   validateDialogue(authored);
   assert.deepEqual(dialogue, authored);
-  const module = readFileSync(
-    new URL("../web-dist/simulation/dialogue.js", import.meta.url),
-    "utf8",
-  );
-  assert.doesNotMatch(module, /import .*json/);
 });
 
 test("content validation reports empty banks, blank lines, duplicates and bad placeholders", () => {
@@ -111,17 +107,10 @@ test("a single remaining greeting or mood option remains speakable on repetition
   }
 });
 
-function until(sim, phase) {
-  for (let i = 0; i < 600 && sim.inspect().scene?.phase !== phase; i++) {
-    sim.step(0.05);
-  }
-
-  assert.equal(sim.inspect().scene?.phase, phase);
-}
-
 test("repeat guest visits rotate paired dialogue independently for each species", () => {
   const sim = new Gullbert(900, 650, () => 0.5);
   sim.configure({ paused: true, sound: false, mischief: 0 });
+  const previous = new Map();
 
   for (let visit = 0; visit < 3; visit++) {
     for (const [command, species, phase, beat] of [
@@ -129,26 +118,20 @@ test("repeat guest visits rotate paired dialogue independently for each species"
       ["gull_argument", "seagull", "posture", "posture"],
     ]) {
       sim.action(command);
-      const arrival = dialogue.guests[species].arrival;
-      assert.equal(
-        sim.inspect().bubble,
-        arrival[visit % arrival.length].gullbert,
-      );
-      until(sim, phase);
+      reach(sim, phase);
       const alternatives = dialogue.guests[species][beat];
-      const expected = alternatives[visit % alternatives.length];
-      assert.equal(sim.inspect().bubble, expected.gullbert);
-      assert.equal(sim.present().guestSpeech, null);
+      const opening = sim.inspect().bubble;
+      const exchange = alternatives.find((pair) => pair.gullbert === opening);
+      assert.ok(exchange, `${species} speaks an authored exchange`);
+      assert.notEqual(opening, previous.get(species));
+      previous.set(species, opening);
 
       for (let tick = 0; tick < 200 && !sim.present().guestSpeech; tick++) {
         sim.step(0.05);
       }
 
-      assert.equal(sim.inspect().bubble, "");
-      assert.equal(sim.present().guestSpeech.text, expected.visitor);
+      assert.equal(sim.present().guestSpeech?.text, exchange.visitor);
       sim.action("cancel");
-      assert.equal(sim.present().guestSpeech, null);
-      assert.equal(sim.inspect().bubble, "");
     }
   }
 });

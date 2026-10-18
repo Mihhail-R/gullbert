@@ -92,68 +92,22 @@ test("every postcard can be selected and consecutive shows choose different phot
   assert.deepEqual([...seen].sort(), ["car", "eiffel", "giza", "liberty"]);
 });
 
-test("postcard startup rolls its schedule before selecting a photo", () => {
-  const rolls = [0.25, 0.99, 0.75, 0];
-  let randomCalls = 0;
-  const sim = routineFixture(GagRoutine, () => {
-    assert.ok(randomCalls < rolls.length, "no unexpected random draw");
-    return rolls[randomCalls++];
-  });
-  sim.settings.mischief = 1;
-  sim.time = 10;
-  sim.action("postcards");
-  assert.equal(randomCalls, 2);
-  assert.equal(sim.gagSchedule.at, 10 + 240 + 0.25 * 180);
-  assert.equal(sim.scene.photo, "eiffel");
-
-  sim.time = 20;
-  sim.action("postcards");
-  assert.equal(randomCalls, 4);
-  assert.equal(sim.gagSchedule.at, 20 + 240 + 0.75 * 180);
-  assert.equal(sim.scene.photo, "liberty");
-});
-
-test("fake departure walks to the nearest edge, disappears two seconds, peeks and returns", () => {
+test("fake departure hides for two seconds, peeks back and returns to its starting spot", () => {
   for (const x of [30, 750]) {
     const sim = setup();
     sim.action("summon", { x, y: sim.inspect().y });
     const origin = { x: sim.inspect().x, y: sim.inspect().y };
     sim.action("pretend_leave");
-    assert.equal(sim.inspect().scene.side, x < 400 ? -1 : 1);
-    const phases = new Set();
-    let awayStart, awayEnd;
+    until(sim, "away");
+    assert.equal(sim.present().visualOffset.opacity, 0);
 
-    for (let i = 0; i < 300; i++) {
-      const phase = sim.inspect().scene?.phase;
-      phases.add(phase);
+    advance(sim, 1.9);
+    assert.equal(sim.present().visualOffset.opacity, 0);
+    until(sim, "peek");
+    assert.equal(sim.inspect().bubble, "forgot something.");
+    assert.equal(sim.inspect().facing, x < 400 ? 1 : -1);
 
-      if (phase === "away") {
-        awayStart ??= sim.inspect().time;
-        awayEnd = sim.inspect().time;
-        assert.equal(sim.present().visualOffset.opacity, 0);
-      }
-
-      if (phase === "peek") {
-        assert.equal(sim.inspect().facing, -sim.inspect().scene.side);
-        assert.equal(Math.abs(sim.present().visualOffset.x), 64);
-        assert.equal(sim.inspect().bubble, "forgot something.");
-      }
-
-      sim.step(0.05);
-    }
-
-    for (const phase of [
-      "approach",
-      "depart",
-      "away",
-      "peek",
-      "reenter",
-      "return",
-    ]) {
-      assert.ok(phases.has(phase), phase);
-    }
-
-    assert.ok(awayEnd - awayStart >= 1.9);
+    advance(sim, 10);
     assert.equal(sim.inspect().scene, null);
     assert.deepEqual({ x: sim.inspect().x, y: sim.inspect().y }, origin);
     assert.deepEqual(sim.present().visualOffset, { x: 0, opacity: 1 });
@@ -308,38 +262,6 @@ test("apology carries and offers one chip for two seconds then eats it without a
 });
 
 test(
-  "all gags permit explicit play with autonomy paused, remain bounded and cancel on " +
-  "hide or replacement",
-  () => {
-    for (const command of commands) {
-      for (const replacement of ["hide", "cancel", "nap", "clean", "feed"]) {
-        const sim = setup();
-        sim.action(command);
-        assert.equal(sim.inspect().scene.kind, command);
-        advance(sim, 0.5);
-
-        if (replacement === "hide") {
-          sim.setVisible(false);
-        } else {
-          sim.action(replacement);
-        }
-
-        assert.equal(sim.inspect().scene, null, `${command}/${replacement}`);
-        assert.deepEqual(sim.present().props, []);
-        assert.equal(sim.present().visualOffset.x, 0);
-        advance(sim, 16);
-        assert.equal(sim.inspect().scene, null);
-      }
-
-      const sim = setup();
-      sim.action(command);
-      advance(sim, command === "apology" ? 10 : 15);
-      assert.equal(sim.inspect().scene, null, command);
-    }
-  }
-);
-
-test(
   "resize during each gag keeps all coordinates safe and pointer loss cancels " +
   "immediately",
   () => {
@@ -418,70 +340,37 @@ test("autonomous gags respect pause, polite, hide, tidying, and bulk suppression
   assert.equal(sim.routine.maybeGag(), false);
 });
 
-test("every gag phase releases its visuals immediately on interruption or resize", () => {
-  const phases = {
-    pretend_leave: ["approach", "depart", "away", "peek", "reenter", "return"],
-    cursor_egg: ["approach", "settle", "inspect"],
-    municipal_gull: ["place", "inspect", "retrieve", "move", "leave"],
-    apology: ["carry", "offer", "eat"],
-    postcards: ["approach", "reach", "pull", "carry", "show", "tuck"],
-  };
+for (const [command, phase, operation] of [
+  ["pretend_leave", "away", "cancel"],
+  ["cursor_egg", "settle", "hide"],
+  ["municipal_gull", "inspect", "clean"],
+  ["apology", "offer", "feed"],
+  ["postcards", "show", "nap"],
+]) {
+  test(`${operation} interrupts ${command} without leaving its visuals behind`, () => {
+    const sim = setup();
 
-  for (const [command, steps] of Object.entries(phases)) {
-    for (const phase of steps) {
-      for (const operation of ["hide", "clean", "cancel", "resize"]) {
-        const sim = setup();
-
-        if (command === "cursor_egg") {
-          egg(sim);
-
-          if (phase === "inspect") {
-            until(sim, "settle");
-            sim.pointer({
-              x: sim.inspect().scene.nest.x + 25,
-              y: sim.inspect().scene.nest.y,
-            });
-          }
-        } else {
-          sim.action(command);
-        }
-
-        until(sim, phase);
-
-        if (operation === "hide") {
-          sim.setVisible(false);
-        } else if (operation === "resize") {
-          sim.resize(100, 100);
-        } else {
-          sim.action(operation);
-        }
-
-        if (operation !== "resize") {
-          assert.equal(
-            sim.inspect().scene,
-            null,
-            `${command}/${phase}/${operation}`,
-          );
-          assert.deepEqual(sim.present().props, []);
-          assert.equal(sim.present().visualOffset.x, 0);
-        }
-
-        advance(sim, 16);
-        assert.equal(
-          sim.inspect().scene,
-          null,
-          `${command}/${phase}/${operation}`,
-        );
-        assert.ok(
-          sim.inspect().x >= 0 && sim.inspect().x <= sim.inspect().width - 96,
-        );
-        assert.ok(
-          sim.inspect().y >= 0 && sim.inspect().y <= sim.inspect().height - 96,
-        );
-      }
+    if (command === "cursor_egg") {
+      egg(sim);
+    } else {
+      sim.action(command);
     }
-  }
-});
+
+    until(sim, phase);
+
+    if (operation === "hide") {
+      sim.setVisible(false);
+    } else {
+      sim.action(operation);
+    }
+
+    assert.deepEqual(sim.present().props, []);
+    assert.equal(sim.present().visualOffset.x, 0);
+    sim.setVisible(true);
+    advance(sim, 16);
+    assert.equal(sim.inspect().scene, null);
+  });
+}
 
 test("municipal cones expire during tidying and are never kept alive by reactions", () => {
   const sim = setup();

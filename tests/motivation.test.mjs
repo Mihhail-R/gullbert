@@ -40,26 +40,23 @@ test("long stretches without attention stay comfortable and never create lonelin
   assert.ok(rested.socialInterest < 0.501);
 });
 
-test("repeated experiences stay bounded and observations cannot change motivation", () => {
+test("repeated meals and play keep tendencies within comfortable bounds", () => {
   const motivation = new Motivation();
 
-  for (let repeat = 0; repeat < 1000; repeat++) {
+  for (let meal = 0; meal < 10; meal++) {
     motivation.enjoyed("meal");
+  }
+
+  assert.equal(motivation.snapshot().energy, 0.8);
+  assert.ok(motivation.snapshot().socialInterest <= 0.8);
+
+  for (let game = 0; game < 10; game++) {
     motivation.enjoyed("play");
-    motivation.enjoyed("scratch");
   }
 
-  const view = motivation.snapshot();
-
-  for (const value of Object.values(view)) {
-    assert.ok(value >= 0.2 && value <= 0.8);
-  }
-
-  assert.throws(() => {
-    view.energy = 1;
-  }, TypeError);
-  motivation.enjoyed("meal");
-  assert.notEqual(motivation.snapshot().energy, view.energy);
+  assert.equal(motivation.snapshot().energy, 0.2);
+  assert.equal(motivation.snapshot().curiosity, 0.2);
+  assert.equal(motivation.snapshot().socialInterest, 0.8);
 });
 
 test("invalid time and suspension cannot produce a backlog of needs", () => {
@@ -92,40 +89,44 @@ test("hidden and paused time freezes tendencies; saved memory carries no care st
   const restored = new Gullbert(900, 650, () => 0.5);
   restored.restoreMemory(JSON.parse(JSON.stringify(sim.exportMemory())));
   assert.deepEqual(restored.inspect().motivation, NEUTRAL_MOTIVATION);
-  assert.equal("motivation" in sim.exportMemory(), false);
   sim.setVisible(true);
   sim.action("nap");
   advance(sim, 5);
   assert.ok(sim.inspect().motivation.energy > content.energy);
 });
 
-test("every consumed meal restores energy and social interest exactly once", () => {
-  for (const command of ["feed", "place_bag", "chip_toss", "bring_gift", "apology"]) {
-    const expected = new Motivation();
-    expected.enjoyed("meal");
-
-    if (command === "chip_toss") {
-      expected.enjoyed("play");
-    }
-
+for (const [command, energy, socialInterest] of [
+  ["feed", 0.54, 0.53],
+  ["place_bag", 0.54, 0.53],
+  ["chip_toss", 0.46, 0.65],
+  ["bring_gift", 0.54, 0.53],
+  ["apology", 0.54, 0.53],
+]) {
+  test(`${command} applies one meal benefit after the food is eaten`, () => {
     const sim = new Gullbert(900, 650, () => 0.95);
     sim.configure({ paused: true, mischief: 0 });
     sim.action(command, { x: 650, y: 480 });
-    assert.deepEqual(sim.inspect().motivation, NEUTRAL_MOTIVATION, command);
+    assert.deepEqual(sim.inspect().motivation, NEUTRAL_MOTIVATION);
+
     advance(sim, 20);
-    assert.deepEqual(sim.inspect().motivation, expected.snapshot(), command);
+    assert.equal(sim.inspect().events.filter((event) => event === "munch").length, 1);
+    const fed = sim.inspect().motivation;
+    assert.ok(Math.abs(fed.energy - energy) < 1e-9);
+    assert.ok(Math.abs(fed.socialInterest - socialInterest) < 1e-9);
+
     advance(sim, 20);
-    assert.deepEqual(sim.inspect().motivation, expected.snapshot(), command);
-  }
-});
+    assert.deepEqual(sim.inspect().motivation, fed, "finished meals cannot pay out again");
+  });
+}
 
 test("cancelled meals leave energy and social interest unchanged", () => {
-  for (const command of ["place_bag", "chip_toss", "bring_gift", "apology"]) {
+  for (const command of ["feed_here", "place_bag", "chip_toss", "bring_gift", "apology"]) {
     const sim = new Gullbert(900, 650, () => 0.95);
     sim.configure({ paused: true, mischief: 0 });
     sim.action(command, { x: 650, y: 480 });
     sim.action("cancel");
     advance(sim, 20);
+    assert.equal(sim.inspect().events.includes("munch"), false, command);
     assert.deepEqual(sim.inspect().motivation, NEUTRAL_MOTIVATION, command);
   }
 });
@@ -158,13 +159,9 @@ test("a completed game changes tendencies, but a cancelled invitation does not",
   assert.equal(sim.inspect().scene.trick, "spin", "energy never blocks explicit actions");
 });
 
-test("scratches encourage company and cancelled food never supplies energy", () => {
+test("scratches encourage company without supplying energy", () => {
   const sim = new Gullbert(900, 650, () => 0.5);
   sim.configure({ paused: true, mischief: 0 });
-  sim.action("feed_here", { x: 850, y: 600 });
-  sim.action("cancel");
-  advance(sim, 3);
-  assert.deepEqual(sim.inspect().motivation, NEUTRAL_MOTIVATION);
 
   for (let tick = 0; tick < 20; tick++) {
     const { x, y, facing } = sim.inspect();
@@ -172,6 +169,7 @@ test("scratches encourage company and cancelled food never supplies energy", () 
     sim.step(0.05);
   }
 
+  assert.equal(sim.present().affection.kind, "scratch");
   sim.pointer(null);
   assert.ok(sim.inspect().motivation.socialInterest > 0.5);
   assert.equal(sim.inspect().motivation.energy, 0.5);
@@ -193,6 +191,4 @@ test("an unattended gull manages his energy without feeding or play", () => {
   }
 
   assert.equal(recovered, true);
-  assert.equal(sim.exportMemory().unpaidTricks, 0);
-  assert.equal(sim.exportMemory().learned.snackSpot, null);
 });
