@@ -15,6 +15,7 @@ import type { RoutinePresentation, SceneOwner } from "../routine.js";
 import type {
   LearningScene,
   LessonScene,
+  EncoreScene,
   SnackRecallScene,
   Scene,
 } from "../scenes.js";
@@ -349,24 +350,48 @@ export class LearningRoutine implements SceneOwner {
   }
 
   startRecall(recall: RecallReservation): void {
-    if (recall.memory.kind !== "snack") {
-      return;
+    const sim = this.#environment;
+    const origin = { x: sim.body.x, y: sim.body.y };
+
+    switch (recall.memory.kind) {
+      case "snack":
+        this.#scene = {
+          kind: "habit",
+          purpose: "old-snack-spot",
+          recall: structuredClone(recall),
+          phase: "recall-old",
+          phaseStarted: sim.clock.now,
+          until: sim.clock.now + 18,
+          origin,
+          target: sim.belongings.recallPoint(recall.memory.oldPosition),
+        };
+        break;
+
+      case "trick":
+        this.#scene = {
+          kind: "trick",
+          purpose: "encore",
+          recall: structuredClone(recall),
+          trick: recall.memory.trick,
+          phase: "perform",
+          phaseStarted: sim.clock.now,
+          until: sim.clock.now + (recall.memory.trick === "spin" ? 2.5 : 3.5),
+          origin,
+          target: origin,
+          facing: sim.body.facing,
+          practiced: true,
+          unsolicited: true,
+          reluctant: false,
+        };
+        break;
+
+      default:
+        return;
     }
 
-    const sim = this.#environment;
     this.cancelAssociations();
-    this.#scene = {
-      kind: "habit",
-      purpose: "old-snack-spot",
-      recall: structuredClone(recall),
-      phase: "recall-old",
-      phaseStarted: sim.clock.now,
-      until: sim.clock.now + 18,
-      origin: { x: sim.body.x, y: sim.body.y },
-      target: sim.belongings.recallPoint(recall.memory.oldPosition),
-    };
     this.#identity = Object.freeze({});
-    sim.activity.beginRoutine("habit");
+    sim.activity.beginRoutine(this.#scene.kind);
   }
 
   resize(): void {
@@ -431,6 +456,14 @@ export class LearningRoutine implements SceneOwner {
         this.#perform(scene, dt);
         break;
 
+      case "pleased":
+        if (sim.clock.now >= scene.until) {
+          sim.belongings.completeRecall(scene.recall, sim.body);
+          this.#finish();
+        }
+
+        break;
+
       case "reward":
       case "check":
         if (sim.clock.now >= scene.until) {
@@ -485,6 +518,10 @@ export class LearningRoutine implements SceneOwner {
 
     if (scene.phase === "refuse") {
       return this.#invoice(scene);
+    }
+
+    if (scene.phase === "pleased") {
+      return { pose: "blink" };
     }
 
     let pose: Pose = "tilt";
@@ -575,7 +612,7 @@ export class LearningRoutine implements SceneOwner {
     return { pose, props: [paper], rotation: pecking ? sim.body.facing * 4 : 0 };
   }
 
-  #perform(scene: LessonScene, dt: number): void {
+  #perform(scene: LessonScene | EncoreScene, dt: number): void {
     const sim = this.#environment;
     const pace = scene.reluctant ? 2.4 : 1;
     const elapsed = (sim.clock.now - scene.phaseStarted) / pace;
@@ -631,11 +668,17 @@ export class LearningRoutine implements SceneOwner {
   #performed(): void {
     const scene = this.#scene;
 
-    if (!scene || scene.purpose !== "lesson") {
+    if (!scene || scene.purpose === "old-snack-spot") {
       return;
     }
 
     const sim = this.#environment;
+
+    if (scene.purpose === "encore") {
+      this.#phase("pleased", 3);
+      sim.speech.say(lines.encore, 3);
+      return;
+    }
 
     if (scene.kind === "habit") {
       this.#phase("check", 3);

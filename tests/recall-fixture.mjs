@@ -39,3 +39,26 @@ export function idleFor(sim, seconds) {
     sim.step(0.1);
   }
 }
+
+export function encoreFixture(trick) {
+  let nowMs = new Date(2026, 0, 5, 12)
+    .getTime();
+  const belongings = new Belongings(900, 650, () => nowMs);
+
+  for (let day = 0; day < 3; day++) {
+    belongings.rewardTrick(trick, { x: 200, y: 300 });
+    nowMs += DAY_MS;
+  }
+
+  nowMs += DAY_MS;
+  belongings.creditActiveTime(300_000, () => 0);
+  const sim = new Gullbert(900, 650, () => 0, { now: () => nowMs });
+  sim.restoreMemory(belongings.exportMemory());
+  sim.configure({ mischief: 0 });
+  return {
+    sim,
+    advanceDays(days) {
+      nowMs += days * DAY_MS;
+    },
+  };
+}
