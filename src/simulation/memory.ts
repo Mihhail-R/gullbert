@@ -2,6 +2,7 @@ import type { Memory, MemoryEpisode } from "./model.js";
 import { ITEMS, isCollectible, type Collectible } from "./items.js";
 import { clamp, SIZE } from "./geometry.js";
 import { normalizePreferences } from "./preferences.js";
+import { migrateSummaries, normalizeSummaries, validRecallDetail } from "./memory-summaries.js";
 
 // Completed experiences only. Scenes and animation clocks never enter the snapshot.
 export const MEMORY_LIMIT = 200;
@@ -15,6 +16,7 @@ const episodeKinds = new Set<MemoryEpisode["kind"]>([
   "perch",
   "visit",
   "activity",
+  "recall",
 ]);
 export function memoryCount(value: unknown): number {
   if (finite(value)) {
@@ -40,6 +42,7 @@ export function normalizeMemory(
   data: unknown,
   width = 1200,
   height = 800,
+  nowMs = Date.now(),
 ): Memory {
   const source = object(data);
   let safeWidth;
@@ -117,6 +120,10 @@ export function normalizeMemory(
       }
 
       if (typeof event.detail !== "string" || !event.detail.trim()) {
+        continue;
+      }
+
+      if (event.kind === "recall" && !validRecallDetail(event.detail)) {
         continue;
       }
 
@@ -211,7 +218,10 @@ export function normalizeMemory(
   }
 
   return {
-    version: 2,
+    version: 3,
+    longTerm: source.version === 3
+      ? normalizeSummaries(source.longTerm)
+      : migrateSummaries(episodes, nowMs),
     episodes,
     unpaidTricks: Math.min(2, memoryCount(source.unpaidTricks)),
     trickCooldownUntilMs,

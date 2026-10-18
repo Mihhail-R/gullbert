@@ -81,6 +81,7 @@ export class PetApplication {
       restore: (memory) => dependencies.simulation.restoreMemory(memory),
       revision: () => dependencies.simulation.status().memoryRevision,
       snapshot: () => dependencies.simulation.exportMemory(),
+      checkpoint: () => dependencies.simulation.checkpointMemory(),
       result: (error) => this.#storageResult(error),
     });
     this.#desktopShutdown = new ShutdownCoordinator({

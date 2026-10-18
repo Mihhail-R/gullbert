@@ -351,6 +351,9 @@ export class Gullbert {
   exportMemory(): Memory {
     return this.#belongings.exportMemory();
   }
+  checkpointMemory(): void {
+    this.#belongings.checkpointActiveTime();
+  }
   restoreMemory(data: unknown) {
     this.#pettiness.settle();
     this.#learning.cancelAssociations();

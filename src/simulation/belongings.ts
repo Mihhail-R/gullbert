@@ -6,6 +6,20 @@ import { observe } from "./observation.js";
 import type { ReadonlyValue } from "./presentation.js";
 import { chooseGift, favouriteTreasure, hangoutPosition } from "./preferences.js";
 import { SIZE } from "./geometry.js";
+import {
+  creditActiveTime,
+  eligibleRecalls,
+  reserveRecall,
+  completeRecall,
+  recallPoint,
+  recordMealEvidence,
+  recordTrickEvidence,
+  recordAcquisition,
+  createLongTermMemory,
+  type RecallMemory,
+  type RecallReservation,
+  type RelativePosition,
+} from "./long-term-memory.js";
 
 export const TRICK_COOLDOWN_MS = 2 * 60 * 1000;
 export const GREETING_COOLDOWN_MS = 5 * 60 * 1000;
@@ -20,6 +34,8 @@ export class Belongings {
   #height: number;
   #now: () => number;
   #snapshot: ReadonlyValue<{ memory: Memory; revision: number }> | null = null;
+  #activeCheckpointMs = 0;
+  #reservation: RecallReservation | null = null;
   readonly #initialSeed = 1 + Math.floor(Math.random() * 0xffff_ffff);
 
   constructor(width: number, height: number, now = Date.now) {
@@ -139,13 +155,116 @@ export class Belongings {
   }
 
   restore(data: unknown): void {
-    this.#memory = normalizeMemory(data, this.#width, this.#height);
+    this.#memory = normalizeMemory(data, this.#width, this.#height, this.#now());
+    this.#activeCheckpointMs = 0;
+    this.#reservation = null;
 
     if (this.#memory.preferences.seed === 0) {
       this.#memory.preferences.seed = this.#initialSeed;
     }
 
     this.#revision += 1;
+  }
+
+  creditActiveTime(elapsedMs: number, random: () => number): void {
+    const longTerm = this.#memory.longTerm;
+    const previousDays = longTerm.active.days;
+    const changed = creditActiveTime(longTerm, elapsedMs, this.#now(), random);
+
+    if (!changed) {
+      return;
+    }
+
+    this.#activeCheckpointMs += elapsedMs;
+
+    if (this.#activeCheckpointMs >= 30_000 || longTerm.active.days !== previousDays) {
+      this.checkpointActiveTime();
+    }
+  }
+
+  /** Normal shutdown captures the final partial checkpoint before reading the revision. */
+  checkpointActiveTime(): void {
+    if (this.#activeCheckpointMs <= 0) {
+      return;
+    }
+
+    this.#activeCheckpointMs = 0;
+    this.#revision += 1;
+  }
+
+  recallPoint(position: RelativePosition): Point {
+    return recallPoint(position, this.#width, this.#height);
+  }
+
+  reserveRecall(
+    random: () => number,
+    kinds: readonly RecallMemory["kind"][] = ["snack", "trick", "treasure"],
+  ): RecallReservation | null {
+    const nowMs = this.#now();
+    const eligible = this.#eligibleRecalls(nowMs)
+      .filter((recall) => kinds.includes(recall.kind));
+    const reservation = reserveRecall(this.#memory.longTerm, eligible, nowMs, random);
+
+    if (reservation) {
+      this.#reservation = structuredClone(reservation);
+      this.#revision += 1;
+    }
+
+    return reservation;
+  }
+
+  completeRecall(reservation: RecallReservation, point: Point): boolean {
+    if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+      return false;
+    }
+
+    if (JSON.stringify(reservation) !== JSON.stringify(this.#reservation)) {
+      return false;
+    }
+
+    const nowMs = this.#now();
+    const completed = completeRecall(
+      this.#memory.longTerm,
+      reservation,
+      this.#eligibleRecalls(nowMs),
+      nowMs,
+    );
+
+    if (!completed) {
+      return false;
+    }
+
+    this.#reservation = null;
+    const recall = reservation.memory;
+    let detail: string;
+
+    switch (recall.kind) {
+      case "snack":
+        detail = "snack_spot";
+        break;
+
+      case "trick":
+        detail = `encore:${recall.trick}`;
+        break;
+
+      case "treasure":
+        detail = `keepsake:${recall.item}`;
+        break;
+    }
+
+    this.#revision += 1;
+    this.remember("recall", detail, point);
+    return true;
+  }
+
+  #eligibleRecalls(nowMs: number): RecallMemory[] {
+    return eligibleRecalls(
+      this.#memory.longTerm,
+      nowMs,
+      this.#memory.collection,
+      this.#width,
+      this.#height,
+    );
   }
 
   hangoutPoint(): Point {
@@ -219,6 +338,7 @@ export class Belongings {
   }
 
   collect(item: Collectible, point?: Point): void {
+    recordAcquisition(this.#memory.longTerm, item, this.#now());
     this.#memory.collection[item] = Math.min(
       999,
       (this.#memory.collection[item] ?? 0) + 1,
@@ -244,6 +364,8 @@ export class Belongings {
   }
 
   rewardTrick(trick: Trick, point?: Point): number {
+    recordTrickEvidence(this.#memory.longTerm, trick, this.#now());
+    this.#revision += 1;
     const learned = this.#memory.learned;
 
     if (learned.tricks[trick] < 6) {
@@ -269,6 +391,7 @@ export class Belongings {
       return;
     }
 
+    recordMealEvidence(this.#memory.longTerm, location, this.#width, this.#height, this.#now());
     this.#memory.unpaidTricks = 0;
     this.#memory.trickRefusals = 0;
     this.#memory.trickCooldownUntilMs = null;
@@ -319,6 +442,10 @@ export class Belongings {
   }
 
   forgetLearning(): void {
+    const fresh = createLongTermMemory();
+    this.#memory.longTerm.snack = fresh.snack;
+    this.#memory.longTerm.tricks = fresh.tricks;
+    this.#reservation = null;
     this.#memory.learned = normalizeMemory(null).learned;
     this.#memory.performances = { come: 0, spin: 0, dead: 0 };
     this.#memory.unpaidTricks = 0;
@@ -326,6 +453,10 @@ export class Belongings {
     this.#memory.trickCooldownUntilMs = null;
     this.#memory.episodes = this.#memory.episodes.filter((event) => {
       if (event.detail === "trick_refusal") {
+        return false;
+      }
+
+      if (event.kind === "recall" && !event.detail.startsWith("keepsake:")) {
         return false;
       }
 

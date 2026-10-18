@@ -68,6 +68,24 @@ export function memoryDescription(event: MemoryEpisode): string {
 
     case "activity":
       return activities[event.detail] ?? "Explored the desktop";
+
+    case "recall": {
+      if (event.detail === "snack_spot") {
+        return "Revisited his old snack spot";
+      }
+
+      if (event.detail.startsWith("encore:")) {
+        return `Remembered ${tricks[event.detail.slice(7)] ?? "an old trick"}`;
+      }
+
+      const item = event.detail.slice(9);
+
+      if (isCollectible(item)) {
+        return `Brought back his old ${ITEMS[item].name.toLowerCase()}`;
+      }
+
+      return "Remembered an old treasure";
+    }
   }
 }
 
