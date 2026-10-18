@@ -1,5 +1,17 @@
 import type { Sound } from "../simulation/model.js";
 
+const tones: Record<Sound, {
+  frequency: number;
+  endingFrequency: number;
+  waveform: OscillatorType;
+}> = {
+  squawk: { frequency: 760, endingFrequency: 310, waveform: "sawtooth" },
+  plop: { frequency: 130, endingFrequency: 45, waveform: "sine" },
+  munch: { frequency: 240, endingFrequency: 45, waveform: "sine" },
+  pop: { frequency: 980, endingFrequency: 45, waveform: "sine" },
+  splash: { frequency: 410, endingFrequency: 45, waveform: "sine" },
+};
+
 export function createAudioPlayer() {
   let audio: AudioContext | null = null;
   function play(kind: Sound) {
@@ -10,36 +22,23 @@ export function createAudioPlayer() {
 
       audio.resume()
         .catch(() => {});
-      const t = audio.currentTime;
-      const osc = audio.createOscillator();
+      const startSeconds = audio.currentTime;
+      const oscillator = audio.createOscillator();
       const gain = audio.createGain();
-      let frequency = 130;
-      let endingFrequency = 45;
-      osc.type = "sine";
+      const tone = tones[kind];
 
-      if (kind === "squawk") {
-        osc.type = "sawtooth";
-        frequency = 760;
-        endingFrequency = 310;
-      } else if (kind === "pop") {
-        frequency = 980;
-      } else if (kind === "splash") {
-        frequency = 410;
-      } else if (kind === "munch") {
-        frequency = 240;
-      }
-
-      osc.frequency.setValueAtTime(frequency, t);
-      osc.frequency.exponentialRampToValueAtTime(endingFrequency, t + 0.14);
-      gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.exponentialRampToValueAtTime(0.045, t + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.17);
-      osc.connect(gain);
+      oscillator.type = tone.waveform;
+      oscillator.frequency.setValueAtTime(tone.frequency, startSeconds);
+      oscillator.frequency.exponentialRampToValueAtTime(tone.endingFrequency, startSeconds + 0.14);
+      gain.gain.setValueAtTime(0.0001, startSeconds);
+      gain.gain.exponentialRampToValueAtTime(0.045, startSeconds + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startSeconds + 0.17);
+      oscillator.connect(gain);
       gain.connect(audio.destination);
-      osc.start(t);
-      osc.stop(t + 0.18);
-    } catch (e) {
-      console.warn("Sound unavailable", e);
+      oscillator.start(startSeconds);
+      oscillator.stop(startSeconds + 0.18);
+    } catch (error) {
+      console.warn("Sound unavailable", error);
     }
   }
 
