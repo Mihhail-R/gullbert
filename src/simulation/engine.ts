@@ -127,7 +127,7 @@ export class Gullbert {
         this.#sounds.push(sound);
       },
       ateChip: (point) => {
-        this.#ateMeal(point);
+        this.#learning.ateMeal(point);
       },
       walked: (point) => {
         this.#restAtHangout(point);
@@ -173,8 +173,6 @@ export class Gullbert {
     });
     this.#touch = new Touch({
       scratched: () => {
-        this.#pettiness.settle();
-        this.#motivation.enjoyed("scratch");
         this.#learning.scratched();
       },
       body: this.#body,
@@ -1164,9 +1162,11 @@ export class Gullbert {
       food: this.#food,
       belongings: this.#belongings,
       moods: this.#moods,
+      motivation: this.#motivation,
+      pettiness: this.#pettiness,
       meals: Object.freeze({
         consumed(point: Point) {
-          runtime.#ateMeal(point);
+          runtime.#learning.ateMeal(point);
         },
       }),
       destinations: Object.freeze({
@@ -1282,12 +1282,6 @@ export class Gullbert {
     };
   }
 
-  #ateMeal(point: Point): void {
-    this.#pettiness.settle();
-    this.#motivation.enjoyed("meal");
-    this.#learning.ateMeal(point);
-  }
-
   #completeRoutine(): void {
     const scene = this.#registry.scene;
     this.#pettiness.completed(
@@ -1297,35 +1291,12 @@ export class Gullbert {
       this.#settings,
       this.#random,
     );
-    let played = false;
-
-    switch (scene?.kind) {
-      case "cap":
-        played = scene.phase === "victory" && scene.rounds >= 3;
-        break;
-
-      case "toss":
-        played = scene.phase === "eat";
-        break;
-    }
-
-    if (
-      scene &&
-      !["trick", "habit", "guest", "gift"].includes(scene.kind)
-    ) {
-      if (played) {
-        this.#belongings.remember("play", scene.kind, this.#body);
-      } else {
-        this.#belongings.remember("activity", scene.kind, this.#body);
-      }
-    }
+    const played = this.#learning.rememberCompletion(scene);
 
     this.#objects.releaseBag();
     this.#registry.complete();
 
     if (played) {
-      this.#pettiness.settle();
-      this.#motivation.enjoyed("play");
       this.#learning.playCompleted();
     }
   }

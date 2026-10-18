@@ -6,7 +6,8 @@ import type { Belongings } from "./belongings.js";
 import type { Mood } from "./behaviors/moods.js";
 import type { RoutineCapabilities } from "./routine.js";
 import type { Cleanup } from "./behaviors/cleanup.js";
-import type { MotivationState } from "./motivation.js";
+import type { Motivation, MotivationState } from "./motivation.js";
+import type { Pettiness } from "./pettiness.js";
 import type { BoredomState } from "./boredom.js";
 
 /** Operation groups for builtins; they cannot configure, resize or access native input. */
@@ -81,6 +82,8 @@ export interface BehaviorCapabilities extends RoutineCapabilities {
     | "forgetLearning"
   >;
   readonly moods: Pick<Mood, "set" | "settleOffence">;
+  readonly motivation: Pick<Motivation, "enjoyed">;
+  readonly pettiness: Pick<Pettiness, "settle">;
   readonly meals: { consumed(point: Point): void };
   readonly destinations: { randomPoint(): Point };
   readonly policy: {
