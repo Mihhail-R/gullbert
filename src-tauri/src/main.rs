@@ -3,6 +3,7 @@
 mod actions;
 mod memory_store;
 mod native_input;
+mod pet_browser;
 mod roommate;
 mod shortcuts;
 mod shutdown;
@@ -17,16 +18,33 @@ use state::{Snapshot, State};
 use tauri::Manager;
 
 #[tauri::command]
-async fn pet_ready(app: tauri::AppHandle) -> Result<Snapshot, String> {
+async fn pet_ready(
+    app: tauri::AppHandle,
+    window: tauri::WebviewWindow,
+) -> Result<Snapshot, String> {
+    if window.label() != "pet" {
+        return Err("Only the pet overlay can finish starting".into());
+    }
+
+    let url = window.url().map_err(|error| error.to_string())?;
+
+    if url.path() != "/pet.html" {
+        return Err("The protected pet document has not loaded".into());
+    }
+
     native_input::request(app, |app| prepare_pet(app.clone())).await?
 }
+
 fn prepare_pet(app: tauri::AppHandle) -> Result<Snapshot, String> {
+    pet_browser::finish_navigation(&app)?;
     native_input::ready(&app)?;
     Ok(state::snapshot(app))
 }
+
 fn main() {
     tauri::Builder::default()
         .manage(State::default())
+        .manage(pet_browser::Runtime::default())
         .manage(shutdown::Runtime::default())
         .manage(updates::Runtime::default())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -42,6 +60,7 @@ fn main() {
             updates::check_update,
             updates::install_update,
             pet_ready,
+            pet_browser::prepare_pet_browser,
             state::update_settings,
             actions::act,
             native_input::desktop::target_picked,
