@@ -92,6 +92,7 @@ export class Gullbert {
   #pettiness = new Pettiness();
   #boredom = new Boredom();
   #nextHangoutVisit = 60;
+  #recallGraceSeconds = 0;
   constructor(
     width = 1200,
     height = 800,
@@ -361,6 +362,7 @@ export class Gullbert {
     this.#cancelFlight();
     this.#rest();
     this.#belongings.restore(data);
+    this.#recallGraceSeconds = 0;
     this.#learning.resetHabits();
     this.#boredom.reset(this.#belongings.snapshot().memory.episodes);
     this.#nextHangoutVisit = this.#time + 60;
@@ -371,8 +373,8 @@ export class Gullbert {
     this.#objects.resize(this.#body.width, this.#body.height);
     this.#gags.resizeGags();
     this.#cap.resize();
-    this.#learning.resize();
     this.#belongings.resize(this.#body.width, this.#body.height);
+    this.#learning.resize();
     this.#activity.resize();
   }
   #randomPoint() {
@@ -443,6 +445,10 @@ export class Gullbert {
     this.#work.sample(sample, nowMs);
   }
   setVisible(visible: boolean): void {
+    if (visible && !this.#visible) {
+      this.#recallGraceSeconds = 0;
+    }
+
     this.#visible = visible;
     this.#registry.visibility(visible);
 
@@ -696,6 +702,8 @@ export class Gullbert {
     this.#boredom.observe(this.#belongings.snapshot().memory.episodes);
 
     if (!this.#settings.paused) {
+      this.#recallGraceSeconds += dt;
+      this.#belongings.creditActiveTime(dt * 1000, this.#random);
       this.#motivation.update(dt, this.#activity.mode);
       this.#boredom.update(dt, this.#activity.mode);
     }
@@ -751,6 +759,10 @@ export class Gullbert {
     const boredom = this.#boredom.snapshot();
 
     if (this.#stepPettyReaction()) {
+      return;
+    }
+
+    if (this.#stepRecall()) {
       return;
     }
 
@@ -855,6 +867,48 @@ export class Gullbert {
 
       this.#wander();
     }
+  }
+
+  #stepRecall(): boolean {
+    if (!this.#visible || this.#settings.paused || this.tidying) {
+      return false;
+    }
+
+    if (this.#activity.mode !== "idle" || this.#registry.active || this.#activity.flight) {
+      return false;
+    }
+
+    if (this.#recallGraceSeconds < 120 || this.#time < this.#activity.calmUntil) {
+      return false;
+    }
+
+    const cleanup = this.#cleanup.snapshot();
+
+    if (this.#time < cleanup.suppressUntil || this.#time < cleanup.reactionUntil) {
+      return false;
+    }
+
+    if (this.#time < cleanup.sulkUntil || this.#pickup.snapshot().held) {
+      return false;
+    }
+
+    if (this.#touch.snapshot().zone !== "" || this.#touch.animating) {
+      return false;
+    }
+
+    if (this.#time < this.#speech.snapshot().bubbleUntil) {
+      return false;
+    }
+
+    const recall = this.#belongings.reserveRecall(this.#random, ["snack"]);
+
+    if (!recall) {
+      return false;
+    }
+
+    this.#learning.startRecall(recall);
+    this.#registry.install(this.#learning.scene!);
+    return true;
   }
 
   #wander(): void {

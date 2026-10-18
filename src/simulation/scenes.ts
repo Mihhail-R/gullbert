@@ -1,6 +1,7 @@
 import type { ReadonlyValue } from "./presentation.js";
 import type { Point, Direction, Trick } from "./model.js";
 import type { Item } from "./items.js";
+import type { RecallReservation } from "./long-term-memory.js";
 
 // Each routine owns its state. Narrow on kind before reading routine-specific fields.
 interface TimedScene {
@@ -83,7 +84,8 @@ export interface CapScene extends TimedScene {
   rounds: number;
   carrying: boolean;
 }
-export interface LearningScene extends TimedScene {
+export interface LessonScene extends TimedScene {
+  purpose: "lesson";
   kind: "trick" | "habit";
   trick: Trick;
   phase: "consider" | "perform" | "reward" | "check" | "refuse";
@@ -95,6 +97,16 @@ export interface LearningScene extends TimedScene {
   unsolicited: boolean;
   reluctant: boolean;
 }
+export interface SnackRecallScene extends TimedScene {
+  kind: "habit";
+  purpose: "old-snack-spot";
+  recall: RecallReservation;
+  phase: "recall-old" | "recall-tilt" | "recall-current";
+  phaseStarted: number;
+  target: Point;
+  origin: Point;
+}
+export type LearningScene = LessonScene | SnackRecallScene;
 interface TheatreClock extends TimedScene {
   started: number;
   deadline: number;
