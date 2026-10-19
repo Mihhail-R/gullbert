@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { normalizeMemory } from "../web-dist/simulation/memory.js";
+import { Belongings } from "../web-dist/simulation/belongings.js";
 import { Gullbert } from "../web-dist/simulation/engine.js";
 import { createLongTermMemory } from "../web-dist/simulation/long-term-memory.js";
 
@@ -155,4 +156,74 @@ test("legacy nest snapshots retain gifts, perch and greetings without restoring 
   sim.action("clean");
   assert.deepEqual(sim.inspect().memory.perch, expected.perch);
   assert.equal(Object.hasOwn(sim.exportMemory(), "nest"), false);
+});
+
+test("live resize clamps remembered locations without rewriting other memory", () => {
+  const belongings = new Belongings(800, 600, () => 1_792_100_000_000);
+  belongings.restore({
+    ...normalizeMemory(),
+    perch: { x: 600.5, y: 450.5 },
+    learned: {
+      tricks: { come: 2, spin: 3, dead: 1 },
+      snackSpot: { x: 650.5, y: 400.5, meals: 4 },
+      snackCandidate: { x: 100.5, y: 200.5, meals: 2 },
+      scratchesAfterPlay: 2,
+    },
+    collection: { sock: 2 },
+    preferences: { seed: 123, hangout: { x: 0.7, y: 0.8, visits: 4 } },
+  });
+  belongings.remember("activity", "a".repeat(100), { x: 600, y: 450 });
+  belongings.creditActiveTime(1.5, () => 0);
+  const before = belongings.exportMemory();
+  const published = belongings.snapshot();
+  const revision = published.revision;
+  const expected = structuredClone(before);
+  expected.perch = { x: 204, y: 154 };
+  expected.learned.snackSpot = { x: 204, y: 154, meals: 4 };
+  expected.learned.snackCandidate = { x: 100.5, y: 154, meals: 2 };
+
+  belongings.resize(300, 250);
+  assert.deepEqual(belongings.exportMemory(), expected);
+  assert.equal(belongings.snapshot().revision, revision + 1);
+  assert.deepEqual(published.memory, before);
+
+  for (const [width, height] of [[300, 250], [800, 600]]) {
+    belongings.resize(width, height);
+    assert.deepEqual(belongings.exportMemory(), expected);
+    assert.equal(belongings.snapshot().revision, revision + 1);
+  }
+
+  belongings.resize(50, 50);
+  expected.perch = { x: 0, y: 0 };
+  expected.learned.snackSpot = { x: 0, y: 0, meals: 4 };
+  expected.learned.snackCandidate = { x: 0, y: 0, meals: 2 };
+  assert.deepEqual(belongings.exportMemory(), expected);
+  assert.equal(belongings.snapshot().revision, revision + 2);
+});
+
+test("live meal and perch locations use the same geometry rules as restored memory", () => {
+  for (const [width, height] of [[800, 600], [50, 50], [NaN, Infinity]]) {
+    const belongings = new Belongings(width, height, () => 1234);
+    const point = { x: 1300.5, y: -20 };
+    const expected = normalizeMemory({ perch: point }, width, height).perch;
+    belongings.placePerch(point);
+    belongings.rememberMeal(point);
+    assert.deepEqual(belongings.exportMemory().perch, expected);
+    assert.deepEqual(belongings.exportMemory().learned.snackSpot, { ...expected, meals: 1 });
+  }
+
+  const belongings = new Belongings(800, 600, () => 1234);
+  belongings.placePerch({ x: 200, y: 100 });
+  const before = belongings.exportMemory();
+  const revision = belongings.snapshot().revision;
+
+  for (const point of [null, [], { x: NaN, y: 1 }, { x: 1, y: Infinity }]) {
+    belongings.rememberMeal(point);
+    assert.deepEqual(belongings.exportMemory(), before);
+    assert.equal(belongings.snapshot().revision, revision);
+  }
+
+  belongings.placePerch({ x: NaN, y: 1 });
+  assert.equal(belongings.exportMemory().perch, null);
+  assert.equal(belongings.snapshot().revision, revision + 1);
 });

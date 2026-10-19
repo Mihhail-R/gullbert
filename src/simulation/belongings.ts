@@ -1,5 +1,11 @@
 import { dialogue } from "./dialogue.js";
-import { MEMORY_LIMIT, memoryCount, normalizeMemory } from "./memory.js";
+import {
+  MEMORY_LIMIT,
+  memoryCount,
+  normalizeMemory,
+  clampMemoryPoint,
+  createLearnedMemory,
+} from "./memory.js";
 import { ITEMS, isCollectible, type Collectible, type Item } from "./items.js";
 import type { Memory, MemoryEpisode, Point, Trick } from "./model.js";
 import { observe } from "./observation.js";
@@ -308,20 +314,32 @@ export class Belongings {
   resize(width: number, height: number): void {
     this.#width = width;
     this.#height = height;
-    const memory = normalizeMemory(this.#memory, width, height);
 
-    if (JSON.stringify(memory) !== JSON.stringify(this.#memory)) {
-      this.#memory = memory;
+    const learned = this.#memory.learned;
+    const points = [this.#memory.perch, learned.snackSpot, learned.snackCandidate];
+    let changed = false;
+
+    for (const point of points) {
+      const clamped = clampMemoryPoint(point, width, height);
+
+      if (!point || !clamped) {
+        continue;
+      }
+
+      if (point.x !== clamped.x || point.y !== clamped.y) {
+        point.x = clamped.x;
+        point.y = clamped.y;
+        changed = true;
+      }
+    }
+
+    if (changed) {
       this.#revision += 1;
     }
   }
 
   placePerch(point: Point): void {
-    this.#memory.perch = normalizeMemory(
-      { perch: point },
-      this.#width,
-      this.#height,
-    ).perch;
+    this.#memory.perch = clampMemoryPoint(point, this.#width, this.#height);
 
     if (this.#memory.perch) {
       this.remember("perch", "favourite spot", this.#memory.perch);
@@ -381,11 +399,7 @@ export class Belongings {
   }
 
   rememberMeal(point: Point): void {
-    const location = normalizeMemory(
-      { perch: point },
-      this.#width,
-      this.#height,
-    ).perch;
+    const location = clampMemoryPoint(point, this.#width, this.#height);
 
     if (!location) {
       return;
@@ -446,7 +460,7 @@ export class Belongings {
     this.#memory.longTerm.snack = fresh.snack;
     this.#memory.longTerm.tricks = fresh.tricks;
     this.#reservation = null;
-    this.#memory.learned = normalizeMemory(null).learned;
+    this.#memory.learned = createLearnedMemory();
     this.#memory.performances = { come: 0, spin: 0, dead: 0 };
     this.#memory.unpaidTricks = 0;
     this.#memory.trickRefusals = 0;
