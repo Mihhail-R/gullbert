@@ -37,6 +37,15 @@ export function cursorPose(
   ];
 }
 
+/** Pickup chooses the reaction and budget; Cursor owns its execution. */
+export interface CursorRetaliation {
+  readonly reaction: "chase" | "trail";
+  readonly deadlineSeconds: number;
+  readonly expiresAtMs: number;
+  readonly pointer: Point | null;
+  readonly cursorId?: number;
+}
+
 type Environment = Pick<
   BehaviorCapabilities,
   | "food"
@@ -221,31 +230,61 @@ export class CursorRoutine implements SceneOwner {
     return true;
   }
 
-  retaliation() {
+  /** Prepare a handoff for activation through the shared scene registry. */
+  createRetaliationScene(reaction: CursorRetaliation): OwnedScene {
+    const now = this.#environment.clock.now;
+    return {
+      kind: "cursor",
+      phase: "stare",
+      takeover: true,
+      started: now,
+      until: now + 0.5,
+      deadline: reaction.deadlineSeconds,
+      pointer: reaction.pointer,
+      retaliation: true,
+      retaliationUntilMs: reaction.expiresAtMs,
+      cursorId: reaction.cursorId,
+      trail: reaction.reaction === "trail" ? 3 : 0,
+      nextSplat: now + 0.8,
+    };
+  }
+
+  /** Run before touch handling and movement, even when either consumes the tick. */
+  maintainRetaliation(nowMs: number): void {
     const scene = this.#scene;
 
     if (!scene?.retaliation) {
-      return null;
-    }
-
-    return observe({
-      phase: scene.phase,
-      retaliation: scene.retaliation,
-      trail: scene.trail,
-      nextSplat: scene.nextSplat,
-    });
-  }
-
-  consumeTrail(nextAt: number): void {
-    const scene = this.#scene;
-
-    if (!scene?.retaliation || (scene.trail ?? 0) <= 0) {
       return;
     }
 
-    scene.trail = (scene.trail ?? 0) - 1;
-    scene.nextSplat = nextAt;
+    const sim = this.#environment;
+
+    if (nowMs >= (scene.retaliationUntilMs ?? Infinity)) {
+      sim.lifecycle.interrupt();
+      sim.lifecycle.rest();
+      return;
+    }
+
+    const remainingSplats = scene.trail ?? 0;
+
+    if (scene.phase !== "stalk" || remainingSplats <= 0) {
+      return;
+    }
+
+    if (sim.clock.now < (scene.nextSplat ?? 0)) {
+      return;
+    }
+
+    sim.objects.scatter(
+      { x: sim.body.x + 48, y: sim.body.y + 86 },
+      sim.clock.now,
+      0.8,
+    );
+    sim.events.emit("plop");
+    scene.trail = remainingSplats - 1;
+    scene.nextSplat = sim.clock.now + 1.8;
   }
+
   #stepCursor(dt: number) {
     const sim = this.#environment;
     const scene = this.#scene;

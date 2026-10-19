@@ -1,3 +1,4 @@
+import type { CursorRetaliation } from "./cursor.js";
 import { dialogue } from "../dialogue.js";
 import { observe } from "../observation.js";
 import type { ReadonlyValue } from "../presentation.js";
@@ -6,7 +7,7 @@ import type { Props } from "../props.js";
 import type { Point, Settings } from "../model.js";
 import type { Pose } from "../poses.js";
 import type { RoutineCapabilities, SceneOwner } from "../routine.js";
-import type { Scene, RelocationScene, CursorScene } from "../scenes.js";
+import type { Scene, RelocationScene } from "../scenes.js";
 import type { SimulationView } from "../capabilities.js";
 import { contains, gullRect, type HitRect, type Touch } from "./touch.js";
 import { theatreOffset } from "./theatre.js";
@@ -59,12 +60,9 @@ export interface PickupContext {
   beginDragging(): void;
   carry(): void;
   rest(delay?: number): void;
-  install(scene: Scene): void;
+  install(scene: RelocationScene): void;
+  retaliate(reaction: CursorRetaliation): void;
   cancel(): void;
-  cursorRetaliation(): Readonly<
-    Pick<CursorScene, "phase" | "retaliation" | "trail" | "nextSplat">
-  > | null;
-  consumeTrail(nextAt: number): void;
 }
 
 export function pickupRect(
@@ -435,74 +433,79 @@ export class Pickup implements SceneOwner {
       return "complete";
     }
 
-    if (scene.phase === "settle" && now >= scene.until) {
-      if (scene.revenge === "chase" || scene.revenge === "trail") {
-        let trail = 0;
-
-        if (scene.revenge === "trail") {
-          trail = 3;
+    switch (scene.phase) {
+      case "settle":
+        if (now >= scene.until) {
+          this.#reactAfterRelease(scene, now);
         }
 
-        context.install({
-          kind: "cursor",
-          phase: "stare",
-          takeover: true,
-          started: now,
-          until: now + 0.5,
-          deadline: scene.deadline,
+        break;
+
+      case "sulk":
+        if (now >= scene.until) {
+          context.cancel();
+          context.rest(3);
+        }
+
+        break;
+
+      case "collect":
+        if (context.body.moveToward(scene.target, 450, delta)) {
+          scene.phase = "return";
+          context.speech.say(dialogue.gullbert.pickup.sinceWereMovingThings, 3);
+        }
+
+        break;
+
+      case "return":
+        if (!context.body.moveToward(scene.origin, 450, delta)) {
+          break;
+        }
+
+        context.objects.dropRubbish(
+          { x: context.body.x + 24, y: context.body.y + 48 },
+          now,
+        );
+        context.speech.say(dialogue.gullbert.pickup.iveImprovedIt, 3);
+        context.cancel();
+        context.rest(3);
+        break;
+    }
+
+    return this.#scene ? "running" : "complete";
+  }
+
+  #reactAfterRelease(scene: RelocationScene, nowSeconds: number): void {
+    const context = this.#context;
+
+    switch (scene.revenge) {
+      case "chase":
+      case "trail":
+        context.retaliate({
+          reaction: scene.revenge,
+          deadlineSeconds: scene.deadline,
+          expiresAtMs: this.#state.revengeUntil,
           pointer: context.touch.snapshot().point,
-          retaliation: true,
-          retaliationSource: scene,
           cursorId: scene.cursorId,
-          trail,
-          nextSplat: now + 0.8,
         });
-      } else if (scene.revenge === "trash") {
+        return;
+
+      case "trash":
         scene.phase = "collect";
-      } else {
-        if (scene.revenge === "big") {
-          this.#mess(2.5);
-          context.speech.say(
-            dialogue.gullbert.pickup.aProportionateResponse,
-            3,
-          );
-        }
+        return;
 
-        scene.phase = "sulk";
-        let duration = 2.5;
+      case "big":
+        this.#mess(2.5);
+        context.speech.say(dialogue.gullbert.pickup.aProportionateResponse, 3);
+        break;
 
-        if (context.settings().mischief === 0) {
-          duration = 1;
-        }
-
-        scene.until = now + duration;
-      }
-    } else if (scene.phase === "sulk" && now >= scene.until) {
-      context.cancel();
-      context.rest(3);
-    } else if (scene.phase === "collect") {
-      if (context.body.moveToward(scene.target, 450, delta)) {
-        scene.phase = "return";
-        context.speech.say(dialogue.gullbert.pickup.sinceWereMovingThings, 3);
-      }
-    } else if (
-      scene.phase === "return" &&
-      context.body.moveToward(scene.origin, 450, delta)
-    ) {
-      context.objects.dropRubbish(
-        { x: context.body.x + 24, y: context.body.y + 48 },
-        now,
-      );
-      context.speech.say(dialogue.gullbert.pickup.iveImprovedIt, 3);
-      context.cancel();
-      context.rest(3);
+      case "none":
+        break;
     }
 
-    if (this.#scene) {
-      return "running";
-    }
-
-    return "complete";
+    scene.phase = "sulk";
+    const durationSeconds = context.settings().mischief === 0 ? 1 : 2.5;
+    scene.until = nowSeconds + durationSeconds;
   }
 
   pose(): Pose | null {
@@ -543,30 +546,6 @@ export class Pickup implements SceneOwner {
     }
 
     return "bag-offended";
-  }
-
-  trail(): void {
-    const context = this.#context;
-    const scene = context.cursorRetaliation();
-
-    if (!scene?.retaliation) {
-      return;
-    }
-
-    if (this.#state.now >= this.#state.revengeUntil) {
-      context.cancel();
-      context.rest();
-      return;
-    }
-
-    if (
-      scene.phase === "stalk" &&
-      (scene.trail ?? 0) > 0 &&
-      context.clock.now >= (scene.nextSplat ?? 0)
-    ) {
-      this.#mess(0.8);
-      context.consumeTrail(context.clock.now + 1.8);
-    }
   }
 
   #mess(scale: number): void {
