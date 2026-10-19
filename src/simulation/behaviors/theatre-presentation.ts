@@ -1,25 +1,9 @@
+import { theatreBeak, theatrePointOnScreen } from "./theatre-geometry.js";
 import type { SimulationView } from "../capabilities.js";
-import { beakOffsetX, clamp } from "../geometry.js";
-import type { Point, SceneProp } from "../model.js";
+import { clamp } from "../geometry.js";
+import type { SceneProp } from "../model.js";
 import type { Pose } from "../poses.js";
 import { isTheatre, type BubblesScene } from "../scenes.js";
-
-function beak(sim: Pick<SimulationView, "x" | "facing" | "y">) {
-  return {
-    x: sim.x + beakOffsetX(sim.facing),
-    y: sim.y + 42,
-  };
-}
-function pointOnScreen(
-  sim: Pick<SimulationView, "width" | "height">,
-  point: Point,
-  margin = 16,
-) {
-  return {
-    x: clamp(point.x, margin, sim.width - margin),
-    y: clamp(point.y, margin, sim.height - margin),
-  };
-}
 
 export function theatrePose(
   sim: Pick<SimulationView, "scene" | "motionTime" | "time">,
@@ -190,7 +174,7 @@ export function theatreProps(
 
     case "toss": {
       // Rendering can run synchronously on resize before the next physics tick.
-      const chip = scene.chip && pointOnScreen(sim, scene.chip, 18);
+      const chip = scene.chip && theatrePointOnScreen(sim, scene.chip, 18);
 
       if (scene.chip && chip) {
         let rotation;
@@ -218,7 +202,7 @@ export function theatreProps(
     }
 
     case "baguette": {
-      const mouth = beak(sim);
+      const mouth = theatreBeak(sim);
       const offset = theatreOffset(sim);
       let horizontalOffset;
 

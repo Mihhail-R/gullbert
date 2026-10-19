@@ -1,3 +1,4 @@
+import { theatreBeak, theatrePointOnScreen } from "./theatre-geometry.js";
 import { dialogue } from "../dialogue.js";
 import { observe } from "../observation.js";
 import type { ReadonlyValue } from "../presentation.js";
@@ -137,20 +138,6 @@ export class TheatreRoutine implements SceneOwner {
 
     return 0.3;
   }
-  #beak() {
-    const sim = this.#environment;
-    return {
-      x: sim.body.x + beakOffsetX(sim.body.facing),
-      y: sim.body.y + 42,
-    };
-  }
-  #pointOnScreen(point: Point, margin = 16) {
-    const sim = this.#environment;
-    return {
-      x: clamp(point.x, margin, sim.body.width - margin),
-      y: clamp(point.y, margin, sim.body.height - margin),
-    };
-  }
   #phase(name: TheatreScene["phase"], duration: number) {
     const sim = this.#environment;
 
@@ -201,11 +188,11 @@ export class TheatreRoutine implements SceneOwner {
     sim.activity.beginRoutine(kind);
 
     if (kind === "bubbles") {
-      const mouth = this.#beak();
+      const mouth = theatreBeak(sim.body);
       const bubbles = Array.from({ length: 6 }, (_, index) => {
         return {
           id: sim.objects.nextId(),
-          ...this.#pointOnScreen({
+          ...theatrePointOnScreen(sim.body, {
             x: mouth.x + sim.body.facing * (55 + index * 38),
             y: mouth.y + 10 + (index % 3) * 22,
           }),
@@ -233,7 +220,8 @@ export class TheatreRoutine implements SceneOwner {
       this.#phase("approach", 7);
       sim.speech.say(dialogue.gullbert.theatre.aPrivateSeasideResort);
     } else if (kind === "toss") {
-      const end = this.#pointOnScreen(
+      const end = theatrePointOnScreen(
+        sim.body,
         point ?? { x: sim.body.width * 0.7, y: sim.body.y + 75 },
       );
       let direction: -1 | 1;
@@ -244,7 +232,7 @@ export class TheatreRoutine implements SceneOwner {
         direction = -1;
       }
 
-      const start = this.#pointOnScreen({
+      const start = theatrePointOnScreen(sim.body, {
         x: sim.body.x + 48 - direction * 150,
         y: sim.body.y + 88,
       });
@@ -428,7 +416,7 @@ export class TheatreRoutine implements SceneOwner {
     for (const bubble of scene.bubbles) {
       Object.assign(
         bubble,
-        this.#pointOnScreen({
+        theatrePointOnScreen(sim.body, {
           x: bubble.x + bubble.vx * dt,
           y: bubble.y + bubble.vy * dt,
         }),
@@ -436,7 +424,7 @@ export class TheatreRoutine implements SceneOwner {
     }
 
     if (scene.phase === "chase") {
-      const mouth = this.#beak();
+      const mouth = theatreBeak(sim.body);
       const target = scene.bubbles.reduce<Bubble | null>((best, bubble) => {
         if (
           !best ||
@@ -473,7 +461,7 @@ export class TheatreRoutine implements SceneOwner {
         dt,
       );
       sim.body.face(facing as -1 | 1);
-      const contact = this.#beak();
+      const contact = theatreBeak(sim.body);
 
       if (Math.hypot(contact.x - target.x, contact.y - target.y) <= 22) {
         scene.bubbles = scene.bubbles.filter((bubble) => {
@@ -537,9 +525,11 @@ export class TheatreRoutine implements SceneOwner {
     }
   }
   #chipPosition(scene: TossScene, elapsed: number) {
+    const sim = this.#environment;
     const { start, end, duration, height } = scene.arc;
     const t = clamp(elapsed / duration, 0, 1);
-    return this.#pointOnScreen(
+    return theatrePointOnScreen(
+      sim.body,
       {
         x: start.x + (end.x - start.x) * t,
         y: start.y + (end.y - start.y) * t - 4 * height * t * (1 - t),
@@ -588,7 +578,7 @@ export class TheatreRoutine implements SceneOwner {
 
     // A landed chip must follow display changes just like one still in flight.
     if (scene.chip) {
-      Object.assign(scene.chip, this.#pointOnScreen(scene.chip, 18));
+      Object.assign(scene.chip, theatrePointOnScreen(sim.body, scene.chip, 18));
     }
 
     if (["takeoff", "intercept"].includes(scene.phase) && scene.chip) {
