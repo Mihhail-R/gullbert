@@ -244,19 +244,13 @@ export class Gullbert {
       },
       install: (scene) => {
         this.#registry.install(scene);
-
-        if (scene.kind === "cursor") {
-          this.#activity.beginRoutine("cursor");
-        }
       },
       cancel: () => {
         this.#cancelScene();
       },
-      cursorRetaliation: () => {
-        return this.#cursor.retaliation();
-      },
-      consumeTrail: (nextAt) => {
-        this.#cursor.consumeTrail(nextAt);
+      retaliate: (reaction) => {
+        this.#registry.install(this.#cursor.createRetaliationScene(reaction));
+        this.#activity.beginRoutine("cursor");
       },
     });
     this.#quiet = new QuietRoutine({
@@ -717,7 +711,9 @@ export class Gullbert {
     this.#speech.expire(this.#time);
   }
   #stepActiveRoutine(delta: number): boolean {
-    if (this.#pickup.snapshot().held) {
+    const pickup = this.#pickup.snapshot();
+
+    if (pickup.held) {
       return true;
     }
 
@@ -725,7 +721,7 @@ export class Gullbert {
       return this.#registry.update(delta);
     }
 
-    this.#pickup.trail();
+    this.#cursor.maintainRetaliation(pickup.now);
 
     if (this.#cleanup.update(delta)) {
       return true;

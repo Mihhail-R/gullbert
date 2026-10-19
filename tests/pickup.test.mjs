@@ -180,6 +180,69 @@ test("trail has at most three splats and ends with its chase", () => {
   assert.equal(sim.inspect().splats.length, 3);
   assert.notEqual(sim.inspect().scene?.kind, "cursor");
 });
+// Reach a due trail splat through the real pickup-to-cursor handoff.
+function approachingTrailSplat() {
+  const sim = bird(2, 0.65);
+  drag(sim, 0);
+  advance(sim, 0.75);
+  sim.pointer({ x: 850, y: 20 });
+
+  while (sim.inspect().time + 0.1 < sim.inspect().scene.nextSplat) {
+    advance(sim, 0.05);
+  }
+
+  assert.equal(sim.inspect().scene.phase, "stalk");
+  assert.equal(sim.inspect().splats.length, 0);
+  return sim;
+}
+
+test("a due retaliation splat uses the position before cursor movement", () => {
+  const sim = approachingTrailSplat();
+  const before = sim.inspect();
+  sim.step(before.scene.nextSplat - before.time);
+  const after = sim.inspect();
+
+  assert.equal(after.splats.length, 1);
+  assert.equal(after.splats[0].x, before.x + 48);
+  assert.equal(after.splats[0].y, before.y + 86);
+  assert.equal(after.splats[0].scale, 0.8);
+  assert.notEqual(after.x, before.x);
+  assert.equal(after.scene.nextSplat, after.time + 1.8);
+});
+
+test("wall-clock expiry cancels retaliation before a due splat or simulation deadline", () => {
+  const sim = approachingTrailSplat();
+  const before = sim.inspect();
+  sim.updatePickupClock(before.pickup.revengeUntil);
+  sim.updatePickupClock(before.pickup.now);
+  sim.updatePickupClock(NaN);
+  sim.step(before.scene.nextSplat - before.time);
+  const after = sim.inspect();
+
+  assert.ok(after.time < before.scene.deadline);
+  assert.equal(after.scene, null);
+  assert.equal(after.splats.length, 0);
+  assert.equal(after.mode, "idle");
+  assert.equal(after.bubble, before.bubble);
+});
+
+test("simulation deadline ends a chase even without new wall-clock samples", () => {
+  const sim = approachingTrailSplat();
+  const before = sim.inspect();
+
+  while (sim.inspect().time < before.scene.deadline) {
+    const current = sim.inspect();
+    sim.pointer({ x: current.x < 450 ? 850 : 20, y: 20 });
+    sim.step(0.05);
+  }
+
+  const after = sim.inspect();
+  assert.equal(after.pickup.now, before.pickup.now);
+  assert.ok(after.pickup.now < after.pickup.revengeUntil);
+  assert.equal(after.scene, null);
+  assert.match(after.bubble, /not worth/i);
+});
+
 test(
   "cancel, food, hide, pause and lowering level stop reactions; paused dragging " +
   "remains available",
