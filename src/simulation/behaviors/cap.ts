@@ -1,3 +1,4 @@
+import { enterPhase } from "../phase-timing.js";
 import { scopeCapabilities } from "../capabilities.js";
 import type { BehaviorCapabilities } from "../capabilities.js";
 import { isPointOnScreen, beakOffsetX, clamp } from "../geometry.js";
@@ -421,9 +422,7 @@ export class CapRoutine implements SceneOwner {
 
   #phase(phase: CapScene["phase"], duration: number): void {
     const scene = this.#scene!;
-    scene.phase = phase;
-    scene.phaseStarted = this.#environment.clock.now;
-    scene.until = scene.phaseStarted + duration;
+    enterPhase(scene, phase, this.#environment.clock.now, duration);
     this.#environment.body.resetMotion();
   }
 
