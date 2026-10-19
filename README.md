@@ -13,9 +13,7 @@ Gullbert roams your desktop, demands chips, learns tricks, collects questionable
 - **macOS 12.3+ (Monterey)**, Apple Silicon (M-series). Download the `darwin-aarch64.dmg` and drag Gullbert into Applications. Gullbert requires the WebKit APIs included with macOS 12.3 or later.
 - **Windows 10+**, x64, with WebView2. Download and run the `setup.exe`.
 
-Gullbert has been tested on the maintainers' Apple Silicon Mac and Windows PC. Testing does not yet cover every OS version or display configuration.
-
-Mac builds are ad-hoc signed and not notarized by Apple; Windows installers are unsigned. Paid platform signing is deferred. Update packages are cryptographically signed and verified by the app.
+Mac builds are ad-hoc signed and not notarized by Apple; Windows installers are unsigned. Update packages are cryptographically signed and verified by the app.
 
 - **Mac first launch:** open Gullbert from Applications. If macOS says it cannot verify the app, go to **System Settings → Privacy & Security → Open Anyway**, then confirm. On older macOS versions, use **System Preferences → Security & Privacy → General**. See [Apple's instructions](https://support.apple.com/102445).
 - **Windows first install:** if SmartScreen shows **Windows protected your PC**, choose **More info → Run anyway** when available.
