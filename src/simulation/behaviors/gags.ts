@@ -1,3 +1,4 @@
+import { enterPhase } from "../phase-timing.js";
 import { SceneState } from "../scene-state.js";
 import { dialogue } from "../dialogue.js";
 import { observe } from "../observation.js";
@@ -325,9 +326,7 @@ export class GagRoutine implements SceneOwner {
       return;
     }
 
-    scene.phase = name;
-    scene.phaseStarted = sim.clock.now;
-    scene.until = sim.clock.now + duration;
+    enterPhase(scene, name, sim.clock.now, duration);
     sim.body.resetMotion();
   }
   #finish(text?: string) {

@@ -1,3 +1,4 @@
+import { enterPhase } from "../phase-timing.js";
 import {
   scopeCapabilities,
   type BehaviorCapabilities,
@@ -675,9 +676,7 @@ export class LearningRoutine implements RecallOwner {
 
   #phase(phase: LearningScene["phase"], duration: number): void {
     const scene = this.#scene!;
-    scene.phase = phase;
-    scene.phaseStarted = this.#environment.clock.now;
-    scene.until = scene.phaseStarted + duration;
+    enterPhase(scene, phase, this.#environment.clock.now, duration);
   }
   #performed(): void {
     const scene = this.#scene;

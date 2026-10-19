@@ -1,3 +1,4 @@
+import { enterPhase } from "../phase-timing.js";
 import { theatreBeak, theatrePointOnScreen } from "./theatre-geometry.js";
 import { dialogue } from "../dialogue.js";
 import { observe } from "../observation.js";
@@ -144,9 +145,7 @@ export class TheatreRoutine implements SceneOwner {
       return;
     }
 
-    this.#state.current.phase = name;
-    this.#state.current.phaseStarted = sim.clock.now;
-    this.#state.current.until = sim.clock.now + duration;
+    enterPhase(this.#state.current, name, sim.clock.now, duration);
     sim.body.resetMotion();
   }
   #finish(message?: string) {
