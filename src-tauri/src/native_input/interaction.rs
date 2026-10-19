@@ -16,10 +16,14 @@ impl Rect {
         {
             return false;
         }
+
         if self.width <= 0.0 || self.width > 160.0 {
             return false;
         }
-        self.height > 0.0 && self.height <= 160.0
+
+        // Screen runoff is tall but narrow. Keep the horizontal capture local,
+        // while allowing the rendered stain to extend down a high-resolution display.
+        self.height > 0.0 && self.height <= 4096.0
     }
     fn contains(&self, x: f64, y: f64) -> bool {
         let within_width = x >= self.x && x <= self.x + self.width;
@@ -61,7 +65,13 @@ mod tests {
     }
     #[test]
     fn oversized_or_invalid_capture_rectangles_are_rejected() {
-        for (width, height) in [(f64::NAN, 40.0), (0.0, 40.0), (1920.0, 1080.0), (-1.0, 5.0)] {
+        for (width, height) in [
+            (f64::NAN, 40.0),
+            (0.0, 40.0),
+            (1920.0, 1080.0),
+            (-1.0, 5.0),
+            (64.0, 4097.0),
+        ] {
             assert!(!Rect {
                 x: 0.0,
                 y: 0.0,

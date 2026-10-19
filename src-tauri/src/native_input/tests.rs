@@ -965,3 +965,25 @@ fn shutdown_releases_every_input_mode_and_old_hit_regions_cannot_recapture() {
         effects.assert_released();
     }
 }
+
+#[test]
+fn long_screen_drips_capture_cleanup_clicks_and_release_after_removal() {
+    let mut input = Input::default();
+    let effects = Recording::default();
+    effects.pointer.set(Some((300.0, 400.0, true)));
+    let stain = Rect {
+        x: 268.0,
+        y: 177.0,
+        width: 64.0,
+        height: 331.0,
+    };
+
+    input.sync_interaction(&effects, vec![stain], None);
+    assert!(
+        effects.capture.get(),
+        "the lower part of a drip must receive cleanup clicks"
+    );
+
+    input.sync_interaction(&effects, vec![], None);
+    assert!(!effects.capture.get());
+}
