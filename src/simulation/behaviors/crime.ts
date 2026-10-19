@@ -1,5 +1,5 @@
+import { SceneState } from "../scene-state.js";
 import { dialogue } from "../dialogue.js";
-import { observe } from "../observation.js";
 import type { ReadonlyValue } from "../presentation.js";
 import { scopeCapabilities } from "../capabilities.js";
 import type { CrimeScene } from "../scenes.js";
@@ -82,8 +82,7 @@ type Environment = Pick<
 >;
 export class CrimeRoutine implements SceneOwner {
   #environment: Environment;
-  #scene: OwnedScene | null = null;
-  #identity: object = Object.freeze({});
+  #state = new SceneState<OwnedScene>();
 
   constructor(environment: Environment) {
     this.#environment = scopeCapabilities(environment, [
@@ -98,24 +97,23 @@ export class CrimeRoutine implements SceneOwner {
     ]);
   }
   get scene(): ReadonlyValue<OwnedScene> | null {
-    return observe(this.#scene);
+    return this.#state.snapshot();
   }
 
   get identity(): object {
-    return this.#identity;
+    return this.#state.identity;
   }
   install(scene: ReadonlyValue<Scene>): void {
-    this.#scene = structuredClone(scene) as OwnedScene;
-    this.#identity = Object.freeze({});
+    this.#state.install(scene as ReadonlyValue<OwnedScene>);
   }
   clear(): void {
-    this.#scene = null;
+    this.#state.clear();
   }
   start(name: string): boolean {
     const handled = this.#startCrime(name);
 
-    if (handled && this.#scene) {
-      this.#identity = Object.freeze({});
+    if (handled) {
+      this.#state.activate();
     }
 
     return handled;
@@ -123,14 +121,14 @@ export class CrimeRoutine implements SceneOwner {
   update(dt: number): "running" | "complete" {
     this.#stepCrime(dt);
 
-    if (!this.#scene) {
+    if (!this.#state.current) {
       return "complete";
     }
 
     return "running";
   }
   complete(): void {
-    this.#scene = null;
+    this.#state.clear();
   }
   presentation() {
     const sim = this.#environment;
@@ -140,12 +138,12 @@ export class CrimeRoutine implements SceneOwner {
           ...sim.body.snapshot(),
           ...sim.activity.snapshot(),
           time: sim.clock.now,
-          scene: this.#scene,
+          scene: this.#state.current,
         }) ?? undefined,
     };
   }
   interrupt(): void {
-    this.#scene = null;
+    this.#state.clear();
   }
   visibility(): void {}
 
@@ -178,7 +176,7 @@ export class CrimeRoutine implements SceneOwner {
       kind = "caper";
     }
 
-    this.#scene = {
+    this.#state.current = {
       kind,
       phase: "approach",
       bagId: bag.id,
@@ -204,7 +202,7 @@ export class CrimeRoutine implements SceneOwner {
   }
   caughtCrime() {
     const sim = this.#environment;
-    const scene = this.#scene;
+    const scene = this.#state.current;
     const bag = sim.objects.snapshot().bag;
 
     if (scene?.kind !== "theft" || !bag || scene.bagId !== bag.id) {
@@ -228,13 +226,13 @@ export class CrimeRoutine implements SceneOwner {
   #phase(name: CrimeScene["phase"], duration: number) {
     const sim = this.#environment;
 
-    if (this.#scene?.kind !== "theft" && this.#scene?.kind !== "caper") {
+    if (this.#state.current?.kind !== "theft" && this.#state.current?.kind !== "caper") {
       return;
     }
 
-    this.#scene.phase = name;
-    this.#scene.phaseStarted = sim.clock.now;
-    this.#scene.until = sim.clock.now + duration;
+    this.#state.current.phase = name;
+    this.#state.current.phaseStarted = sim.clock.now;
+    this.#state.current.until = sim.clock.now + duration;
     sim.body.resetMotion();
   }
   #finish(message?: string) {
@@ -281,7 +279,7 @@ export class CrimeRoutine implements SceneOwner {
   }
   #stepCrime(dt: number) {
     const sim = this.#environment;
-    const scene = this.#scene;
+    const scene = this.#state.current;
 
     if (!scene || (scene.kind !== "theft" && scene.kind !== "caper")) {
       return false;
@@ -329,7 +327,7 @@ export class CrimeRoutine implements SceneOwner {
   }
   #stepTheft(dt: number) {
     const sim = this.#environment;
-    const scene = this.#scene;
+    const scene = this.#state.current;
 
     if (scene?.kind !== "theft") {
       return;
@@ -390,7 +388,7 @@ export class CrimeRoutine implements SceneOwner {
   }
   #stepCaper(dt: number) {
     const sim = this.#environment;
-    const scene = this.#scene;
+    const scene = this.#state.current;
 
     if (scene?.kind !== "caper") {
       return;

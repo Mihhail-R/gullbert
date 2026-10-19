@@ -13,6 +13,7 @@ import {
 import type { Point } from "../model.js";
 import type { BehaviorCapabilities } from "../capabilities.js";
 import type { SceneOwner } from "../routine.js";
+import { SceneState } from "../scene-state.js";
 import type { Scene, TheatreScene as OwnedScene } from "../scenes.js";
 import {
   theatrePose,
@@ -46,8 +47,7 @@ type Environment = Pick<
 >;
 export class TheatreRoutine implements SceneOwner {
   #environment: Environment;
-  #scene: OwnedScene | null = null;
-  #identity: object = Object.freeze({});
+  #state = new SceneState<OwnedScene>();
   #rareTheatre?: { nextAllowed: number; nextCheck: number; recent: string[] };
   constructor(environment: Environment) {
     this.#environment = scopeCapabilities(environment, [
@@ -66,24 +66,23 @@ export class TheatreRoutine implements SceneOwner {
     ]);
   }
   get scene(): ReadonlyValue<OwnedScene> | null {
-    return observe(this.#scene);
+    return this.#state.snapshot();
   }
 
   get identity(): object {
-    return this.#identity;
+    return this.#state.identity;
   }
   install(scene: ReadonlyValue<Scene>): void {
-    this.#scene = structuredClone(scene) as OwnedScene;
-    this.#identity = Object.freeze({});
+    this.#state.install(scene as ReadonlyValue<OwnedScene>);
   }
   clear(): void {
-    this.#scene = null;
+    this.#state.clear();
   }
   start(name: string, point?: Point): boolean {
     const handled = this.#startTheatre(name, point);
 
-    if (handled && this.#scene) {
-      this.#identity = Object.freeze({});
+    if (handled) {
+      this.#state.activate();
     }
 
     return handled;
@@ -91,7 +90,7 @@ export class TheatreRoutine implements SceneOwner {
   update(dt: number): "running" | "complete" {
     this.#stepTheatre(dt);
 
-    if (!this.#scene) {
+    if (!this.#state.current) {
       return "complete";
     }
 
@@ -99,7 +98,7 @@ export class TheatreRoutine implements SceneOwner {
   }
   complete(): void {
     this.#cancelTheatre();
-    this.#scene = null;
+    this.#state.clear();
   }
   presentation() {
     const sim = this.#environment;
@@ -108,7 +107,7 @@ export class TheatreRoutine implements SceneOwner {
       ...sim.activity.snapshot(),
       time: sim.clock.now,
       visible: sim.policy.visible(),
-      scene: this.#scene,
+      scene: this.#state.current,
     };
     const props = theatreProps(observation);
     const looseProps = props.filter(function looseChip(prop) {
@@ -123,7 +122,7 @@ export class TheatreRoutine implements SceneOwner {
   }
   interrupt(): void {
     this.#cancelTheatre();
-    this.#scene = null;
+    this.#state.clear();
   }
   visibility(): void {}
   get rareTheatre() {
@@ -141,13 +140,13 @@ export class TheatreRoutine implements SceneOwner {
   #phase(name: TheatreScene["phase"], duration: number) {
     const sim = this.#environment;
 
-    if (!isTheatre(this.#scene)) {
+    if (!isTheatre(this.#state.current)) {
       return;
     }
 
-    this.#scene.phase = name;
-    this.#scene.phaseStarted = sim.clock.now;
-    this.#scene.until = sim.clock.now + duration;
+    this.#state.current.phase = name;
+    this.#state.current.phaseStarted = sim.clock.now;
+    this.#state.current.until = sim.clock.now + duration;
     sim.body.resetMotion();
   }
   #finish(message?: string) {
@@ -201,7 +200,7 @@ export class TheatreRoutine implements SceneOwner {
           expires: sim.clock.now + 10 + index * 0.7,
         };
       });
-      this.#scene = { ...clock, kind, phase: "chase", bubbles, pops: [] };
+      this.#state.current = { ...clock, kind, phase: "chase", bubbles, pops: [] };
       this.#phase("chase", 14);
       sim.speech.say(dialogue.gullbert.theatre.floatingTrespassers);
     } else if (kind === "bath") {
@@ -209,7 +208,7 @@ export class TheatreRoutine implements SceneOwner {
         x: (point?.x ?? sim.body.x + 100) - 48,
         y: (point?.y ?? sim.body.y + 76) - 76,
       });
-      this.#scene = {
+      this.#state.current = {
         ...clock,
         kind,
         phase: "approach",
@@ -242,7 +241,7 @@ export class TheatreRoutine implements SceneOwner {
         duration: 2.2,
         height: Math.min(140, sim.body.height * 0.25),
       };
-      this.#scene = {
+      this.#state.current = {
         ...clock,
         kind,
         phase: "takeoff",
@@ -254,7 +253,7 @@ export class TheatreRoutine implements SceneOwner {
         landFrom: sim.body.y,
         recoilFrom: { x: sim.body.x, y: sim.body.y },
       };
-      this.#phase("takeoff", this.#scene.reaction);
+      this.#phase("takeoff", this.#state.current.reaction);
       sim.speech.say(dialogue.gullbert.theatre.airborneLunch);
     } else {
       const memory = this.#rareMemory();
@@ -278,7 +277,7 @@ export class TheatreRoutine implements SceneOwner {
       }
 
       sim.body.face(direction as -1 | 1);
-      this.#scene = {
+      this.#state.current = {
         ...clock,
         kind,
         phase: "entrance",
@@ -297,21 +296,21 @@ export class TheatreRoutine implements SceneOwner {
   #cancelTheatre() {
     const sim = this.#environment;
 
-    if (!isTheatre(this.#scene)) {
+    if (!isTheatre(this.#state.current)) {
       return;
     }
 
     sim.speech.clear();
     sim.speech.forget();
 
-    if (this.#scene.kind === "baguette") {
-      sim.body.place(sim.body.safePoint(this.#scene.origin));
+    if (this.#state.current.kind === "baguette") {
+      sim.body.place(sim.body.safePoint(this.#state.current.origin));
     }
 
-    if (this.#scene?.kind === "toss") {
+    if (this.#state.current?.kind === "toss") {
       sim.body.place({
         x: sim.body.x,
-        y: sim.body.safePoint({ x: sim.body.x, y: this.#scene.groundY }).y,
+        y: sim.body.safePoint({ x: sim.body.x, y: this.#state.current.groundY }).y,
       });
     }
   }
@@ -327,7 +326,7 @@ export class TheatreRoutine implements SceneOwner {
       return false;
     }
 
-    if (this.#scene || sim.activity.mode !== "idle") {
+    if (this.#state.current || sim.activity.mode !== "idle") {
       return false;
     }
 
@@ -367,7 +366,7 @@ export class TheatreRoutine implements SceneOwner {
   }
   #stepTheatre(dt: number) {
     const sim = this.#environment;
-    const scene = this.#scene;
+    const scene = this.#state.current;
 
     if (!isTheatre(scene)) {
       return false;
@@ -400,7 +399,7 @@ export class TheatreRoutine implements SceneOwner {
   }
   #stepBubbles(dt: number) {
     const sim = this.#environment;
-    const scene = this.#scene;
+    const scene = this.#state.current;
 
     if (scene?.kind !== "bubbles") {
       return;
@@ -485,7 +484,7 @@ export class TheatreRoutine implements SceneOwner {
   }
   #stepBath(dt: number) {
     const sim = this.#environment;
-    const scene = this.#scene;
+    const scene = this.#state.current;
 
     if (scene?.kind !== "bath") {
       return;
@@ -539,7 +538,7 @@ export class TheatreRoutine implements SceneOwner {
   }
   #landToss(caught: boolean) {
     const sim = this.#environment;
-    const scene = this.#scene;
+    const scene = this.#state.current;
 
     if (scene?.kind !== "toss") {
       return;
@@ -568,7 +567,7 @@ export class TheatreRoutine implements SceneOwner {
   }
   #stepToss(dt: number) {
     const sim = this.#environment;
-    const scene = this.#scene;
+    const scene = this.#state.current;
 
     if (scene?.kind !== "toss") {
       return;
@@ -737,7 +736,7 @@ export class TheatreRoutine implements SceneOwner {
   }
   #stepBaguette(dt: number) {
     const sim = this.#environment;
-    const scene = this.#scene;
+    const scene = this.#state.current;
 
     if (scene?.kind !== "baguette") {
       return;
