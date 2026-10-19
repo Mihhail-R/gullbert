@@ -39,6 +39,7 @@ export interface BehaviorCapabilities extends RoutineCapabilities {
     | "moveCone"
     | "clearCones"
     | "releaseBag"
+    | "scatter"
     | "remove"
   >;
   readonly activity: Pick<

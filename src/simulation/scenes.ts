@@ -17,7 +17,7 @@ export interface CursorScene extends TimedScene {
   caughtAt?: number;
   cursorId?: number;
   retaliation?: boolean;
-  retaliationSource?: RelocationScene;
+  retaliationUntilMs?: number;
   trail?: number;
   nextSplat?: number;
 }
