@@ -1,10 +1,15 @@
 import type { ReadonlyValue } from "./presentation.js";
-import type { Routine, SceneOwner } from "./routine.js";
+import type { Routine, SceneOwner, RecallOwner } from "./routine.js";
 import type { Point } from "./model.js";
 import type { Scene } from "./scenes.js";
+import type { RecallReservation } from "./long-term-memory.js";
 
 function ownsScene(routine: Routine): routine is SceneOwner {
   return "scene" in routine && "install" in routine;
+}
+
+function recallsMemory(routine: Routine): routine is RecallOwner {
+  return "startRecall" in routine;
 }
 
 /** Chooses exactly one activity and separates completion from interruption. */
@@ -39,16 +44,30 @@ export class RoutineRegistry {
   start(name: string, point?: Point): boolean {
     for (const routine of this.#routines) {
       if (routine.start(name, point)) {
-        if (!ownsScene(routine) || routine.scene) {
-          this.#active = routine;
-        }
-
+        this.#activate(routine);
         return true;
       }
     }
 
     return false;
   }
+  startRecall(recall: RecallReservation): boolean {
+    for (const routine of this.#routines) {
+      if (recallsMemory(routine) && routine.startRecall(recall)) {
+        this.#activate(routine);
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  #activate(routine: Routine): void {
+    if (!ownsScene(routine) || routine.scene) {
+      this.#active = routine;
+    }
+  }
+
   update(delta: number): boolean {
     const owner = this.#active;
 

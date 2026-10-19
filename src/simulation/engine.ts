@@ -906,23 +906,7 @@ export class Gullbert {
       return false;
     }
 
-    switch (recall.memory.kind) {
-      case "treasure":
-        if (!this.#gifts.startRecall(recall)) {
-          return false;
-        }
-
-        this.#registry.install(this.#gifts.scene!);
-        break;
-
-      case "snack":
-      case "trick":
-        this.#learning.startRecall(recall);
-        this.#registry.install(this.#learning.scene!);
-        break;
-    }
-
-    return true;
+    return this.#registry.startRecall(recall);
   }
 
   #wander(): void {

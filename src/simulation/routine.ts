@@ -2,6 +2,7 @@ import type { ReadonlyValue } from "./presentation.js";
 import type { Point, SceneProp, Sound } from "./model.js";
 import type { Pose } from "./poses.js";
 import type { Scene } from "./scenes.js";
+import type { RecallReservation } from "./long-term-memory.js";
 
 /** The only capabilities available to an additional routine. */
 export interface RoutineCapabilities {
@@ -40,6 +41,11 @@ export interface SceneOwner extends Routine {
   readonly identity: object;
   install(scene: ReadonlyValue<Scene>): void;
   clear(): void;
+}
+
+/** A scene owner that can perform a reserved memory callback. */
+export interface RecallOwner extends SceneOwner {
+  startRecall(recall: RecallReservation): boolean;
 }
 
 export interface RoutinePresentation {

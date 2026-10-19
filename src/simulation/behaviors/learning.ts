@@ -11,7 +11,7 @@ import type { Point, SceneProp, Trick } from "../model.js";
 import { observe } from "../observation.js";
 import type { Pose } from "../poses.js";
 import type { ReadonlyValue } from "../presentation.js";
-import type { RoutinePresentation, SceneOwner } from "../routine.js";
+import type { RoutinePresentation, RecallOwner } from "../routine.js";
 import type {
   LearningScene,
   LessonScene,
@@ -46,7 +46,7 @@ const commands: Partial<Record<string, Trick>> = {
 };
 
 /** Owns meal, play, and scratch consequences alongside their transient learned associations. */
-export class LearningRoutine implements SceneOwner {
+export class LearningRoutine implements RecallOwner {
   #environment: Environment;
   #scene: LearningScene | null = null;
   #identity: object = Object.freeze({});
@@ -349,7 +349,7 @@ export class LearningRoutine implements SceneOwner {
     return true;
   }
 
-  startRecall(recall: RecallReservation): void {
+  startRecall(recall: RecallReservation): boolean {
     const sim = this.#environment;
     const origin = { x: sim.body.x, y: sim.body.y };
 
@@ -386,12 +386,14 @@ export class LearningRoutine implements SceneOwner {
         break;
 
       default:
-        return;
+        return false;
     }
 
+    this.resize();
     this.cancelAssociations();
     this.#identity = Object.freeze({});
     sim.activity.beginRoutine(this.#scene.kind);
+    return true;
   }
 
   resize(): void {

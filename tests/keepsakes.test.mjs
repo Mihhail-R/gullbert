@@ -41,7 +41,7 @@ function finish(sim) {
 test("retrieving an owned spoon carries its old item without another acquisition", () => {
   const { sim, belongings, recall } = keepsakeFixture();
   const before = structuredClone(belongings.snapshot().memory);
-  assert.equal(sim.routine.startRecall(recall), true);
+  assert.equal(sim.startRecall(recall), true);
   reachPhase(sim, "return");
   assert.equal(sim.scene.carrying, true);
   assert.equal(sim.scene.item, "bent_spoon");
@@ -63,7 +63,7 @@ test("retrieving an owned spoon carries its old item without another acquisition
 for (const phase of ["away", "reveal"]) {
   test(`interrupting a keepsake in ${phase} consumes the reservation without a recall`, () => {
     const { sim, belongings, recall } = keepsakeFixture("sock");
-    assert.equal(sim.routine.startRecall(recall), true);
+    assert.equal(sim.startRecall(recall), true);
     reachPhase(sim, phase);
     sim.action("cancel");
     finish(sim);
@@ -76,7 +76,7 @@ for (const phase of ["away", "reveal"]) {
 
 test("a gift deadline does not record a successful keepsake recall", () => {
   const { sim, belongings, recall } = keepsakeFixture();
-  sim.routine.startRecall(recall);
+  sim.startRecall(recall);
   sim.time = 21;
   sim.step(0.05);
   assert.equal(sim.scene, null);
@@ -89,13 +89,13 @@ test("a gift deadline does not record a successful keepsake recall", () => {
 test("a keepsake removed before departure cannot start retrieval", () => {
   const { sim, belongings, recall } = keepsakeFixture();
   belongings.restore({ ...belongings.snapshot().memory, collection: {} });
-  assert.equal(sim.routine.startRecall(recall), false);
+  assert.equal(sim.startRecall(recall), false);
   assert.equal(sim.scene, null);
 });
 
 test("hidden retrieval resumes on a resized display with one successful recall", () => {
   const { sim, belongings, recall } = keepsakeFixture("parking_ticket");
-  sim.routine.startRecall(recall);
+  sim.startRecall(recall);
   reachPhase(sim, "away");
   sim.setVisible(false);
   sim.step(1000);
@@ -112,7 +112,7 @@ test("hidden retrieval resumes on a resized display with one successful recall",
 
 test("removing a keepsake during its reveal cannot complete the old reservation", () => {
   const { sim, belongings, recall } = keepsakeFixture();
-  sim.routine.startRecall(recall);
+  sim.startRecall(recall);
   reachPhase(sim, "reveal");
   belongings.restore({ ...belongings.snapshot().memory, collection: {} });
   finish(sim);
