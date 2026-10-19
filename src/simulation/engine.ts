@@ -467,8 +467,8 @@ export class Gullbert {
     this.#objects.releaseBag();
     this.#registry.interrupt();
   }
-  #replaceActivity() {
-    this.#learning.cancelAssociations();
+  #replaceActivity(command: string) {
+    this.#learning.replaceActivity(command);
     this.#objects.discardFood();
     this.#cancelScene();
     this.#cancelFlight();
@@ -599,14 +599,7 @@ export class Gullbert {
       return;
     }
 
-    // Capture the completed trick before replacement interrupts its scene.
-    let reward = null;
-
-    if (name === "feed" || name === "feed_here") {
-      reward = this.#learning.rewardCandidate();
-    }
-
-    this.#replaceActivity();
+    this.#replaceActivity(name);
 
     if (this.#startRoutine(name, point)) {
       if (name === "forget_learning") {
@@ -636,7 +629,6 @@ export class Gullbert {
       case "feed":
       case "feed_here": {
         this.#food.clearRequest();
-        this.#learning.offerReward(reward);
         let destination = { x: this.#body.x, y: this.#body.y };
 
         if (point) {
