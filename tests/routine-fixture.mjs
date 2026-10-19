@@ -1,6 +1,7 @@
 import { Belongings } from "../web-dist/simulation/belongings.js";
 import { Activity } from "../web-dist/simulation/activity.js";
 import { Props } from "../web-dist/simulation/props.js";
+import { RoutineRegistry } from "../web-dist/simulation/registry.js";
 import { Body } from "../web-dist/simulation/body.js";
 import { clamp, SIZE } from "../web-dist/simulation/geometry.js";
 
@@ -48,29 +49,39 @@ export function routineFixture(Routine, random = () => 0.5) {
       this.until = this.time + delay;
     },
     cancelScene() {
-      this.routine.interrupt();
+      registry.interrupt();
     },
     completeRoutine() {
-      this.routine.clear();
+      registry.complete();
     },
     configure(settings) {
       Object.assign(this.settings, settings);
     },
     setVisible(visible) {
       this.visible = visible;
-      this.routine.visibility(visible);
+      registry.visibility(visible);
     },
     action(name, point) {
-      this.routine.interrupt();
+      registry.interrupt();
       this.tidying = name === "tidy";
 
-      if (name === "place_bag") {
-        this.objects.placeBag(point);
-      } else if (name === "cancel" || name === "tidy") {
-        this.rest();
-      } else {
-        this.routine.start(name, point);
+      switch (name) {
+        case "place_bag":
+          this.objects.placeBag(point);
+          break;
+
+        case "cancel":
+        case "tidy":
+          this.rest();
+          break;
+
+        default:
+          registry.start(name, point);
+          break;
       }
+    },
+    startRecall(recall) {
+      return registry.startRecall(recall);
     },
     resize(width, height) {
       this.width = width;
@@ -85,10 +96,10 @@ export function routineFixture(Routine, random = () => 0.5) {
 
       const dt = Math.min(delta, 0.1);
       this.time += dt;
-      this.routine.update(dt);
+      registry.update(dt);
     },
     get scene() {
-      return this.routine.scene;
+      return registry.scene;
     },
     get nextGuest() {
       return this.routine.nextGuest;
@@ -141,29 +152,31 @@ export function routineFixture(Routine, random = () => 0.5) {
         return body[field];
       },
       set(value) {
-        if (field === "x") {
-          body.place({ x: value, y: body.y });
-        }
+        switch (field) {
+          case "x":
+            body.place({ x: value, y: body.y });
+            break;
 
-        if (field === "y") {
-          body.place({ x: body.x, y: value });
-        }
+          case "y":
+            body.place({ x: body.x, y: value });
+            break;
 
-        if (field === "facing") {
-          body.face(value);
-        }
+          case "facing":
+            body.face(value);
+            break;
 
-        if (field === "motionTime") {
-          body.resetMotion();
-          body.advanceMotion(value);
-        }
+          case "motionTime":
+            body.resetMotion();
+            body.advanceMotion(value);
+            break;
 
-        if (field === "width") {
-          body.resize(value, body.height);
-        }
+          case "width":
+            body.resize(value, body.height);
+            break;
 
-        if (field === "height") {
-          body.resize(body.width, value);
+          case "height":
+            body.resize(body.width, value);
+            break;
         }
       },
     });
@@ -269,12 +282,18 @@ export function routineFixture(Routine, random = () => 0.5) {
         return activity.mode;
       },
       set(mode) {
-        if (mode === "idle") {
-          activity.rest(sim.time);
-        } else if (mode === "walk") {
-          activity.walk(body.snapshot());
-        } else {
-          activity.beginRoutine(mode);
+        switch (mode) {
+          case "idle":
+            activity.rest(sim.time);
+            break;
+
+          case "walk":
+            activity.walk(body.snapshot());
+            break;
+
+          default:
+            activity.beginRoutine(mode);
+            break;
         }
       },
     },
@@ -301,8 +320,11 @@ export function routineFixture(Routine, random = () => 0.5) {
   });
   capabilities.activity = activity;
   capabilities.lifecycle = {
+    interrupt() {
+      registry.interrupt();
+    },
     complete() {
-      sim.routine.clear();
+      registry.complete();
     },
     rest(delay) {
       sim.rest(delay);
@@ -343,5 +365,6 @@ export function routineFixture(Routine, random = () => 0.5) {
     sim.bubbleUntil = 0;
   };
   sim.routine = new Routine(capabilities);
+  const registry = new RoutineRegistry([sim.routine], new Map());
   return sim;
 }

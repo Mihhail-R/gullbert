@@ -6,7 +6,7 @@ import type { RecallReservation } from "../long-term-memory.js";
 import type { Pose } from "../poses.js";
 import type { Point } from "../model.js";
 import type { SimulationView, BehaviorCapabilities } from "../capabilities.js";
-import type { SceneOwner } from "../routine.js";
+import type { RecallOwner } from "../routine.js";
 import type { Scene, GiftPurpose, GiftScene as OwnedScene } from "../scenes.js";
 import { ITEMS } from "../items.js";
 
@@ -70,7 +70,7 @@ type Environment = Pick<
   | "events"
   | "meals"
 >;
-export class GiftRoutine implements SceneOwner {
+export class GiftRoutine implements RecallOwner {
   #environment: Environment;
   #scene: OwnedScene | null = null;
   #identity: object = Object.freeze({});
