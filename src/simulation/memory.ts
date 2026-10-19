@@ -1,4 +1,4 @@
-import type { Memory, MemoryEpisode } from "./model.js";
+import type { Memory, MemoryEpisode, Point } from "./model.js";
 import { ITEMS, isCollectible, type Collectible } from "./items.js";
 import { clamp, SIZE } from "./geometry.js";
 import { normalizePreferences } from "./preferences.js";
@@ -38,6 +38,31 @@ function finite(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
+/** Remembered locations stay in the available travel area without scaling. */
+export function clampMemoryPoint(value: unknown, width: number, height: number): Point | null {
+  const point = object(value);
+
+  if (!finite(point.x) || !finite(point.y)) {
+    return null;
+  }
+
+  const safeWidth = finite(width) ? width : 1200;
+  const safeHeight = finite(height) ? height : 800;
+  return {
+    x: clamp(point.x, 0, Math.max(0, safeWidth - SIZE)),
+    y: clamp(point.y, 0, Math.max(0, safeHeight - SIZE)),
+  };
+}
+
+export function createLearnedMemory(): Memory["learned"] {
+  return {
+    tricks: { come: 0, spin: 0, dead: 0 },
+    snackSpot: null,
+    snackCandidate: null,
+    scratchesAfterPlay: 0,
+  };
+}
+
 export function normalizeMemory(
   data: unknown,
   width = 1200,
@@ -45,36 +70,6 @@ export function normalizeMemory(
   nowMs = Date.now(),
 ): Memory {
   const source = object(data);
-  let safeWidth;
-
-  if (finite(width)) {
-    safeWidth = width;
-  } else {
-    safeWidth = 1200;
-  }
-
-  const maxX = Math.max(0, safeWidth - SIZE);
-  let safeHeight;
-
-  if (finite(height)) {
-    safeHeight = height;
-  } else {
-    safeHeight = 800;
-  }
-
-  const maxY = Math.max(0, safeHeight - SIZE);
-  function point(value: unknown) {
-    const p = object(value);
-
-    if (!finite(p.x) || !finite(p.y)) {
-      return null;
-    }
-
-    return {
-      x: clamp(p.x, 0, maxX),
-      y: clamp(p.y, 0, maxY),
-    };
-  }
   const collection: Memory["collection"] = {};
   const savedCollection = object(source.collection);
 
@@ -167,21 +162,28 @@ export function normalizeMemory(
 
     return 0;
   }
-  const spot = point(learned.snackSpot);
+
+  const learnedMemory = createLearnedMemory();
+  learnedMemory.tricks = {
+    come: lessons(tricks.come),
+    spin: lessons(tricks.spin),
+    dead: lessons(tricks.dead),
+  };
+  learnedMemory.scratchesAfterPlay = lessons(learned.scratchesAfterPlay);
+
+  const spot = clampMemoryPoint(learned.snackSpot, width, height);
   const meals = lessons(object(learned.snackSpot).meals);
-  let snackSpot = null;
 
   if (spot && meals > 0) {
-    snackSpot = { ...spot, meals };
+    learnedMemory.snackSpot = { ...spot, meals };
   }
 
-  const candidate = point(learned.snackCandidate);
+  const candidate = clampMemoryPoint(learned.snackCandidate, width, height);
   const candidateMeals = lessons(object(learned.snackCandidate).meals);
-  let snackCandidate = null;
 
   if (candidate && candidateMeals > 0) {
-    if (snackSpot && snackSpot.meals >= 3) {
-      snackCandidate = { ...candidate, meals: Math.min(2, candidateMeals) };
+    if (learnedMemory.snackSpot && learnedMemory.snackSpot.meals >= 3) {
+      learnedMemory.snackCandidate = { ...candidate, meals: Math.min(2, candidateMeals) };
     }
   }
 
@@ -235,17 +237,8 @@ export function normalizeMemory(
       pigeon: memoryCount(visits.pigeon),
       gull: memoryCount(visits.gull),
     },
-    learned: {
-      tricks: {
-        come: lessons(tricks.come),
-        spin: lessons(tricks.spin),
-        dead: lessons(tricks.dead),
-      },
-      snackSpot,
-      snackCandidate,
-      scratchesAfterPlay: lessons(learned.scratchesAfterPlay),
-    },
-    perch: point(source.perch),
+    learned: learnedMemory,
+    perch: clampMemoryPoint(source.perch, width, height),
     collection,
     preferences: normalizePreferences(source.preferences),
     greetings: {
