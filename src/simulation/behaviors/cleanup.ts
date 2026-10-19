@@ -3,7 +3,7 @@ import type { Bag, Point, Settings, Flight } from "../model.js";
 import type { Pose } from "../poses.js";
 import type { Mood } from "./moods.js";
 import type { Body } from "../body.js";
-import type { Props, PropSnapshot } from "../props.js";
+import { splatBounds, type Props, type PropSnapshot } from "../props.js";
 import type { Scene } from "../scenes.js";
 import type { ReadonlyValue } from "../presentation.js";
 
@@ -124,14 +124,10 @@ export function cleanupObjects(sim: Geometry): CleanupTarget[] {
   }
 
   for (const splat of sim.splats) {
-    const scale = splat.scale ?? 1;
     objects.push({
       kind: "splat",
       id: splat.id,
-      x: splat.x - 24 * scale,
-      y: splat.y - 15 * scale,
-      width: 48 * scale,
-      height: 30 * scale,
+      ...splatBounds(splat),
     });
   }
 

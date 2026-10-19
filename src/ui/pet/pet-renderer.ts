@@ -1,3 +1,5 @@
+import { runoffMarkup } from "./splat-art.js";
+import { splatBounds } from "../../simulation/props.js";
 import type { PetPresentation } from "../../simulation/presentation.js";
 import { clamp } from "../../simulation/geometry.js";
 import type { Item } from "../../simulation/items.js";
@@ -289,9 +291,13 @@ export function createPetRenderer(world: HTMLElement) {
       highlight.style.height = `${target.height + 16}px`;
     }
 
+    renderSplats(sim);
+  }
+
+  function renderSplats(sim: PetPresentation) {
     const alive = new Set(
-      sim.splats.map((s) => {
-        return s.id;
+      sim.splats.map((splat) => {
+        return splat.id;
       }),
     );
 
@@ -302,34 +308,56 @@ export function createPetRenderer(world: HTMLElement) {
       }
     }
 
-    for (const s of sim.splats) {
-      let node = nodes.get(s.id);
+    for (const splat of sim.splats) {
+      let node = nodes.get(splat.id);
 
       if (!node) {
         node = document.createElement("div");
         node.className = "splat";
         node.innerHTML =
-          '<svg viewBox="0 0 16 10" aria-hidden="true">' +
+          '<svg class="splat-impact" viewBox="0 0 16 10" aria-hidden="true">' +
           '<path fill="#c4ced5" d="M3 1h2v1h1v1h4V2h1V0h2v1h1v2h-1v1h1v1h2v2h-1v1' +
           'h-3v1h-2v1H7V9H5v1H3V8H1V7H0V5h2V4h2V3H3Z"/>' +
           '<path fill="#f6f3e8" d="M4 ' +
           '2h1v1h1v1h5V3h1V1h1v2h-1v2h2v1h1v1h-3v1h-2v1H7V8H4v1H3V7H1V6h2V5h2V3H4Z"/>' +
           '<path fill="#93a9b5" d="M7 4h3v1h2v2h-2v1H7V7H5V5h2Z"/>' +
           '<path fill="#c4ced5" d="M7 4h3v1H7ZM6 5h2v1H6Z"/>' +
-          '</svg>';
-        node.style.left = `${Math.round(s.x)}px`;
-        node.style.top = `${Math.round(s.y)}px`;
+          '</svg>' +
+          '<svg class="splat-runoff" aria-hidden="true"></svg>';
         splats.append(node);
-        nodes.set(s.id, node);
+        nodes.set(splat.id, node);
       }
 
-      const scale = s.scale ?? 1;
+      const scale = splat.scale ?? 1;
+      const trailLength = splat.trailLength ?? 0;
+      const bounds = splatBounds(splat);
+      const left = splat.x - 24 * scale;
+      const top = splat.y - 15 * scale;
+      const bottom = top + (30 + trailLength) * scale;
+      const right = left + 48 * scale;
+      node.style.left = `${splat.x}px`;
+      node.style.top = `${splat.y}px`;
+      const runoff = node.querySelector<SVGElement>(".splat-runoff")!;
+      const artworkKey = `${splat.id}:${trailLength}`;
+
+      if (runoff.dataset.artwork !== artworkKey) {
+        runoff.setAttribute("viewBox", `0 0 48 ${30 + trailLength}`);
+        runoff.innerHTML = runoffMarkup(splat.id, trailLength);
+        runoff.dataset.artwork = artworkKey;
+      }
+
+      node.style.clipPath = splat.clip
+        ? `inset(${bounds.y - top}px ${right - bounds.x - bounds.width}px ` +
+          `${bottom - bounds.y - bounds.height}px ${bounds.x - left}px)`
+        : "none";
+      node.classList.toggle("dripping", splat.trailLength !== undefined);
       node.style.width = `${48 * scale}px`;
-      node.style.height = `${30 * scale}px`;
+      node.style.height = `${(30 + trailLength) * scale}px`;
+      node.style.setProperty("--splat-height", `${30 * scale}px`);
       node.style.marginLeft = `${-24 * scale}px`;
       node.style.marginTop = `${-15 * scale}px`;
       node.dataset.scale = String(scale);
-      node.classList.toggle("old", sim.time - s.born > 32);
+      node.classList.toggle("old", sim.time - splat.born >= 32);
     }
   }
   function dispose() {
