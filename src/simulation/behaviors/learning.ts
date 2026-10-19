@@ -98,8 +98,19 @@ export class LearningRoutine implements RecallOwner {
     return null;
   }
 
-  offerReward(trick: Trick | null): void {
-    this.#mealReward = trick;
+  /** Transfers an eligible performance to a new meal before its scene is interrupted. */
+  replaceActivity(command: string): void {
+    let reward: Trick | null = null;
+
+    switch (command) {
+      case "feed":
+      case "feed_here":
+        reward = this.rewardCandidate();
+        break;
+    }
+
+    this.cancelAssociations();
+    this.#mealReward = reward;
   }
 
   cancelAssociations(): void {
@@ -490,11 +501,12 @@ export class LearningRoutine implements RecallOwner {
     this.clear();
   }
   interrupt(): void {
+    // Meal associations outlive the trick scene; replacement or cancellation owns them.
     this.clear();
-    this.cancelAssociations();
   }
   visibility(visible: boolean): void {
     if (!visible) {
+      this.cancelAssociations();
       this.#environment.lifecycle.interrupt();
       this.#environment.lifecycle.rest(3);
     }

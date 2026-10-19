@@ -152,6 +152,36 @@ test("replacing a reward chip before he reaches it cannot teach a trick", () => 
   }
 });
 
+for (const interruption of ["hide", "pause", "mischief"]) {
+  test(`${interruption} cancels the reward association while a meal is on its way`, () => {
+    const sim = setup();
+    perform(sim);
+    sim.action("feed_here", { x: 850, y: 600 });
+
+    switch (interruption) {
+      case "hide":
+        sim.setVisible(false);
+        sim.setVisible(true);
+        break;
+
+      case "pause":
+        sim.configure({ paused: true });
+        break;
+
+      case "mischief":
+        sim.configure({ mischief: 1 });
+        break;
+    }
+
+    advance(sim, 10);
+
+    const memory = sim.exportMemory();
+    assert.equal(memory.learned.snackSpot.meals, 1);
+    assert.equal(memory.learned.tricks.spin, 0);
+    assert.equal(memory.episodes.some((episode) => episode.kind === "reward"), false);
+  });
+}
+
 test("three meals in one area teach a snack spot; removed or cancelled chips do not", () => {
   const sim = setup();
   sim.action("feed_here", { x: 300, y: 300 });
