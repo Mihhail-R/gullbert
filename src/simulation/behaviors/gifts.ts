@@ -1,5 +1,5 @@
+import { SceneState } from "../scene-state.js";
 import { dialogue } from "../dialogue.js";
-import { observe } from "../observation.js";
 import type { ReadonlyValue } from "../presentation.js";
 import { scopeCapabilities } from "../capabilities.js";
 import type { RecallReservation } from "../long-term-memory.js";
@@ -72,8 +72,7 @@ type Environment = Pick<
 >;
 export class GiftRoutine implements RecallOwner {
   #environment: Environment;
-  #scene: OwnedScene | null = null;
-  #identity: object = Object.freeze({});
+  #state = new SceneState<OwnedScene>();
 
   constructor(environment: Environment) {
     this.#environment = scopeCapabilities(environment, [
@@ -89,24 +88,23 @@ export class GiftRoutine implements RecallOwner {
     ]);
   }
   get scene(): ReadonlyValue<OwnedScene> | null {
-    return observe(this.#scene);
+    return this.#state.snapshot();
   }
 
   get identity(): object {
-    return this.#identity;
+    return this.#state.identity;
   }
   install(scene: ReadonlyValue<Scene>): void {
-    this.#scene = structuredClone(scene) as OwnedScene;
-    this.#identity = Object.freeze({});
+    this.#state.install(scene as ReadonlyValue<OwnedScene>);
   }
   clear(): void {
-    this.#scene = null;
+    this.#state.clear();
   }
   start(name: string): boolean {
     const handled = this.#startGift(name);
 
-    if (handled && this.#scene) {
-      this.#identity = Object.freeze({});
+    if (handled) {
+      this.#state.activate();
     }
 
     return handled;
@@ -114,7 +112,7 @@ export class GiftRoutine implements RecallOwner {
   update(dt: number): "running" | "complete" {
     this.#stepGift(dt);
 
-    if (!this.#scene) {
+    if (!this.#state.current) {
       return "complete";
     }
 
@@ -122,7 +120,7 @@ export class GiftRoutine implements RecallOwner {
   }
   complete(): void {
     this.#ground();
-    this.#scene = null;
+    this.#state.clear();
   }
   presentation() {
     const sim = this.#environment;
@@ -132,23 +130,23 @@ export class GiftRoutine implements RecallOwner {
           ...sim.body.snapshot(),
           ...sim.activity.snapshot(),
           time: sim.clock.now,
-          scene: this.#scene,
+          scene: this.#state.current,
         }) ?? undefined,
     };
   }
   interrupt(): void {
     this.#ground();
-    this.#scene = null;
+    this.#state.clear();
   }
   visibility(): void {}
 
   #ground(): void {
-    if (!this.#scene) {
+    if (!this.#state.current) {
       return;
     }
 
     const body = this.#environment.body;
-    const origin = body.safePoint(this.#scene.origin);
+    const origin = body.safePoint(this.#state.current.origin);
     body.place(body.safePoint({ x: body.x, y: origin.y }));
   }
 
@@ -190,7 +188,7 @@ export class GiftRoutine implements RecallOwner {
       item: memory.item,
       recall: structuredClone(recall),
     });
-    this.#identity = Object.freeze({});
+    this.#state.activate();
     return true;
   }
 
@@ -204,7 +202,7 @@ export class GiftRoutine implements RecallOwner {
       side = 1;
     }
 
-    this.#scene = {
+    this.#state.current = {
       kind: "gift",
       phase: "takeoff",
       ...gift,
@@ -273,7 +271,7 @@ export class GiftRoutine implements RecallOwner {
 
   #stepGift(dt: number) {
     const sim = this.#environment;
-    const scene = this.#scene;
+    const scene = this.#state.current;
 
     if (scene?.kind !== "gift") {
       return false;

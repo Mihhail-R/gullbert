@@ -1,3 +1,4 @@
+import { SceneState } from "../scene-state.js";
 import { dialogue } from "../dialogue.js";
 import { observe } from "../observation.js";
 import type { ReadonlyValue } from "../presentation.js";
@@ -224,8 +225,7 @@ type Environment = Pick<
 >;
 export class GagRoutine implements SceneOwner {
   #environment: Environment;
-  #scene: OwnedScene | null = null;
-  #identity: object = Object.freeze({});
+  #state = new SceneState<OwnedScene>();
   #gagSchedule?: { at: number; level: number; last?: GagScene["kind"] };
   #lastPostcard?: (typeof postcards)[number]["photo"];
   constructor(environment: Environment) {
@@ -245,24 +245,23 @@ export class GagRoutine implements SceneOwner {
     ]);
   }
   get scene(): ReadonlyValue<OwnedScene> | null {
-    return observe(this.#scene);
+    return this.#state.snapshot();
   }
 
   get identity(): object {
-    return this.#identity;
+    return this.#state.identity;
   }
   install(scene: ReadonlyValue<Scene>): void {
-    this.#scene = structuredClone(scene) as OwnedScene;
-    this.#identity = Object.freeze({});
+    this.#state.install(scene as ReadonlyValue<OwnedScene>);
   }
   clear(): void {
-    this.#scene = null;
+    this.#state.clear();
   }
   start(name: string): boolean {
     const handled = this.#startGag(name);
 
-    if (handled && this.#scene) {
-      this.#identity = Object.freeze({});
+    if (handled) {
+      this.#state.activate();
     }
 
     return handled;
@@ -270,7 +269,7 @@ export class GagRoutine implements SceneOwner {
   update(dt: number): "running" | "complete" {
     this.#stepGag(dt);
 
-    if (!this.#scene) {
+    if (!this.#state.current) {
       return "complete";
     }
 
@@ -278,7 +277,7 @@ export class GagRoutine implements SceneOwner {
   }
   complete(): void {
     this.#cancelGag();
-    this.#scene = null;
+    this.#state.clear();
   }
   presentation() {
     const sim = this.#environment;
@@ -287,7 +286,7 @@ export class GagRoutine implements SceneOwner {
       ...sim.activity.snapshot(),
       time: sim.clock.now,
       visible: sim.policy.visible(),
-      scene: this.#scene,
+      scene: this.#state.current,
     };
     return observe({
       pose: gagPose(observation) ?? undefined,
@@ -297,10 +296,10 @@ export class GagRoutine implements SceneOwner {
   }
   interrupt(): void {
     this.#cancelGag();
-    this.#scene = null;
+    this.#state.clear();
   }
   visibility(visible: boolean): void {
-    if (!visible && this.#scene) {
+    if (!visible && this.#state.current) {
       this.#environment.lifecycle.interrupt();
       this.#environment.lifecycle.rest();
     }
@@ -322,7 +321,7 @@ export class GagRoutine implements SceneOwner {
   ): void {
     const sim = this.#environment;
 
-    if (scene !== this.#scene) {
+    if (scene !== this.#state.current) {
       return;
     }
 
@@ -399,7 +398,7 @@ export class GagRoutine implements SceneOwner {
           side = -1;
         }
 
-        this.#scene = {
+        this.#state.current = {
           ...clock,
           kind: "postcards",
           phase: "approach",
@@ -423,7 +422,7 @@ export class GagRoutine implements SceneOwner {
           side = 1;
         }
 
-        this.#scene = {
+        this.#state.current = {
           ...clock,
           kind: name,
           phase: "approach",
@@ -435,7 +434,7 @@ export class GagRoutine implements SceneOwner {
       }
 
       case "cursor_egg": {
-        this.#scene = {
+        this.#state.current = {
           ...clock,
           kind: name,
           phase: "approach",
@@ -459,7 +458,7 @@ export class GagRoutine implements SceneOwner {
         ].map((p) => {
           return this.#onScreen(p);
         });
-        this.#scene = {
+        this.#state.current = {
           ...clock,
           kind: name,
           phase: "place",
@@ -482,7 +481,7 @@ export class GagRoutine implements SceneOwner {
           sidestepDistance = -90;
         }
 
-        this.#scene = {
+        this.#state.current = {
           ...clock,
           deadline: sim.clock.now + 9.9,
           kind: "apology",
@@ -497,8 +496,8 @@ export class GagRoutine implements SceneOwner {
       }
     }
 
-    if (this.#scene) {
-      sim.activity.beginRoutine(this.#scene.kind);
+    if (this.#state.current) {
+      sim.activity.beginRoutine(this.#state.current.kind);
     }
 
     return true;
@@ -521,7 +520,7 @@ export class GagRoutine implements SceneOwner {
       return false;
     }
 
-    if (sim.policy.tidying() || this.#scene || sim.activity.mode !== "idle") {
+    if (sim.policy.tidying() || this.#state.current || sim.activity.mode !== "idle") {
       return false;
     }
 
@@ -545,7 +544,7 @@ export class GagRoutine implements SceneOwner {
   #cancelGag() {
     const sim = this.#environment;
 
-    if (!isGag(this.#scene)) {
+    if (!isGag(this.#state.current)) {
       return;
     }
 
@@ -556,7 +555,7 @@ export class GagRoutine implements SceneOwner {
   resizeGags() {
     const sim = this.#environment;
 
-    const scene = this.#scene;
+    const scene = this.#state.current;
 
     if (!isGag(scene)) {
       return;
@@ -591,7 +590,7 @@ export class GagRoutine implements SceneOwner {
   }
   gagPointer(point: PointerSample | null) {
     const sim = this.#environment;
-    const scene = this.#scene;
+    const scene = this.#state.current;
 
     if (scene?.kind !== "cursor_egg") {
       return;
@@ -628,7 +627,7 @@ export class GagRoutine implements SceneOwner {
   }
   #stepGag(dt: number) {
     const sim = this.#environment;
-    const scene = this.#scene;
+    const scene = this.#state.current;
 
     if (!isGag(scene)) {
       return false;
