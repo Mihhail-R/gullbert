@@ -155,8 +155,6 @@ export class SnackRoutine implements SceneOwner {
       return false;
     }
 
-    sim.food.search();
-
     if ((sim.objects.snapshot().bag?.servings ?? 0) > 0) {
       this.#beginBagMeal();
     } else {
@@ -191,7 +189,6 @@ export class SnackRoutine implements SceneOwner {
     };
     sim.activity.beginRoutine("snack");
     sim.speech.say(dialogue.gullbert.snacks.chipsPlural, 2);
-    sim.food.found();
   }
   #stepSnack(dt: number) {
     const sim = this.#environment;

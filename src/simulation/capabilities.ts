@@ -59,8 +59,6 @@ export interface BehaviorCapabilities extends RoutineCapabilities {
     FoodPolicy,
     | "snapshot"
     | "clearRequest"
-    | "search"
-    | "found"
     | "failed"
     | "deferEncounter"
     | "afterBagActivity"
@@ -162,7 +160,6 @@ export interface SimulationView extends Readonly<Point> {
   readonly nextNibble: number;
   readonly nextSnackRequest: number;
   readonly bag: Readonly<Bag> | null;
-  readonly snackSearch: "found" | "failed" | null;
   readonly snackRequestAt: number | null;
   readonly nibbleEligibleAt: number | null;
   readonly nextBagVisit: number;
