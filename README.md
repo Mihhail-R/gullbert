@@ -22,7 +22,7 @@ Use the control room or menu bar / system tray to play, adjust behaviour, or hid
 
 ## Offline and private
 
-The installed app works entirely offline. No account, analytics, cloud AI, or background network requests. Settings and Gullbert's memories stay on your device.
+The installed app works entirely offline. No account, analytics, cloud AI, or background network requests. Settings and Gullbert's memories stay on your device. Memory storage uses SQLite schema version 2 with complete JSON snapshots (current memory format: version 3). Migration is forward-only: older builds reject schema version 2; there are no downgrade or dual-write paths. Imported `roommate.json` files remain untouched as recovery copies.
 
 The only network feature is **App updates**: **Check for updates** manually checks this repository's GitHub releases. Downloading and installing an update requires a separate **Install and restart** action. There are no automatic checks or downloads.
 
