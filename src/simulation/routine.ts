@@ -4,13 +4,11 @@ import type { Pose } from "./poses.js";
 import type { Scene } from "./scenes.js";
 import type { RecallReservation } from "./long-term-memory.js";
 
-/** The only capabilities available to an additional routine. */
+/** Shared operation groups used by built-in routines. */
 export interface RoutineCapabilities {
   readonly clock: { readonly now: number };
   readonly random: () => number;
   readonly movement: {
-    readonly position: Readonly<Point>;
-    readonly bounds: Readonly<{ width: number; height: number }>;
     moveTo(point: Point): void;
     face(direction: -1 | 1): void;
   };
@@ -18,10 +16,6 @@ export interface RoutineCapabilities {
     say(text: string, duration?: number): void;
     clear(): void;
     forget(): void;
-  };
-  readonly props: {
-    add(prop: Omit<SceneProp, "id">): number;
-    remove(id: number): void;
   };
   readonly events: { emit(sound: Sound): void };
 }
@@ -33,7 +27,6 @@ export interface Routine {
   visibility(visible: boolean): void;
   presentation(): RoutinePresentation;
 }
-export type RoutineFactory = (capabilities: RoutineCapabilities) => Routine;
 
 /** Registry bookkeeping is separate from the shared routine lifecycle. */
 export interface SceneOwner extends Routine {

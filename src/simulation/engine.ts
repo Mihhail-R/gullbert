@@ -9,12 +9,7 @@ import { Motivation } from "./motivation.js";
 import { Pettiness } from "./pettiness.js";
 import { Boredom } from "./boredom.js";
 import { RoutineRegistry } from "./registry.js";
-import { ScopedRoutine } from "./scoped-routine.js";
-import type {
-  RoutineFactory,
-  SceneOwner,
-  RoutinePresentation,
-} from "./routine.js";
+import type { SceneOwner } from "./routine.js";
 import type { BehaviorCapabilities, SimulationView } from "./capabilities.js";
 import {
   projectPresentation,
@@ -32,7 +27,6 @@ import type {
   PointerSample,
   Settings,
   Memory,
-  SceneProp,
   Sound,
   WorkSample,
 } from "./model.js";
@@ -97,7 +91,7 @@ export class Gullbert {
     width = 1200,
     height = 800,
     random = Math.random,
-    options: { now?: () => number; routines?: readonly RoutineFactory[] } = {},
+    options: { now?: () => number } = {},
   ) {
     this.#random = random;
     this.#time = 0;
@@ -302,11 +296,7 @@ export class Gullbert {
     owners.set("cap", this.#cap);
     owners.set("trick", this.#learning);
     owners.set("habit", this.#learning);
-    const additional = (options.routines ?? []).map((factory) => {
-      return new ScopedRoutine(factory, this.#capabilities, () => {
-        return this.#visible;
-      });
-    });
+
     this.#registry = new RoutineRegistry(
       [
         this.#gags,
@@ -321,7 +311,6 @@ export class Gullbert {
         this.#cap,
         this.#learning,
         this.#quiet,
-        ...additional,
       ],
       owners,
     );
@@ -1139,10 +1128,9 @@ export class Gullbert {
     return frameFor(this.pose);
   }
 
-  #routineProps: SceneProp[] = [];
-
   #createCapabilities(): BehaviorCapabilities {
     const runtime = this;
+
     return Object.freeze({
       clock: Object.freeze({
         get now() {
@@ -1153,15 +1141,6 @@ export class Gullbert {
         return runtime.#random();
       },
       movement: Object.freeze({
-        get position() {
-          return Object.freeze({ x: runtime.#body.x, y: runtime.#body.y });
-        },
-        get bounds() {
-          return Object.freeze({
-            width: runtime.#body.width,
-            height: runtime.#body.height,
-          });
-        },
         moveTo(point: Point) {
           runtime.#body.place(point);
         },
@@ -1178,20 +1157,6 @@ export class Gullbert {
         },
         forget() {
           runtime.#speech.forget();
-        },
-      }),
-      props: Object.freeze({
-        add(prop: Omit<SceneProp, "id">) {
-          const id = runtime.#objects.nextId();
-          runtime.#routineProps.push({ ...prop, id });
-          return id;
-        },
-        remove(id: number) {
-          runtime.#routineProps = runtime.#routineProps.filter(
-            function keep(prop) {
-              return prop.id !== id;
-            },
-          );
         },
       }),
       events: Object.freeze({
@@ -1359,16 +1324,10 @@ export class Gullbert {
     return freezeObservation(this.#observe());
   }
   present(pointer: Point | null = null, interactive = true): PetPresentation {
-    const routine: RoutinePresentation = this.#registry.presentation();
-    let props = [...(routine.props ?? [])];
+    const routine = this.#registry.presentation();
 
-    if (this.#visible) {
-      props = [...props, ...this.#routineProps];
-    }
-
-    const presentation = { ...routine, props };
     return freezeObservation(
-      projectPresentation(this.#presentationObservation(), pointer, interactive, presentation),
+      projectPresentation(this.#presentationObservation(), pointer, interactive, routine),
     );
   }
   status() {
