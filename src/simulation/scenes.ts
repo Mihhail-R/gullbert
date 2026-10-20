@@ -97,7 +97,6 @@ export interface LessonScene extends TimedScene {
   origin: Point;
   facing: Direction;
   practiced: boolean;
-  unsolicited: boolean;
   reluctant: boolean;
 }
 export interface SnackRecallScene extends TimedScene {
