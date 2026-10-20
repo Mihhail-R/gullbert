@@ -11,6 +11,7 @@ import {
   invoke,
   type RoommateStatus,
   type PreviewMessage,
+  type TargetNotice,
 } from "../../platform/bridge.js";
 import type { Memory, MemoryEpisode, Settings } from "../../simulation/model.js";
 import {
@@ -417,13 +418,13 @@ function renderCollection(collection: Memory["collection"], favourite: Collectib
 }
 
 if (native) {
-  let targetId: number | null = null;
+  let target: { id: number; purpose: string } | null = null;
   await native.event.listen("gullbert-shutdown-error", ({ payload }) => {
     error(payload);
   });
-  await native.event.listen("gullbert-target", ({ payload }) => {
+  await native.event.listen("gullbert-target", ({ payload }: { payload: TargetNotice }) => {
     if (payload.outcome === "started") {
-      targetId = payload.id;
+      target = { id: payload.id, purpose: payload.purpose };
       $("#placement-notice").hidden = false;
       $("#placement-status").textContent = payload.purpose === "tidy"
         ? "Click loose mess on your desktop. Escape finishes tidying."
@@ -432,11 +433,15 @@ if (native) {
       return;
     }
 
-    if (payload.id !== targetId) {
+    if (!target || payload.id !== target.id) {
       return;
     }
 
-    targetId = null;
+    if (payload.outcome === "selected" && target.purpose === "tidy") {
+      return;
+    }
+
+    target = null;
     $("#placement-notice").hidden = true;
   });
   await native.event.listen("gullbert-roommate", (e) => {

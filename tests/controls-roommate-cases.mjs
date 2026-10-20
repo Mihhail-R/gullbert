@@ -381,6 +381,44 @@ export function roommateRenderingTests(mode) {
       assert.equal(element("placement-notice").hidden, true);
     });
 
+    test("tidy selections keep Done open until the matching terminal notice", async () => {
+      const notice = listeners.get("gullbert-target");
+      notice({ payload: {
+        outcome: "started", id: 1, purpose: "tidy", preparation: "tidy",
+      } });
+      notice({ payload: { outcome: "selected", id: 99, point: { x: 1, y: 2 } } });
+      assert.equal(element("placement-notice").hidden, false);
+      notice({ payload: { outcome: "selected", id: 1, point: { x: 10, y: 20 } } });
+      notice({ payload: { outcome: "selected", id: 1, point: { x: 30, y: 40 } } });
+      assert.equal(element("placement-notice").hidden, false);
+      assert.equal(element("cancel-placement").textContent, "Done");
+      element("cancel-placement")
+        .click();
+      await settle();
+      assert.equal(commands.at(-1).command, "cancel_targeting");
+      notice({ payload: { outcome: "finished_tidying", id: 1 } });
+      assert.equal(element("placement-notice").hidden, true);
+
+      for (const [index, outcome] of [
+        "finished_tidying",
+        "abandoned",
+        "replaced",
+      ].entries()) {
+        const id = index + 2;
+        notice({ payload: {
+          outcome: "started", id, purpose: "tidy", preparation: "tidy",
+        } });
+        notice({ payload: { outcome, id } });
+        assert.equal(element("placement-notice").hidden, true);
+      }
+
+      notice({ payload: {
+        outcome: "started", id: 5, purpose: "feed", preparation: "cancel",
+      } });
+      notice({ payload: { outcome: "selected", id: 5, point: { x: 50, y: 60 } } });
+      assert.equal(element("placement-notice").hidden, true);
+    });
+
     test("failed preference saves restore the previous setting and allow retry", async () => {
       failSave = true;
       element("pause-toggle")
