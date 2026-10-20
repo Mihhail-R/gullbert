@@ -9,7 +9,7 @@ import type { SceneProp } from "../model.js";
 import type { Pose } from "../poses.js";
 import type { SimulationView, BehaviorCapabilities } from "../capabilities.js";
 import type { SceneOwner } from "../routine.js";
-import type { Scene, GuestScene as OwnedScene } from "../scenes.js";
+import type { GuestScene as OwnedScene } from "../scenes.js";
 
 const VISIT_LIMIT = 90;
 const TURN_PAUSE = 0.4;
@@ -240,10 +240,6 @@ export class GuestRoutine implements SceneOwner {
 
   get identity(): object {
     return this.#identity;
-  }
-  install(scene: ReadonlyValue<Scene>): void {
-    this.#scene = structuredClone(scene) as OwnedScene;
-    this.#identity = Object.freeze({});
   }
   clear(): void {
     this.#scene = null;

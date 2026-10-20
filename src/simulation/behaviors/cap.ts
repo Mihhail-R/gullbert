@@ -9,7 +9,7 @@ import { observe } from "../observation.js";
 import type { Pose } from "../poses.js";
 import type { ReadonlyValue } from "../presentation.js";
 import type { RoutinePresentation, SceneOwner } from "../routine.js";
-import type { CapScene, Scene } from "../scenes.js";
+import type { CapScene } from "../scenes.js";
 import { contains } from "./touch.js";
 
 type Environment = Pick<
@@ -44,12 +44,6 @@ export class CapRoutine implements SceneOwner {
 
   get identity(): object {
     return this.#identity;
-  }
-
-  install(scene: ReadonlyValue<Scene>): void {
-    this.#scene = structuredClone(scene) as CapScene;
-    this.#identity = Object.freeze({});
-    this.resize();
   }
 
   clear(): void {

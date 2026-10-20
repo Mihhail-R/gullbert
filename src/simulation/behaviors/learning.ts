@@ -78,11 +78,6 @@ export class LearningRoutine implements RecallOwner {
   get identity(): object {
     return this.#identity;
   }
-  install(scene: ReadonlyValue<Scene>): void {
-    this.#scene = structuredClone(scene) as LearningScene;
-    this.#identity = Object.freeze({});
-    this.resize();
-  }
   clear(): void {
     this.#scene = null;
   }

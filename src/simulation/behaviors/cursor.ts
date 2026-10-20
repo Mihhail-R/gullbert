@@ -7,7 +7,7 @@ import type { Point, PointerSample } from "../model.js";
 import type { Pose } from "../poses.js";
 import type { SimulationView, BehaviorCapabilities } from "../capabilities.js";
 import type { SceneOwner } from "../routine.js";
-import type { Scene, CursorScene as OwnedScene } from "../scenes.js";
+import type { CursorScene as OwnedScene } from "../scenes.js";
 export function cursorBeak(sim: Readonly<Point> & { readonly facing: number }) {
   return { x: sim.x + beakOffsetX(sim.facing), y: sim.y + 48 };
 }
@@ -84,10 +84,6 @@ export class CursorRoutine implements SceneOwner {
 
   get identity(): object {
     return this.#identity;
-  }
-  install(scene: ReadonlyValue<Scene>): void {
-    this.#scene = structuredClone(scene) as OwnedScene;
-    this.#identity = Object.freeze({});
   }
   clear(): void {
     this.#scene = null;
@@ -230,23 +226,24 @@ export class CursorRoutine implements SceneOwner {
     return true;
   }
 
-  /** Prepare a handoff for activation through the shared scene registry. */
-  createRetaliationScene(reaction: CursorRetaliation): OwnedScene {
+  /** Own the retaliation before the engine transfers registry ownership. */
+  startRetaliation(reaction: CursorRetaliation): void {
     const now = this.#environment.clock.now;
-    return {
+    this.#scene = {
       kind: "cursor",
       phase: "stare",
       takeover: true,
       started: now,
       until: now + 0.5,
       deadline: reaction.deadlineSeconds,
-      pointer: reaction.pointer,
+      pointer: reaction.pointer ? { ...reaction.pointer } : null,
       retaliation: true,
       retaliationUntilMs: reaction.expiresAtMs,
       cursorId: reaction.cursorId,
       trail: reaction.reaction === "trail" ? 3 : 0,
       nextSplat: now + 0.8,
     };
+    this.#identity = Object.freeze({});
   }
 
   /** Run before touch handling and movement, even when either consumes the tick. */

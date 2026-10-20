@@ -15,7 +15,7 @@ import type { Point } from "../model.js";
 import type { BehaviorCapabilities } from "../capabilities.js";
 import type { SceneOwner } from "../routine.js";
 import { SceneState } from "../scene-state.js";
-import type { Scene, TheatreScene as OwnedScene } from "../scenes.js";
+import type { TheatreScene as OwnedScene } from "../scenes.js";
 import {
   theatrePose,
   theatreProps,
@@ -72,9 +72,6 @@ export class TheatreRoutine implements SceneOwner {
 
   get identity(): object {
     return this.#state.identity;
-  }
-  install(scene: ReadonlyValue<Scene>): void {
-    this.#state.install(scene as ReadonlyValue<OwnedScene>);
   }
   clear(): void {
     this.#state.clear();

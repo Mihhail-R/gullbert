@@ -14,11 +14,6 @@ export class SceneState<Scene> {
     return observe(this.current);
   }
 
-  install(scene: ReadonlyValue<Scene>): void {
-    this.current = structuredClone(scene) as Scene;
-    this.#identity = Object.freeze({});
-  }
-
   activate(): void {
     if (this.current) {
       this.#identity = Object.freeze({});

@@ -9,7 +9,6 @@ import { Motivation } from "./motivation.js";
 import { Pettiness } from "./pettiness.js";
 import { Boredom } from "./boredom.js";
 import { RoutineRegistry } from "./registry.js";
-import type { SceneOwner } from "./routine.js";
 import type { BehaviorCapabilities, SimulationView } from "./capabilities.js";
 import {
   projectPresentation,
@@ -30,7 +29,6 @@ import type {
   Sound,
   WorkSample,
 } from "./model.js";
-import type { Scene } from "./scenes.js";
 import { Mood } from "./behaviors/moods.js";
 import { QuietRoutine } from "./behaviors/quiet.js";
 import { Pickup, canPickup, pickupRect } from "./behaviors/pickup.js";
@@ -236,14 +234,15 @@ export class Gullbert {
       rest: (delay) => {
         this.#rest(delay);
       },
-      install: (scene) => {
-        this.#registry.install(scene);
+      relocated: () => {
+        this.#registry.activate(this.#pickup);
       },
       cancel: () => {
         this.#cancelScene();
       },
       retaliate: (reaction) => {
-        this.#registry.install(this.#cursor.createRetaliationScene(reaction));
+        this.#cursor.startRetaliation(reaction);
+        this.#registry.activate(this.#cursor);
         this.#activity.beginRoutine("cursor");
       },
     });
@@ -268,35 +267,6 @@ export class Gullbert {
         },
       },
     });
-    const owners = new Map<Scene["kind"], SceneOwner>();
-
-    for (const kind of [
-      "pretend_leave",
-      "cursor_egg",
-      "municipal_gull",
-      "apology",
-      "postcards",
-    ] as const) {
-      owners.set(kind, this.#gags);
-    }
-
-    for (const kind of ["bubbles", "bath", "toss", "baguette"] as const) {
-      owners.set(kind, this.#theatre);
-    }
-
-    owners.set("relocation", this.#pickup);
-    owners.set("guest", this.#guests);
-    owners.set("gift", this.#gifts);
-    owners.set("perch", this.#perch);
-    owners.set("work", this.#work);
-    owners.set("theft", this.#crime);
-    owners.set("caper", this.#crime);
-    owners.set("cursor", this.#cursor);
-    owners.set("snack", this.#snacks);
-    owners.set("cap", this.#cap);
-    owners.set("trick", this.#learning);
-    owners.set("habit", this.#learning);
-
     this.#registry = new RoutineRegistry(
       [
         this.#gags,
@@ -312,7 +282,6 @@ export class Gullbert {
         this.#learning,
         this.#quiet,
       ],
-      owners,
     );
     this.#perch.scheduleFirstVisit();
     this.resize(width, height);
