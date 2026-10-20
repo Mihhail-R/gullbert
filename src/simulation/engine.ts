@@ -9,6 +9,8 @@ import { Motivation } from "./motivation.js";
 import { Pettiness } from "./pettiness.js";
 import { Boredom } from "./boredom.js";
 import { RoutineRegistry } from "./registry.js";
+import type { RoutinePresentation } from "./routine.js";
+import type { Scene } from "./scenes.js";
 import type { BehaviorCapabilities, SimulationView } from "./capabilities.js";
 import {
   projectPresentation,
@@ -346,13 +348,7 @@ export class Gullbert {
     this.#activity.interruptFlight();
   }
   get carriedItem() {
-    const scene = this.#registry.scene;
-
-    if (scene?.kind === "gift" && scene.carrying) {
-      return scene.item;
-    } else {
-      return null;
-    }
+    return carriedItemIn(this.#registry.scene);
   }
   get tidying() {
     return this.#cleanup.tidying;
@@ -368,8 +364,9 @@ export class Gullbert {
       return false;
     }
 
-    const scene = this.#registry.scene;
-
+    return this.#sceneWantsPointer(this.#registry.scene);
+  }
+  #sceneWantsPointer(scene: ReadonlyValue<Scene> | null): boolean {
     switch (scene?.kind) {
       case "cap":
       case "cursor_egg":
@@ -1000,62 +997,51 @@ export class Gullbert {
     );
   }
   get pose(): Pose {
-    const routinePose = this.#activeRoutinePose();
+    return this.#resolvePose();
+  }
+  #resolvePose(routine?: RoutinePresentation): Pose {
+    const routinePose = this.#activeRoutinePose(routine);
 
     if (routinePose) {
       return routinePose;
     }
 
-    if (
-      ["walk", "fetch"].includes(this.#activity.mode) &&
-      this.#activity.goal
-    ) {
-      const cycle: Pose[] = ["idle", "walkLeft", "idle", "walkRight"];
-      let stepsPerSecond;
+    switch (this.#activity.mode) {
+      case "walk":
+      case "fetch": {
+        if (this.#activity.goal) {
+          const cycle: Pose[] = ["idle", "walkLeft", "idle", "walkRight"];
+          const stepsPerSecond = this.#activity.mode === "fetch" ? 14 : 8;
+          return cycle[Math.floor(this.#body.motionTime * stepsPerSecond) % 4];
+        }
 
-      if (this.#activity.mode === "fetch") {
-        stepsPerSecond = 14;
-      } else {
-        stepsPerSecond = 8;
+        break;
       }
 
-      return cycle[Math.floor(this.#body.motionTime * stepsPerSecond) % 4];
-    }
+      case "takeoff":
+        if (this.#activity.flight) {
+          return this.#activity.until - this.#time > 0.25 ? "crouch" : "wingUp";
+        }
 
-    if (this.#activity.mode === "takeoff" && this.#activity.flight) {
-      if (this.#activity.until - this.#time > 0.25) {
-        return "crouch";
-      } else {
-        return "wingUp";
-      }
-    }
+        break;
 
-    if (this.#activity.mode === "fly" || this.#activity.mode === "drop") {
-      if (Math.floor(this.#time * 10) % 2) {
-        return "wingUp";
-      } else {
-        return "wingDown";
-      }
-    }
+      case "fly":
+      case "drop":
+        return Math.floor(this.#time * 10) % 2 ? "wingUp" : "wingDown";
 
-    if (this.#activity.mode === "land" && this.#activity.flight) {
-      if (this.#activity.until - this.#time > 0.2) {
-        return "wingDown";
-      } else {
-        return "crouch";
-      }
-    }
+      case "land":
+        if (this.#activity.flight) {
+          return this.#activity.until - this.#time > 0.2 ? "wingDown" : "crouch";
+        }
 
-    if (this.#activity.mode === "squawk" || this.#activity.mode === "eat") {
-      if (Math.floor(this.#time * 8) % 2) {
-        return "squawk";
-      } else {
-        return "idle";
-      }
-    }
+        break;
 
-    if (this.#activity.mode === "proud") {
-      return "blink";
+      case "squawk":
+      case "eat":
+        return Math.floor(this.#time * 8) % 2 ? "squawk" : "idle";
+
+      case "proud":
+        return "blink";
     }
 
     const mood = this.#moods.pose(this.#activity.mode, this.#time);
@@ -1070,7 +1056,7 @@ export class Gullbert {
 
     return "idle";
   }
-  #activeRoutinePose(): Pose | null {
+  #activeRoutinePose(routine?: RoutinePresentation): Pose | null {
     const pickup = this.#pickup.pose();
 
     if (pickup) {
@@ -1089,9 +1075,8 @@ export class Gullbert {
       return touch;
     }
 
-    return (
-      this.#registry.presentation().pose ?? this.#learning.expectationPose()
-    );
+    const presentation = routine ?? this.#registry.presentation();
+    return presentation.pose ?? this.#learning.expectationPose();
   }
   get frame() {
     return frameFor(this.pose);
@@ -1198,15 +1183,9 @@ export class Gullbert {
       mode: this.#activity.mode,
     };
   }
-  #presentationObservation(): PresentationObservation {
+  #presentationObservation(routine: RoutinePresentation): PresentationObservation {
     const geometry = this.#geometryObservation();
-    const scene = geometry.scene;
-    const pose = this.pose;
-    let carriedItem = null;
-
-    if (scene?.kind === "gift" && scene.carrying) {
-      carriedItem = scene.item;
-    }
+    const pose = this.#resolvePose(routine);
 
     return {
       ...geometry,
@@ -1217,7 +1196,7 @@ export class Gullbert {
       memory: this.#belongings.snapshot().memory,
       touch: this.#touch.snapshot(),
       pickup: this.#pickup.snapshot(),
-      carriedItem,
+      carriedItem: carriedItemIn(geometry.scene),
       pose,
       frame: frameFor(pose),
     };
@@ -1225,6 +1204,8 @@ export class Gullbert {
   #baseObservation(): SimulationView {
     const pose: Pose = "idle";
     const belongings = this.#belongings.snapshot();
+    const scene = this.#registry.scene;
+
     return {
       ...this.#body.snapshot(),
       ...this.#objects.snapshot(),
@@ -1237,7 +1218,7 @@ export class Gullbert {
       nextMischief: this.#nextMischief,
       settings: { ...this.#settings },
       events: [...this.#sounds],
-      scene: this.#registry.scene,
+      scene,
       visible: this.#visible,
       memory: belongings.memory,
       memoryRevision: belongings.revision,
@@ -1250,9 +1231,9 @@ export class Gullbert {
       gagSchedule: this.#gags.gagSchedule,
       nextGuest: this.#guests.nextGuest,
       rareTheatre: this.#theatre.rareTheatre,
-      carriedItem: this.carriedItem,
+      carriedItem: carriedItemIn(scene),
       tidying: this.tidying,
-      wantsPointer: this.wantsPointer,
+      wantsPointer: this.#visible && this.#sceneWantsPointer(scene),
       moving: this.moving,
       pose,
       frame: frameFor(pose),
@@ -1296,7 +1277,7 @@ export class Gullbert {
     const routine = this.#registry.presentation();
 
     return freezeObservation(
-      projectPresentation(this.#presentationObservation(), pointer, interactive, routine),
+      projectPresentation(this.#presentationObservation(routine), pointer, interactive, routine),
     );
   }
   status() {
@@ -1455,6 +1436,14 @@ export class Gullbert {
 }
 
 export type SimulationSnapshot = ReadonlyValue<SimulationView>;
+function carriedItemIn(scene: ReadonlyValue<Scene> | null) {
+  if (scene?.kind === "gift" && scene.carrying) {
+    return scene.item;
+  }
+
+  return null;
+}
+
 function freezeObservation<T>(value: T): ReadonlyValue<T> {
   if (typeof value === "object" && value !== null) {
     for (const child of Object.values(value)) {
