@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { Body } from "../web-dist/simulation/body.js";
+import { Touch } from "../web-dist/simulation/behaviors/touch.js";
 import { Gullbert } from "../web-dist/simulation/engine.js";
 import { dropAt, reach } from "./simulation-helpers.mjs";
 function bird() {
@@ -26,6 +28,92 @@ test("pointing notices, head contact relaxes, a parked cursor eventually release
   sim.step(0.1);
   assert.equal(sim.inspect().touch.zone, "");
 });
+
+for (const samplesPerSecond of [10, 20, 60]) {
+  test(`continuous head contact earns one reward at ${samplesPerSecond} Hz`, () => {
+    const sim = bird();
+    const { x, y } = sim.inspect();
+    const head = { x: x + 60, y: y + 35 };
+
+    function hold(seconds) {
+      for (let sample = 0; sample < seconds * samplesPerSecond; sample++) {
+        sim.pointer(head);
+        sim.step(1 / samplesPerSecond);
+      }
+    }
+
+    hold(1);
+    assert.ok(Math.abs(sim.inspect().motivation.socialInterest - 0.58) < 1e-9);
+    assert.equal(sim.present().affection.kind, "scratch");
+
+    hold(10);
+    assert.ok(Math.abs(sim.inspect().motivation.socialInterest - 0.58) < 1e-9);
+    assert.equal(sim.present().affection.kind, "");
+
+    sim.pointer({ x: 0, y: 0 });
+    sim.step(1 / samplesPerSecond);
+    hold(1);
+    assert.ok(Math.abs(sim.inspect().motivation.socialInterest - 0.66) < 1e-9);
+  });
+}
+
+for (const interruption of ["stale", "unavailable", "reset", "missing"]) {
+  test(`${interruption} touch permits a new rewarded scratch`, () => {
+    const body = new Body(800, 600);
+    const clock = { now: 0 };
+    let available = true;
+    let rewards = 0;
+    const touch = new Touch({
+      body,
+      clock,
+      speech: { say() {} },
+      available: () => available,
+      sleeping: () => false,
+      rest() {},
+      scratched() {
+        rewards++;
+      },
+    });
+    const head = { x: body.x + 60, y: body.y + 35 };
+
+    function hold() {
+      for (let sample = 0; sample < 20; sample++) {
+        touch.pointer(head);
+        clock.now += 0.05;
+        touch.update();
+      }
+    }
+
+    hold();
+    assert.equal(rewards, 1);
+
+    switch (interruption) {
+      case "stale":
+        clock.now += 0.5;
+        touch.update();
+        break;
+
+      case "unavailable":
+        available = false;
+        touch.update();
+        available = true;
+        break;
+
+      case "reset":
+        touch.reset();
+        break;
+
+      case "missing":
+        touch.pointer(null);
+        touch.update();
+        break;
+    }
+
+    hold();
+    assert.equal(rewards, 2);
+  });
+}
+
 test("a poke wakes a sleeping gull", () => {
   const sim = bird();
   const point = { x: sim.inspect().x + 45, y: sim.inspect().y + 65 };
