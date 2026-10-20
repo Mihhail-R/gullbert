@@ -601,7 +601,24 @@ export class PetApplication {
   }
 
   #publishRoommate(force = false): void {
-    if (!this.#running() || !this.#initialized) {
+    if (!this.#running()) {
+      return;
+    }
+
+    if (!this.#initialized) {
+      if (!this.#storageError) {
+        return;
+      }
+
+      const native = this.#dependencies.native;
+      const status = { error: this.#storageError };
+
+      if (native) {
+        this.#runNative(native.invoke("publish_roommate", { status }));
+      } else {
+        this.#dependencies.browser.publish({ type: "roommate", ...status });
+      }
+
       return;
     }
 

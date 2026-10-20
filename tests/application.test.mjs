@@ -221,6 +221,69 @@ test("failed native restore never saves unread belongings even after later comma
   assert.equal(h.nativeListeners.size, 0);
 });
 
+test("native roommate requests keep reporting a failed restore without memory", async () => {
+  let loadCount = 0;
+  const h = harness({
+    native: true,
+    load() {
+      loadCount++;
+      throw new Error("disk unavailable");
+    },
+  });
+  await h.app.start();
+
+  const previousCount = h.calls.filter(([name]) => name === "publish_roommate").length;
+  h.nativeListeners.get("gullbert-roommate-request")();
+  h.nativeListeners.get("gullbert-roommate-request")();
+  const statuses = h.calls
+    .filter(([name]) => name === "publish_roommate")
+    .map(([, args]) => args.status);
+
+  assert.equal(statuses.length, previousCount + 2);
+  assert.deepEqual(statuses.slice(-2), [
+    {
+      error: "Could not restore Gullbert’s belongings. Restart to try again; saved " +
+        "belongings have not been replaced.",
+    },
+    {
+      error: "Could not restore Gullbert’s belongings. Restart to try again; saved " +
+        "belongings have not been replaced.",
+    },
+  ]);
+  assert.deepEqual(statuses[0], {
+    error: "Could not restore Gullbert’s belongings. Restart to try again; saved " +
+      "belongings have not been replaced.",
+  });
+  assert.deepEqual(h.saved, []);
+  assert.deepEqual(h.restored, []);
+  assert.equal(loadCount, 1);
+  await h.app.dispose();
+});
+
+test("preview publishes only the restore error after failed initialization", async () => {
+  let loadCount = 0;
+  const h = harness({
+    load() {
+      loadCount++;
+      throw new Error("disk unavailable");
+    },
+  });
+  await h.app.start();
+
+  const roommateUpdates = h.published.filter(({ type }) => type === "roommate");
+  assert.ok(roommateUpdates.length > 0);
+  assert.ok(h.published.some(({ type }) => type === "ready"));
+  assert.deepEqual(roommateUpdates, roommateUpdates.map((update) => ({
+    type: "roommate",
+    error: "Could not restore Gullbert’s belongings. Restart to try again; saved " +
+      "belongings have not been replaced.",
+  })));
+  assert.deepEqual(h.saved, []);
+  assert.deepEqual(h.restored, []);
+  assert.equal(loadCount, 1);
+  await h.app.dispose();
+});
+
 test(
   "late pickup acquisition after application disposal releases its lease without " +
   "retaliation",
