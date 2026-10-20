@@ -386,6 +386,8 @@ export function roommateRenderingTests(mode) {
       notice({ payload: {
         outcome: "started", id: 1, purpose: "tidy", preparation: "tidy",
       } });
+      notice({ payload: { outcome: "abandoned", id: 99 } });
+      assert.equal(element("placement-notice").hidden, false);
       notice({ payload: { outcome: "selected", id: 99, point: { x: 1, y: 2 } } });
       assert.equal(element("placement-notice").hidden, false);
       notice({ payload: { outcome: "selected", id: 1, point: { x: 10, y: 20 } } });
