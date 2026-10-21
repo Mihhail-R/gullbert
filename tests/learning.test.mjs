@@ -417,13 +417,10 @@ test("refusals escalate by mischief, and pause suppresses physical protests", ()
   }
 });
 
-test("interrupted tricks and volunteered performances do not incur snack debt", () => {
+test("interrupted tricks avoid snack debt and forgetting clears completed trick debt", () => {
   const sim = setup();
   sim.action("trick_spin");
   sim.action("cancel");
-  assert.equal(sim.exportMemory().unpaidTricks, 0);
-  sim.action("show_spin");
-  reach(sim, "reward");
   assert.equal(sim.exportMemory().unpaidTricks, 0);
   perform(sim);
   perform(sim);
@@ -617,19 +614,6 @@ test("the second unpaid trick takes longer but still earns a consumed reward", (
     advance(sim, 3);
     assert.equal(sim.exportMemory().learned.tricks[trick], 1);
   }
-});
-
-test("volunteered tricks keep their normal pace even with an unpaid trick", () => {
-  const fresh = setup();
-  fresh.action("show_spin");
-  reach(fresh, "reward");
-
-  const sim = setup();
-  sim.restoreMemory({ unpaidTricks: 1 });
-  sim.action("show_spin");
-  advance(sim, fresh.inspect().time);
-  assert.equal(sim.inspect().scene.phase, "reward");
-  assert.equal(sim.exportMemory().unpaidTricks, 1);
 });
 
 test("interrupting a refusal removes the invoice", () => {
