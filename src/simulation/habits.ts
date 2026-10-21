@@ -131,8 +131,8 @@ export class Habits {
     for (const choice of choices) {
       choice.weight *= motivationWeight(choice.command, motivation);
 
-      if (choice.command !== "habit_snack") {
-        choice.weight *= boredom.interest[choice.command] ?? 1;
+      if (choice.command === "play_cap") {
+        choice.weight *= boredom.capInterest;
       }
 
       const attempt = this.#attempts.get(choice.command);
