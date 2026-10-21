@@ -304,6 +304,10 @@ function roommate(data: RoommateStatus) {
   }
 
   $("#hangout-summary").textContent = hangout;
+  const nest = memory?.nest;
+  $("#nest-summary").textContent = nest
+    ? `${nest.items.length} of 3 treasures on display`
+    : "A little home for his questionable treasures.";
   const perch = memory?.perch;
   $("#perch-summary").textContent = perch
     ? `Remembered · ${Math.round(perch.x)}, ${Math.round(perch.y)} on his desktop`

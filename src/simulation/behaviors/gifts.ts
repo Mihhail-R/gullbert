@@ -19,42 +19,33 @@ export function giftPose(
     return null;
   }
 
-  if (scene.phase === "takeoff") {
-    if (scene.until - sim.time > 0.25) {
-      return "crouch";
-    } else {
-      return "wingUp";
-    }
-  }
+  switch (scene.phase) {
+    case "carry-home":
+      return Math.floor(sim.time * 9) % 2 ? "walkLeft" : "walkRight";
 
-  if (scene.phase === "land") {
-    if (scene.until - sim.time > 0.2) {
-      return "wingDown";
-    } else {
+    case "deposit":
       return "crouch";
-    }
-  }
 
-  if (scene.phase === "reveal") {
-    if (scene.item === "chip") {
-      if (Math.floor(sim.time * 6) % 2) {
-        return "bag-inspect";
-      } else {
-        return "squawk";
+    case "takeoff":
+      return scene.until - sim.time > 0.25 ? "crouch" : "wingUp";
+
+    case "land":
+      return scene.until - sim.time > 0.2 ? "wingDown" : "crouch";
+
+    case "reveal":
+      switch (scene.item) {
+        case "chip":
+          return Math.floor(sim.time * 6) % 2 ? "bag-inspect" : "squawk";
+
+        case "parking_ticket":
+          return "bag-offended";
+
+        default:
+          return "blink";
       }
-    }
 
-    if (scene.item === "parking_ticket") {
-      return "bag-offended";
-    } else {
-      return "blink";
-    }
-  }
-
-  if (Math.floor(sim.time * 10) % 2) {
-    return "wingUp";
-  } else {
-    return "wingDown";
+    default:
+      return Math.floor(sim.time * 10) % 2 ? "wingUp" : "wingDown";
   }
 }
 
@@ -139,6 +130,12 @@ export class GiftRoutine implements RecallOwner {
 
   #ground(): void {
     if (!this.#state.current) {
+      return;
+    }
+
+    const scene = this.#state.current;
+
+    if (scene.phase === "carry-home" || scene.phase === "deposit") {
       return;
     }
 
@@ -376,11 +373,50 @@ export class GiftRoutine implements RecallOwner {
             sim.belongings.collect(scene.item, sim.body);
           }
 
-          this.#finish();
+          const nest = sim.belongings.snapshot().memory.nest;
+
+          if (scene.item !== "chip" && nest) {
+            scene.phase = "carry-home";
+            scene.deadline = sim.clock.now + 60;
+          } else {
+            this.#finish();
+          }
         }
 
         break;
       }
+
+      case "carry-home": {
+        const nest = sim.belongings.snapshot().memory.nest;
+
+        if (!nest) {
+          this.#finish();
+          break;
+        }
+
+        const walkingSpeed = Math.max(150, sim.body.width / 20);
+
+        if (sim.body.moveToward(nest, walkingSpeed, dt)) {
+          scene.phase = "deposit";
+          scene.until = sim.clock.now + 0.8;
+          sim.body.resetMotion();
+        }
+
+        break;
+      }
+
+      case "deposit":
+        if (sim.clock.now >= scene.until) {
+          if (scene.item !== "chip") {
+            sim.belongings.nestTreasure(scene.item);
+          }
+
+          scene.carrying = false;
+          sim.speech.say(dialogue.gullbert.nest.deposit);
+          this.#finish();
+        }
+
+        break;
     }
 
     return true;

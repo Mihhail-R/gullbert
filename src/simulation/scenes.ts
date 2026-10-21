@@ -58,13 +58,17 @@ export type GiftPurpose =
 
 export type GiftScene = TimedScene & GiftPurpose & {
   kind: "gift";
-  phase: "takeoff" | "depart" | "away" | "return" | "land" | "reveal";
+  phase: "takeoff" | "depart" | "away" | "return" | "land" | "reveal" | "carry-home" | "deposit";
   carrying: boolean;
   origin: Point;
   side: Direction;
   deadline: number;
   speed: number;
 };
+export interface NestScene extends TimedScene {
+  kind: "nest";
+  phase: "approach" | "arrange" | "sleep";
+}
 export interface PerchScene extends TimedScene {
   kind: "perch";
   phase: "approach" | "settle" | "loiter";
@@ -267,6 +271,7 @@ export type Scene =
   | SnackScene
   | CrimeScene
   | GiftScene
+  | NestScene
   | PerchScene
   | WorkScene
   | CapScene

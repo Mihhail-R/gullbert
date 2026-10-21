@@ -117,9 +117,7 @@ export function chooseGift(
   preferences: ReadonlyValue<Preferences>,
   random: () => number,
 ): Item {
-  const items: Item[] = [
-    "bottle_cap", "bent_spoon", "sock", "glass_diamond", "parking_ticket", "chip",
-  ];
+  const items = Object.keys(ITEMS) as Item[];
   const choices = items.map((item) => {
     let weight = 1;
 

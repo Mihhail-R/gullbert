@@ -1,3 +1,4 @@
+import { createNestRenderer } from "./nest-renderer.js";
 import { runoffMarkup } from "./splat-art.js";
 import { splatBounds } from "../../simulation/props.js";
 import type { PetPresentation } from "../../simulation/presentation.js";
@@ -40,6 +41,7 @@ export function createPetRenderer(world: HTMLElement) {
   bag.hidden = true;
   world.prepend(bag);
   const renderTheatre = createTheatreRenderer(world, gull, sprite);
+  const renderNest = createNestRenderer(world);
   const perch = document.createElement("div");
   const carried = document.createElement("img");
   perch.id = "perch-spot";
@@ -57,6 +59,7 @@ export function createPetRenderer(world: HTMLElement) {
     }
   }
   function renderBelongings(sim: PetPresentation) {
+    renderNest(sim.nest, sim.mode === "nest" && sim.phase === "arrange");
     const spot = sim.perch;
     perch.hidden = !spot;
 
@@ -362,6 +365,7 @@ export function createPetRenderer(world: HTMLElement) {
   }
   function dispose() {
     renderTheatre.dispose();
+    renderNest.dispose();
 
     for (const node of rubbishNodes.values()) {
       node.remove();

@@ -22,6 +22,7 @@ test("missing and malformed snapshots produce fresh, empty durable memories", ()
       scratchesAfterPlay: 0,
     },
     perch: null,
+    nest: null,
     collection: {},
     preferences: { seed: 0, treasureAffection: {}, hangout: null },
     greetings: { seen: false, lastAt: 0, lastLine: "", lastDiscovery: null },
@@ -143,7 +144,7 @@ test("legacy nest snapshots retain gifts, perch and greetings without restoring 
     },
   };
   sim.restoreMemory(legacy);
-  const { nest, ...expected } = legacy;
+  const expected = { ...legacy, nest: null };
   expected.preferences.seed = sim.exportMemory().preferences.seed;
   assert.deepEqual(sim.exportMemory(), expected);
   sim.action("bring_gift");
@@ -155,7 +156,7 @@ test("legacy nest snapshots retain gifts, perch and greetings without restoring 
   assert.equal(sim.inspect().memory.collection.bottle_cap, 3);
   sim.action("clean");
   assert.deepEqual(sim.inspect().memory.perch, expected.perch);
-  assert.equal(Object.hasOwn(sim.exportMemory(), "nest"), false);
+  assert.equal(sim.exportMemory().nest, null);
 });
 
 test("live resize clamps remembered locations without rewriting other memory", () => {

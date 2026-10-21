@@ -370,5 +370,30 @@
     "availability": "all",
     "visibility": "preserve",
     "route": "quit"
+  },
+  "place_nest": {
+    "variant": "PlaceNest",
+    "aliases": ["--place-nest"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "target",
+    "purpose": "place_nest",
+    "preparation": "cancel"
+  },
+  "visit_nest": {
+    "variant": "VisitNest",
+    "aliases": ["--visit-nest"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "visit_nest"
+  },
+  "clear_nest": {
+    "variant": "ClearNest",
+    "aliases": ["--clear-nest"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "clear_nest"
   }
 }

@@ -180,6 +180,26 @@
           "description": "An official invitation to pay me in chips.",
           "reveal": "you have won a fine."
         },
+        "shell": {
+          "name": "Sea shell",
+          "description": "A tiny house. Previous tenant unknown.",
+          "reveal": "ocean property. mine now."
+        },
+        "button": {
+          "name": "Lost button",
+          "description": "One eye from a very surprised coat.",
+          "reveal": "a spare belly button."
+        },
+        "string": {
+          "name": "Length of string",
+          "description": "Structural engineering, probably.",
+          "reveal": "load-bearing spaghetti."
+        },
+        "foil_ball": {
+          "name": "Foil ball",
+          "description": "The moon. In travel size.",
+          "reveal": "stole the moon."
+        },
         "chip": {
           "description": "I brought lunch. My lunch.",
           "reveal": "for you. actually, for me.",
@@ -414,6 +434,14 @@
       },
       "reluctantReward": "there. two tricks. one very expectant gull.",
       "invoice": "2 tricks unpaid\nCHIP DUE"
+    },
+    "nest": {
+      "placed": "prime coastal real estate.",
+      "missing": "a home needs an address. place my nest first.",
+      "removed": "keeping the valuables. obviously.",
+      "visit": "interior design inspection.",
+      "sleep": "do not disturb the architect.",
+      "deposit": "this really ties the nest together."
     }
   },
   "guests": {

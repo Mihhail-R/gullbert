@@ -81,6 +81,9 @@ pub(crate) fn install(app: &tauri::App) -> tauri::Result<()> {
             "Gifts && favourite spot",
             &[
                 ("bring_gift", "Bring me something"),
+                ("place_nest", "Place nest…"),
+                ("visit_nest", "Visit nest"),
+                ("clear_nest", "Remove nest"),
                 ("place_perch", "Favourite spot…"),
                 ("perch", "Perch"),
                 ("clear_perch", "Clear favourite spot"),
