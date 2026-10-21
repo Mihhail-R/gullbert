@@ -1,6 +1,10 @@
 import { submitPreviewAction } from "../../actions/preview.js";
 import { dialogue } from "../../simulation/dialogue.js";
-import type { ActionMessage, PreviewMessage } from "../../platform/bridge.js";
+import type {
+  ActionMessage,
+  PreviewMessage,
+  RoommateStatus,
+} from "../../platform/bridge.js";
 import { createPickupDrag } from "../../platform/pickup-drag.js";
 import { createCursorBiteBridge } from "../../platform/cursor-bite.js";
 import { ShutdownCoordinator } from "../../platform/shutdown.js";
@@ -333,18 +337,7 @@ export class PetApplication {
         "Could not restore Gullbert’s belongings. Restart to try again; saved " +
         "belongings have not been replaced.";
 
-      if (native) {
-        this.#runNative(
-          native.invoke("publish_roommate", {
-            status: { error: this.#storageError },
-          }),
-        );
-      } else {
-        this.#dependencies.browser.publish({
-          type: "roommate",
-          error: this.#storageError,
-        });
-      }
+      this.#deliverRoommate({ error: this.#storageError });
     }
 
     if (!this.#current(generation)) {
@@ -601,7 +594,16 @@ export class PetApplication {
   }
 
   #publishRoommate(force = false): void {
-    if (!this.#running() || !this.#initialized) {
+    if (!this.#running()) {
+      return;
+    }
+
+    if (!this.#initialized) {
+      if (!this.#storageError) {
+        return;
+      }
+
+      this.#deliverRoommate({ error: this.#storageError });
       return;
     }
 
@@ -619,18 +621,22 @@ export class PetApplication {
       mood = status.mood;
     }
 
-    const data = {
-      type: "roommate" as const,
+    const data: RoommateStatus = {
       memory: this.#dependencies.simulation.exportMemory(),
       mood,
       error: this.#storageError,
     };
+
+    this.#deliverRoommate(data);
+  }
+
+  #deliverRoommate(status: RoommateStatus): void {
     const native = this.#dependencies.native;
 
     if (native) {
-      this.#runNative(native.invoke("publish_roommate", { status: data }));
+      this.#runNative(native.invoke("publish_roommate", { status }));
     } else {
-      this.#dependencies.browser.publish(data);
+      this.#dependencies.browser.publish({ type: "roommate", ...status });
     }
   }
 
