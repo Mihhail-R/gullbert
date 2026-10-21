@@ -7,7 +7,7 @@ import type { Pose } from "../poses.js";
 import type { Point } from "../model.js";
 import type { SimulationView, BehaviorCapabilities } from "../capabilities.js";
 import type { RecallOwner } from "../routine.js";
-import type { Scene, GiftPurpose, GiftScene as OwnedScene } from "../scenes.js";
+import type { GiftPurpose, GiftScene as OwnedScene } from "../scenes.js";
 import { ITEMS } from "../items.js";
 
 export function giftPose(
@@ -93,9 +93,6 @@ export class GiftRoutine implements RecallOwner {
 
   get identity(): object {
     return this.#state.identity;
-  }
-  install(scene: ReadonlyValue<Scene>): void {
-    this.#state.install(scene as ReadonlyValue<OwnedScene>);
   }
   clear(): void {
     this.#state.clear();

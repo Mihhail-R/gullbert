@@ -16,7 +16,7 @@ function episode(id, kind, detail) {
 }
 
 function selectionCounts(memory, mischief = 1, motivation) {
-  const counts = { habit_snack: 0, show_spin: 0, show_dead: 0, play_cap: 0, none: 0 };
+  const counts = { habit_snack: 0, play_cap: 0, none: 0 };
 
   // Sweep the draw rather than relying on flaky random samples.
   for (let draw = 0; draw < 1000; draw++) {
@@ -34,8 +34,6 @@ test("ordinary habits never select spin or play-dead despite mastery and rewards
     episodes: [episode(1, "reward", "spin"), episode(2, "reward", "dead")],
   });
   const counts = selectionCounts(memory);
-  assert.equal(counts.show_spin, 0);
-  assert.equal(counts.show_dead, 0);
   assert.equal(counts.none, 1000);
 });
 
@@ -104,13 +102,12 @@ test("unanswered invitations back off and a new completed game restores willingn
   assert.equal(habits.choose(memory, 1010, 1, random), "play_cap");
 });
 
-test("unpaid tricks suppress performances, while quiet mode also suppresses invitations", () => {
+test("unpaid tricks allow invitations, while quiet mode suppresses them", () => {
   const memory = normalizeMemory({
     unpaidTricks: 2,
     learned: { tricks: { spin: 6 } },
     episodes: [episode(1, "play", "cap")],
   });
-  assert.equal(selectionCounts(memory).show_spin, 0);
   assert.ok(selectionCounts(memory).play_cap > 0);
   assert.equal(selectionCounts(memory, 0).none, 1000);
 });

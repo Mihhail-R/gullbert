@@ -84,13 +84,11 @@ export class Belongings {
     this.#revision += 1;
   }
 
-  performed(trick: Trick, point: Point, requested = true): void {
+  performed(trick: Trick, point: Point): void {
     this.#coolOff();
 
-    if (requested) {
-      this.#memory.unpaidTricks = Math.min(2, this.#memory.unpaidTricks + 1);
-      this.#memory.trickCooldownUntilMs = this.#now() + TRICK_COOLDOWN_MS;
-    }
+    this.#memory.unpaidTricks = Math.min(2, this.#memory.unpaidTricks + 1);
+    this.#memory.trickCooldownUntilMs = this.#now() + TRICK_COOLDOWN_MS;
 
     this.#memory.performances[trick] = memoryCount(
       this.#memory.performances[trick] + 1,

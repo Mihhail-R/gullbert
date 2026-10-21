@@ -32,16 +32,20 @@ test(
 
     g.action("search_snack");
     advance(g, 3.1);
-    assert.equal(g.inspect().snackSearch, "failed");
-    assert.match(g.inspect().bubble, /betrayal/);
+    assert.equal(g.inspect().scene?.phase, "disappointed");
+    advance(g, 2.1);
+    assert.equal(g.inspect().scene, null);
+    assert.equal(g.inspect().mode, "idle");
   }
 );
 test("missing snack searches terminate and new commands or cleanup cancel approach", () => {
   const g = bird();
   g.action("search_snack");
-  advance(g, 6);
+  advance(g, 3.1);
+  assert.equal(g.inspect().scene?.phase, "disappointed");
+  advance(g, 2.9);
   assert.equal(g.inspect().mode, "idle");
-  assert.equal(g.inspect().snackSearch, "failed");
+  assert.equal(g.inspect().scene, null);
   g.action("place_bag", { x: 0, y: 0 });
   g.action("nap");
   advance(g, 1);
