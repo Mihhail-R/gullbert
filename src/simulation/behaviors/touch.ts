@@ -116,6 +116,7 @@ function freshState(): TouchState {
 export class Touch {
   readonly #context: TouchContext;
   #state = freshState();
+  #scratchRewarded = false;
 
   constructor(context: TouchContext) {
     this.#context = context;
@@ -141,6 +142,7 @@ export class Touch {
 
   reset(): void {
     this.#state = freshState();
+    this.#scratchRewarded = false;
   }
 
   pointer(point: PointerSample | null): void {
@@ -216,6 +218,7 @@ export class Touch {
     if (!context.available()) {
       state.zone = "";
       state.reaction = "";
+      this.#scratchRewarded = false;
       return false;
     }
 
@@ -229,6 +232,10 @@ export class Touch {
 
     if (point) {
       zone = zoneAt(context.body, point);
+    }
+
+    if (zone !== "head") {
+      this.#scratchRewarded = false;
     }
 
     if (state.reaction === "pet" && zone !== "head") {
@@ -276,7 +283,12 @@ export class Touch {
     if (zone === "head" && dwell >= 0.45) {
       state.reaction = "pet";
       this.#remark(dialogue.gullbert.touch.fineOneHeadScratch);
-      context.scratched?.();
+
+      if (!this.#scratchRewarded) {
+        this.#scratchRewarded = true;
+        context.scratched?.();
+      }
+
       return true;
     }
 

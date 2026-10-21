@@ -6,6 +6,32 @@ export interface Splat extends Point {
   id: number;
   born: number;
   scale?: number;
+  trailLength?: number;
+  clip?: Point & { width: number; height: number };
+}
+interface StoredSplat extends Splat {
+  runoffLength: number;
+}
+
+/** Painted bounds, shared by rendering and cleanup selection. */
+export function splatBounds(splat: Readonly<Splat>) {
+  const scale = splat.scale ?? 1;
+  const left = splat.x - 24 * scale;
+  const top = splat.y - 15 * scale;
+  const right = left + 48 * scale;
+  const bottom = top + (30 + (splat.trailLength ?? 0)) * scale;
+  const clip = splat.clip;
+  const x = clip ? Math.max(left, clip.x) : left;
+  const y = clip ? Math.max(top, clip.y) : top;
+  const clippedRight = clip ? Math.min(right, clip.x + clip.width) : right;
+  const clippedBottom = clip ? Math.min(bottom, clip.y + clip.height) : bottom;
+
+  return {
+    x,
+    y,
+    width: Math.max(0, clippedRight - x),
+    height: Math.max(0, clippedBottom - y),
+  };
 }
 interface Rubbish extends Point {
   id: number;
@@ -22,12 +48,13 @@ export interface PropSnapshot {
 }
 type LooseKind = "bag" | "chip" | "splat" | "rubbish" | "cone";
 
-/** Owns transient objects, their identities, bounds, serving counts and expiry. */
+/** Owns loose objects and session stains, including runoff, cleanup and expiry. */
 export class Props {
   #serial = 0;
   #bag: Bag | null = null;
   #crumb: Point | null = null;
-  #splats: Splat[] = [];
+  #splats: StoredSplat[] = [];
+  #now = 0;
   #cones: Cone[] = [];
   #rubbish: Rubbish[] = [];
   #looseChips: (SceneProp & { id: number })[] = [];
@@ -44,7 +71,7 @@ export class Props {
       serial: this.#serial,
       bag: this.#bag,
       crumb: this.#crumb,
-      splats: this.#splats,
+      splats: this.#visibleSplats(),
       cones: this.#cones,
       rubbish: this.#rubbish,
       looseChips: this.#looseChips,
@@ -118,14 +145,33 @@ export class Props {
     this.#crumb = null;
   }
 
+  #visibleSplats(): Splat[] {
+    return this.#splats.map((splat) => {
+      const scale = splat.scale ?? 1;
+      const elapsedSeconds = Math.max(0, this.#now - splat.born - 0.25);
+      const runoffLength = Math.min(splat.runoffLength, elapsedSeconds * 48 / scale);
+
+      return {
+        id: splat.id,
+        born: splat.born,
+        scale: splat.scale,
+        x: splat.x,
+        y: splat.y,
+        trailLength: Math.floor(runoffLength / 3) * 3,
+        clip: { x: 0, y: 0, width: this.#width, height: this.#height },
+      };
+    });
+  }
+
   scatter(point: Point, now: number, scale?: number): void {
-    const splat: Splat = { ...point, id: this.nextId(), born: now };
-
-    if (scale !== undefined) {
-      splat.scale = scale;
-    }
-
-    this.#splats.push(splat);
+    this.#now = now;
+    this.#splats.push({
+      ...point,
+      id: this.nextId(),
+      born: now,
+      scale,
+      runoffLength: Math.max(0, (this.#height - point.y) / (scale ?? 1) - 15),
+    });
     this.#splats = this.#splats.slice(-6);
   }
 
@@ -188,9 +234,8 @@ export class Props {
   }
 
   expire(now: number): void {
-    this.#splats = this.#splats.filter((splat) => {
-      return now - splat.born < 40;
-    });
+    this.#now = now;
+    this.#splats = this.#splats.filter((splat) => now - splat.born < 40);
     this.#cones = this.#cones.filter((cone) => {
       return now - cone.born < 90;
     });

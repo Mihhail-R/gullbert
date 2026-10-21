@@ -42,8 +42,6 @@ const commands: Partial<Record<string, Trick>> = {
   trick_come: "come",
   trick_spin: "spin",
   trick_dead: "dead",
-  show_spin: "spin",
-  show_dead: "dead",
 };
 
 /** Owns meal, play, and scratch consequences alongside their transient learned associations. */
@@ -77,11 +75,6 @@ export class LearningRoutine implements RecallOwner {
   }
   get identity(): object {
     return this.#identity;
-  }
-  install(scene: ReadonlyValue<Scene>): void {
-    this.#scene = structuredClone(scene) as LearningScene;
-    this.#identity = Object.freeze({});
-    this.resize();
   }
   clear(): void {
     this.#scene = null;
@@ -303,7 +296,7 @@ export class LearningRoutine implements RecallOwner {
       kind = "habit";
     }
 
-    const requested = name.startsWith("trick_");
+    const requested = trick !== undefined;
     const chosen = trick ?? "come";
     const practiced = memory.learned.tricks[chosen] >= 3;
     this.#scene = {
@@ -317,7 +310,6 @@ export class LearningRoutine implements RecallOwner {
       target,
       facing: sim.body.facing,
       practiced,
-      unsolicited: name.startsWith("show_"),
       reluctant: requested && memory.unpaidTricks === 1,
     };
 
@@ -351,8 +343,6 @@ export class LearningRoutine implements RecallOwner {
 
     if (habit) {
       line = lines.checkSpot;
-    } else if (this.#scene.unsolicited) {
-      line = lines.showoff;
     } else if (this.#scene.reluctant) {
       line = lines.reluctant[chosen];
     }
@@ -392,7 +382,6 @@ export class LearningRoutine implements RecallOwner {
           target: origin,
           facing: sim.body.facing,
           practiced: true,
-          unsolicited: true,
           reluctant: false,
         };
         break;
@@ -700,7 +689,7 @@ export class LearningRoutine implements RecallOwner {
     }
 
     const trick = scene.trick;
-    sim.belongings.performed(trick, sim.body, !scene.unsolicited);
+    sim.belongings.performed(trick, sim.body);
     const performed = sim.belongings.snapshot().memory.performances[trick];
     this.#phase("reward", 20);
     let line = lines.reward[(performed - 1) % lines.reward.length];

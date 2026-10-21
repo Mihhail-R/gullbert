@@ -20,7 +20,7 @@ import type { Point, PointerSample, SceneProp } from "../model.js";
 import type { Pose } from "../poses.js";
 import type { SimulationView, BehaviorCapabilities } from "../capabilities.js";
 import type { SceneOwner } from "../routine.js";
-import type { Scene, GagScene as OwnedScene } from "../scenes.js";
+import type { GagScene as OwnedScene } from "../scenes.js";
 
 const departureOutwardPhases: readonly DepartureScene["phase"][] = [
   "depart",
@@ -251,9 +251,6 @@ export class GagRoutine implements SceneOwner {
 
   get identity(): object {
     return this.#state.identity;
-  }
-  install(scene: ReadonlyValue<Scene>): void {
-    this.#state.install(scene as ReadonlyValue<OwnedScene>);
   }
   clear(): void {
     this.#state.clear();

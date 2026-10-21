@@ -1,3 +1,4 @@
+import type { Splat } from "./props.js";
 import type { Body } from "./body.js";
 import type { Props } from "./props.js";
 import type { Activity } from "./activity.js";
@@ -58,8 +59,6 @@ export interface BehaviorCapabilities extends RoutineCapabilities {
     FoodPolicy,
     | "snapshot"
     | "clearRequest"
-    | "search"
-    | "found"
     | "failed"
     | "deferEncounter"
     | "afterBagActivity"
@@ -146,9 +145,7 @@ export interface SimulationView extends Readonly<Point> {
   readonly until: number;
   readonly nextMischief: number;
   readonly settings: Readonly<Settings>;
-  readonly splats: ReadonlyValue<
-    (Point & { id: number; born: number; scale?: number })[]
-  >;
+  readonly splats: ReadonlyValue<Splat[]>;
   readonly events: readonly Sound[];
   readonly bubble: string;
   readonly bubbleUntil: number;
@@ -163,7 +160,6 @@ export interface SimulationView extends Readonly<Point> {
   readonly nextNibble: number;
   readonly nextSnackRequest: number;
   readonly bag: Readonly<Bag> | null;
-  readonly snackSearch: "found" | "failed" | null;
   readonly snackRequestAt: number | null;
   readonly nibbleEligibleAt: number | null;
   readonly nextBagVisit: number;

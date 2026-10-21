@@ -2,7 +2,6 @@
 export class FoodPolicy {
   #nextNibble = 0;
   #nextSnackRequest: number;
-  #snackSearch: "found" | "failed" | null = null;
   #snackRequestAt: number | null = null;
   #nibbleEligibleAt: number | null = null;
   #nextBagVisit = 0;
@@ -15,7 +14,6 @@ export class FoodPolicy {
     return Object.freeze({
       nextNibble: this.#nextNibble,
       nextSnackRequest: this.#nextSnackRequest,
-      snackSearch: this.#snackSearch,
       snackRequestAt: this.#snackRequestAt,
       nibbleEligibleAt: this.#nibbleEligibleAt,
       nextBagVisit: this.#nextBagVisit,
@@ -26,14 +24,7 @@ export class FoodPolicy {
     this.#snackRequestAt = null;
     this.#nibbleEligibleAt = null;
   }
-  search(): void {
-    this.#snackSearch = null;
-  }
-  found(): void {
-    this.#snackSearch = "found";
-  }
   failed(now: number): void {
-    this.#snackSearch = "failed";
     this.#nibbleEligibleAt = now + 3;
   }
   deferEncounter(now: number): void {

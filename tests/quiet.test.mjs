@@ -202,7 +202,7 @@ test("boredom encourages ordinary wandering while low energy still favors rest",
         curiosity: 0.5,
         socialInterest: 0.5,
       };
-      const boredom = { level: name === "content" ? 0 : 0.8, interest: {} };
+      const boredom = { level: name === "content" ? 0 : 0.8, capInterest: 1 };
       sim.routine.choose(motivation, boredom);
       sim.time = 20;
 
