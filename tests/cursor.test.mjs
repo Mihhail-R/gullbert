@@ -256,7 +256,9 @@ test("a failed search triggers a cursor attempt, but another search respects its
   g.action("search_snack");
   advance(g, 4);
   assert.equal(g.inspect().scene?.phase, "disappointed");
-  advance(g, 2.2);
+  advance(g, 1.9);
+  assert.notEqual(g.inspect().scene?.kind, "cursor");
+  advance(g, 0.2);
   assert.equal(g.inspect().scene?.kind, "cursor");
   g.pointer(null);
   const cooldown = g.inspect().nextNibble;
