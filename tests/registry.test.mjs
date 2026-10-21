@@ -20,7 +20,7 @@ function keepsakeRegistry() {
       return started;
     }
   });
-  const registry = new RoutineRegistry([sim.routine], new Map([["gift", sim.routine]]));
+  const registry = new RoutineRegistry([sim.routine]);
   return { registry, sim, recall, belongings };
 }
 

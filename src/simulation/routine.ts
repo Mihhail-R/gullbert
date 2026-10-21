@@ -32,7 +32,6 @@ export interface Routine {
 export interface SceneOwner extends Routine {
   readonly scene: ReadonlyValue<Scene> | null;
   readonly identity: object;
-  install(scene: ReadonlyValue<Scene>): void;
   clear(): void;
 }
 

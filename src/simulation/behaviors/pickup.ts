@@ -7,7 +7,7 @@ import type { Props } from "../props.js";
 import type { Point, Settings } from "../model.js";
 import type { Pose } from "../poses.js";
 import type { RoutineCapabilities, SceneOwner } from "../routine.js";
-import type { Scene, RelocationScene } from "../scenes.js";
+import type { RelocationScene } from "../scenes.js";
 import type { SimulationView } from "../capabilities.js";
 import { contains, gullRect, type HitRect, type Touch } from "./touch.js";
 import { theatreOffset } from "./theatre.js";
@@ -60,7 +60,7 @@ export interface PickupContext {
   beginDragging(): void;
   carry(): void;
   rest(delay?: number): void;
-  install(scene: RelocationScene): void;
+  relocated(): void;
   retaliate(reaction: CursorRetaliation): void;
   cancel(): void;
 }
@@ -158,15 +158,6 @@ export class Pickup implements SceneOwner {
 
     this.#scene.cursorId = id;
     return true;
-  }
-
-  install(scene: ReadonlyValue<Scene>): void {
-    if (scene.kind !== "relocation") {
-      throw new Error("Pickup owns only relocation scenes");
-    }
-
-    this.#scene = structuredClone(scene) as RelocationScene;
-    this.#identity = Object.freeze({});
   }
 
   clear(): void {
@@ -340,12 +331,9 @@ export class Pickup implements SceneOwner {
       origin: context.body.safePoint(held.origin),
       target: { x: targetX, y: context.body.y },
     };
-    context.install(scene);
-    const installed = this.#scene;
-
-    if (!installed) {
-      throw new Error("Relocation installation did not reach its owner");
-    }
+    this.#scene = scene;
+    this.#identity = Object.freeze({});
+    context.relocated();
 
     if (level === 0) {
       if (count === 1) {
@@ -376,19 +364,19 @@ export class Pickup implements SceneOwner {
         }
 
         if (count >= 3 && !settings.paused) {
-          installed.revenge = "trash";
+          scene.revenge = "trash";
         }
 
         break;
       }
 
       case 2: {
-        installed.revenge = choosePublicEnemyRevenge(count, context.random);
+        scene.revenge = choosePublicEnemyRevenge(count, context.random);
         break;
       }
     }
 
-    if (!settings.paused && installed.revenge !== "none") {
+    if (!settings.paused && scene.revenge !== "none") {
       if (this.#state.now >= this.#state.nextRevenge) {
         this.#state.revengeUntil = this.#state.now + 10000;
         this.#state.nextRevenge = this.#state.now + 20000;
@@ -397,16 +385,16 @@ export class Pickup implements SceneOwner {
       const remaining = this.#state.revengeUntil - this.#state.now;
 
       if (remaining > 700) {
-        installed.deadline = context.clock.now + remaining / 1000;
+        scene.deadline = context.clock.now + remaining / 1000;
       } else {
-        installed.revenge = "none";
+        scene.revenge = "none";
       }
     } else {
-      installed.revenge = "none";
+      scene.revenge = "none";
     }
 
     if (level === 2) {
-      context.speech.say(PUBLIC_ENEMY_REPLIES[installed.revenge], 3);
+      context.speech.say(PUBLIC_ENEMY_REPLIES[scene.revenge], 3);
     }
   }
 

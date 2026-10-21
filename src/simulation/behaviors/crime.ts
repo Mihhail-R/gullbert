@@ -7,7 +7,7 @@ import type { CrimeScene } from "../scenes.js";
 import type { Pose } from "../poses.js";
 import type { SimulationView, BehaviorCapabilities } from "../capabilities.js";
 import type { SceneOwner } from "../routine.js";
-import type { Scene, CrimeScene as OwnedScene } from "../scenes.js";
+import type { CrimeScene as OwnedScene } from "../scenes.js";
 import { attachBag, bagGoal } from "./snacks.js";
 
 export function crimePose(
@@ -103,9 +103,6 @@ export class CrimeRoutine implements SceneOwner {
 
   get identity(): object {
     return this.#state.identity;
-  }
-  install(scene: ReadonlyValue<Scene>): void {
-    this.#state.install(scene as ReadonlyValue<OwnedScene>);
   }
   clear(): void {
     this.#state.clear();

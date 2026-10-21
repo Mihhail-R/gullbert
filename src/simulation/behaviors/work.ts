@@ -5,7 +5,7 @@ import { observe } from "../observation.js";
 import type { Pose } from "../poses.js";
 import type { ReadonlyValue } from "../presentation.js";
 import type { SceneOwner } from "../routine.js";
-import type { Scene, WorkScene } from "../scenes.js";
+import type { WorkScene } from "../scenes.js";
 
 type Environment = Pick<
   BehaviorCapabilities,
@@ -45,13 +45,6 @@ export class WorkRoutine implements SceneOwner {
 
   get identity(): object {
     return this.#identity;
-  }
-
-  install(scene: ReadonlyValue<Scene>): void {
-    if (scene.kind === "work") {
-      this.#scene = structuredClone(scene);
-      this.#identity = Object.freeze({});
-    }
   }
 
   clear(): void {

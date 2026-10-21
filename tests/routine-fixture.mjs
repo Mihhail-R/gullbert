@@ -344,6 +344,6 @@ export function routineFixture(Routine, random = () => 0.5) {
     sim.bubbleUntil = 0;
   };
   sim.routine = new Routine(capabilities);
-  const registry = new RoutineRegistry([sim.routine], new Map());
+  const registry = new RoutineRegistry([sim.routine]);
   return sim;
 }

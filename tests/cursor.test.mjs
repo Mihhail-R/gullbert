@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { Gullbert } from "../web-dist/simulation/engine.js";
+import { CursorRoutine } from "../web-dist/simulation/behaviors/cursor.js";
+import { RoutineRegistry } from "../web-dist/simulation/registry.js";
+import { routineFixture } from "./routine-fixture.mjs";
 import { createPointerTracker } from "../web-dist/platform/pointer.js";
 function bird() {
   const g = new Gullbert(800, 600, () => 0.5);
@@ -12,6 +15,33 @@ function advance(g, t) {
     g.step(0.05);
   }
 }
+test("reactivating Cursor preserves its prepared retaliation and detaches pointer input", () => {
+  const sim = routineFixture(CursorRoutine);
+  const registry = new RoutineRegistry([sim.routine]);
+  const pointer = { x: 850, y: 20 };
+  const reaction = {
+    reaction: "chase",
+    deadlineSeconds: 10,
+    expiresAtMs: 10000,
+    pointer,
+    cursorId: 41,
+  };
+  sim.routine.startRetaliation(reaction);
+  registry.activate(sim.routine);
+  const originalIdentity = registry.identity;
+
+  sim.routine.startRetaliation({ ...reaction, reaction: "trail", cursorId: 42 });
+  registry.activate(sim.routine);
+  pointer.x = 10;
+  assert.notEqual(registry.identity, originalIdentity);
+  assert.deepEqual(registry.scene.pointer, { x: 850, y: 20 });
+  assert.equal(registry.scene.cursorId, 42);
+
+  sim.time = 0.5;
+  registry.update(0.05);
+  assert.equal(registry.scene.phase, "stalk");
+});
+
 test("nibbling a stationary cursor ends with disappointment and releases tracking", () => {
   const sim = bird();
   sim.action("nibble_cursor");

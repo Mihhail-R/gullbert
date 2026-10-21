@@ -6,7 +6,7 @@ import type { Pose } from "../poses.js";
 import type { Point } from "../model.js";
 import type { SimulationView, BehaviorCapabilities } from "../capabilities.js";
 import type { SceneOwner } from "../routine.js";
-import type { Scene, PerchScene as OwnedScene } from "../scenes.js";
+import type { PerchScene as OwnedScene } from "../scenes.js";
 
 export function perchPose(
   sim: Pick<SimulationView, "scene" | "motionTime" | "time">,
@@ -74,10 +74,6 @@ export class PerchRoutine implements SceneOwner {
 
   get identity(): object {
     return this.#identity;
-  }
-  install(scene: ReadonlyValue<Scene>): void {
-    this.#scene = structuredClone(scene) as OwnedScene;
-    this.#identity = Object.freeze({});
   }
   clear(): void {
     this.#scene = null;

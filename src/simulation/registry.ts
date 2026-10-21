@@ -5,7 +5,7 @@ import type { Scene } from "./scenes.js";
 import type { RecallReservation } from "./long-term-memory.js";
 
 function ownsScene(routine: Routine): routine is SceneOwner {
-  return "scene" in routine && "install" in routine;
+  return "scene" in routine;
 }
 
 function recallsMemory(routine: Routine): routine is RecallOwner {
@@ -15,14 +15,9 @@ function recallsMemory(routine: Routine): routine is RecallOwner {
 /** Chooses exactly one activity and separates completion from interruption. */
 export class RoutineRegistry {
   #routines: readonly Routine[];
-  #owners: ReadonlyMap<Scene["kind"], SceneOwner>;
   #active: Routine | null = null;
-  constructor(
-    routines: readonly Routine[],
-    owners: ReadonlyMap<Scene["kind"], SceneOwner>,
-  ) {
+  constructor(routines: readonly Routine[]) {
     this.#routines = routines;
-    this.#owners = owners;
   }
   get scene(): ReadonlyValue<Scene> | null {
     if (this.#active && ownsScene(this.#active)) {
@@ -83,22 +78,17 @@ export class RoutineRegistry {
 
     return true;
   }
-  install(scene: ReadonlyValue<Scene>): void {
-    const owner = this.#owners.get(scene.kind);
+  activate(owner: SceneOwner): void {
+    const previous = this.#active;
 
-    if (!owner) {
-      throw new Error(`No routine owns ${scene.kind}`);
-    }
-
-    if (this.#active && this.#active !== owner) {
-      if (ownsScene(this.#active)) {
-        this.#active.clear();
+    if (previous && previous !== owner) {
+      if (ownsScene(previous)) {
+        previous.clear();
       } else {
-        this.#active.interrupt();
+        previous.interrupt();
       }
     }
 
-    owner.install(scene);
     this.#active = owner;
   }
   presentation() {

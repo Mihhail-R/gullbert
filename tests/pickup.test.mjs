@@ -13,7 +13,7 @@ function drag(sim, now, point = { x: 250, y: 250 }) {
     sim.beginPickup({ x: sim.inspect().x + 45, y: sim.inspect().y + 45 }, now),
   );
   sim.movePickup(point);
-  sim.finishPickup(false, now + 100);
+  return sim.finishPickup(false, now + 100);
 }
 function advance(sim, seconds) {
   for (let i = 0; i < seconds * 20; i++) {
@@ -167,6 +167,50 @@ test("chase catches only near beak, tugs briefly, and has a ten-second overall d
     assert.notEqual(sim.inspect().scene?.kind, "cursor");
   }
 });
+test("pickup hands authorization and its deadline to a cursor that keeps advancing", () => {
+  const sim = bird(2, 0);
+  const reaction = drag(sim, 0);
+  const relocation = sim.inspect().scene;
+  assert.ok(reaction);
+  assert.equal(sim.armReaction(reaction, 41), true);
+
+  advance(sim, 0.75);
+  const encounter = sim.cursorEncounter();
+  assert.equal(sim.inspect().scene.kind, "cursor");
+  assert.equal(sim.inspect().scene.deadline, relocation.deadline);
+  assert.equal(encounter.cursorId, 41);
+  assert.equal(sim.currentReaction(reaction), true);
+
+  sim.pointer({ x: 850, y: 20 });
+  advance(sim, 0.55);
+  assert.equal(sim.inspect().scene.phase, "stalk");
+  assert.equal(sim.cursorEncounter().token, encounter.token);
+});
+
+test("canceled retaliation results cannot authorize or release a later interaction", () => {
+  const sim = bird(2, 0);
+  const oldReaction = drag(sim, 0);
+  assert.equal(sim.armReaction(oldReaction, 41), true);
+  advance(sim, 0.75);
+  const oldEncounter = sim.cursorEncounter();
+  sim.action("cancel");
+  assert.equal(sim.currentReaction(oldReaction), false);
+
+  const reaction = drag(sim, 22000, { x: 450, y: 250 });
+  assert.ok(reaction);
+  assert.notEqual(reaction, oldReaction);
+  assert.equal(sim.armReaction(oldReaction, 99), false);
+  assert.equal(sim.armReaction(reaction, 42), true);
+  advance(sim, 0.75);
+  const encounter = sim.cursorEncounter();
+
+  sim.releaseCursor(undefined, oldEncounter.token);
+  assert.equal(sim.inspect().scene.phase, "stare");
+  assert.equal(sim.cursorEncounter().cursorId, 42);
+  assert.equal(sim.cursorEncounter().token, encounter.token);
+  assert.equal(sim.currentReaction(reaction), true);
+});
+
 test("trail has at most three splats and ends with its chase", () => {
   const sim = bird(2, 0.65);
   drag(sim, 0);
