@@ -100,6 +100,7 @@ export function projectPresentation(
     bubble: sim.bubble,
     hat: hatPosture(sim),
     perch: sim.memory.perch,
+    nest: sim.memory.nest,
     carriedItem: sim.carriedItem,
     gullHidden: sim.scene?.kind === "gift" && sim.scene.phase === "away",
     mood: sim.mood?.name ?? "",

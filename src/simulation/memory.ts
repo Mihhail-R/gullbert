@@ -219,6 +219,25 @@ export function normalizeMemory(
     }
   }
 
+  const savedNest = object(source.nest);
+  // Retired legacy nests had only coordinates; do not silently revive them.
+  const nestPoint = Array.isArray(savedNest.items)
+    ? clampMemoryPoint(source.nest, width, height)
+    : null;
+  const nestItems: Collectible[] = [];
+
+  if (Array.isArray(savedNest.items)) {
+    for (const item of savedNest.items) {
+      if (!isCollectible(item) || nestItems.includes(item)) {
+        continue;
+      }
+
+      if ((collection[item] ?? 0) > 0 && nestItems.length < 3) {
+        nestItems.push(item);
+      }
+    }
+  }
+
   return {
     version: 3,
     longTerm: source.version === 3
@@ -240,6 +259,7 @@ export function normalizeMemory(
     learned: learnedMemory,
     perch: clampMemoryPoint(source.perch, width, height),
     collection,
+    nest: nestPoint ? { ...nestPoint, items: nestItems } : null,
     preferences: normalizePreferences(source.preferences),
     greetings: {
       seen: greetings.seen === true,

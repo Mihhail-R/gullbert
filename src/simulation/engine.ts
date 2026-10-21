@@ -41,6 +41,7 @@ import { GagRoutine, gagOffset } from "./behaviors/gags.js";
 import { TheatreRoutine, theatreOffset } from "./behaviors/theatre.js";
 import { GuestRoutine } from "./behaviors/guests.js";
 import { GiftRoutine } from "./behaviors/gifts.js";
+import { NestRoutine } from "./behaviors/nest.js";
 import { PerchRoutine } from "./behaviors/perch.js";
 import { CrimeRoutine } from "./behaviors/crime.js";
 import { CursorRoutine, cursorBeak } from "./behaviors/cursor.js";
@@ -62,6 +63,7 @@ export class Gullbert {
   #guests: GuestRoutine;
   #gifts: GiftRoutine;
   #perch: PerchRoutine;
+  #nest: NestRoutine;
   #crime: CrimeRoutine;
   #cursor: CursorRoutine;
   #snacks: SnackRoutine;
@@ -135,6 +137,7 @@ export class Gullbert {
     this.#guests = new GuestRoutine(this.#capabilities);
     this.#gifts = new GiftRoutine(this.#capabilities);
     this.#perch = new PerchRoutine(this.#capabilities);
+    this.#nest = new NestRoutine(this.#capabilities);
     this.#crime = new CrimeRoutine(this.#capabilities);
     this.#cursor = new CursorRoutine(this.#capabilities);
     this.#snacks = new SnackRoutine(this.#capabilities);
@@ -276,6 +279,7 @@ export class Gullbert {
         this.#guests,
         this.#gifts,
         this.#perch,
+        this.#nest,
         this.#work,
         this.#crime,
         this.#cursor,
@@ -731,6 +735,10 @@ export class Gullbert {
       this.#time >= this.#cleanup.snapshot().suppressUntil &&
       (this.#theatre.maybeTheatre() || this.#guests.maybeGuest())
     ) {
+      return;
+    }
+
+    if (this.#nest.maybeVisit()) {
       return;
     }
 

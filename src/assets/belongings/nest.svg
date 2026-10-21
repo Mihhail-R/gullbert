@@ -1,0 +1,10 @@
+<!-- SPDX-License-Identifier: CC0-1.0 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 17" shape-rendering="crispEdges">
+  <path fill="#554635" d="M5 4h38v2h4v6h-3v3h-6v2H10v-2H4v-3H1V6h4Z"/>
+  <path fill="#91704b" d="M5 5h38v2h3v4h-5v3H8v-3H3V7h2Z"/>
+  <path fill="#423b35" d="M11 4h26v2h5v4H6V6h5Z"/>
+  <path fill="#bda070" d="M2 7h3v4h9v2H7v-1H4v-2H2Zm38 3h6v2h-5v2H30v-2h10ZM13 14h15v2H13ZM7 3h13v2H7Zm23 0h11v2H30Z"/>
+  <path fill="#d2c6a4" d="M8 8h2v4h8v2h-3v-1H8Zm23 4h8v2h-8ZM22 2h10v2H22Z"/>
+  <path fill="#789093" d="M18 11h9v2h-3v2h-5v-2h-1Z"/>
+  <path fill="#d7b86b" d="M35 7h2v3h-2ZM11 10h2v2h-2Z"/>
+</svg>

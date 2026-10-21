@@ -49,6 +49,7 @@ export interface Memory {
   visits: Record<"pigeon" | "gull", number>;
   learned: LearnedHabits;
   perch: Point | null;
+  nest: (Point & { items: Collectible[] }) | null;
   collection: Partial<Record<Collectible, number>>;
   preferences: Preferences;
   greetings: {

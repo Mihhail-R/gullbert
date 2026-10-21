@@ -136,6 +136,10 @@ const targetDescriptions: Record<string, readonly [string, string]> = {
     "Pick a snack spot.",
     "Click anywhere to place a bag of chips. Esc cancels.",
   ],
+  place_nest: [
+    "Pick a home for his nest.",
+    "Click to place it. Press Escape to cancel.",
+  ],
   place_perch: [
     "Pick his favourite loitering spot.",
     "Click to choose where he likes to perch. Esc cancels.",

@@ -13,6 +13,7 @@ const activities: Record<string, string> = {
   theft: "Investigated a chip bag",
   caper: "Got into a chip bag",
   perch: "Visited his placed perch",
+  nest: "Rearranged his nest and settled in",
   hangout: "Rested at his own hangout",
   cap: "Played with a bottle cap",
   bubbles: "Played with bubbles",

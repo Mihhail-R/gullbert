@@ -555,3 +555,57 @@ body[data-theme] #speech::after {
   background: var(--card);
   border-color: var(--line);
 }
+
+#rubbish-nest {
+  position: absolute;
+  width: 96px;
+  height: 34px;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+
+#rubbish-nest img {
+  position: absolute;
+}
+
+.nest-bed {
+  width: 96px;
+  height: 34px;
+}
+
+.nest-treasure {
+  width: 24px;
+  height: 24px;
+  top: 2px;
+}
+
+.nest-slot-0 {
+  left: 3px;
+  transform: rotate(-15deg);
+}
+
+.nest-slot-1 {
+  left: 36px;
+  top: 9px;
+}
+
+.nest-slot-2 {
+  left: 69px;
+  transform: rotate(15deg);
+}
+
+#rubbish-nest.arranging .nest-treasure {
+  animation: nest-shuffle 0.5s steps(2) infinite alternate;
+}
+
+@keyframes nest-shuffle {
+  to {
+    translate: 2px -3px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #rubbish-nest.arranging .nest-treasure {
+    animation: none;
+  }
+}

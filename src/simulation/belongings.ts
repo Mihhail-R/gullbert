@@ -314,7 +314,9 @@ export class Belongings {
     this.#height = height;
 
     const learned = this.#memory.learned;
-    const points = [this.#memory.perch, learned.snackSpot, learned.snackCandidate];
+    const points = [
+      this.#memory.perch, this.#memory.nest, learned.snackSpot, learned.snackCandidate,
+    ];
     let changed = false;
 
     for (const point of points) {
@@ -351,6 +353,60 @@ export class Belongings {
       this.#memory.perch = null;
       this.#revision += 1;
     }
+  }
+
+  placeNest(point: Point): void {
+    const location = clampMemoryPoint(point, this.#width, this.#height);
+
+    if (!location) {
+      return;
+    }
+
+    const items = this.#memory.nest?.items ?? Object.keys(this.#memory.collection)
+      .filter(isCollectible)
+      .filter((item) => (this.#memory.collection[item] ?? 0) > 0)
+      .slice(-3);
+    this.#memory.nest = { ...location, items };
+    this.#revision += 1;
+  }
+
+  clearNest(): void {
+    if (this.#memory.nest) {
+      this.#memory.nest = null;
+      this.#revision += 1;
+    }
+  }
+
+  nestTreasure(item: Collectible): void {
+    const nest = this.#memory.nest;
+
+    if (!nest || (this.#memory.collection[item] ?? 0) <= 0) {
+      return;
+    }
+
+    if (nest.items.includes(item)) {
+      return;
+    }
+
+    if (nest.items.length === 3) {
+      const favourite = this.favouriteTreasure();
+      const replace = nest.items.findIndex((stored) => stored !== favourite);
+      nest.items.splice(replace, 1);
+    }
+
+    nest.items.push(item);
+    this.#revision += 1;
+  }
+
+  arrangeNest(): void {
+    const nest = this.#memory.nest;
+
+    if (!nest || nest.items.length < 2) {
+      return;
+    }
+
+    nest.items.push(nest.items.shift()!);
+    this.#revision += 1;
   }
 
   collect(item: Collectible, point?: Point): void {

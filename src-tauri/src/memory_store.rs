@@ -283,7 +283,11 @@ fn validate(memory: &Value) -> Result<(), String> {
                 | "keepsake:bent_spoon"
                 | "keepsake:sock"
                 | "keepsake:glass_diamond"
-                | "keepsake:parking_ticket" => {}
+                | "keepsake:parking_ticket"
+                | "keepsake:shell"
+                | "keepsake:button"
+                | "keepsake:string"
+                | "keepsake:foil_ball" => {}
 
                 _ => return Err("Invalid recall experience detail".into()),
             },
@@ -415,6 +419,25 @@ mod tests {
             serde_json::from_str::<Value>(&read_snapshot(&db).unwrap().unwrap()).unwrap(),
             saved
         );
+    }
+
+    #[test]
+    fn nest_and_new_treasure_recalls_survive_reopening() {
+        let dir = Directory::new();
+        let mut saved = memory();
+        saved["nest"] = serde_json::json!({
+            "x": 120, "y": 210, "items": ["shell", "button", "string"]
+        });
+        saved["collection"] = serde_json::json!({
+            "shell": 1, "button": 1, "string": 1, "foil_ball": 1
+        });
+        saved["episodes"][0]["kind"] = serde_json::json!("recall");
+
+        for item in ["shell", "button", "string", "foil_ball"] {
+            saved["episodes"][0]["detail"] = serde_json::json!(format!("keepsake:{item}"));
+            save(&dir.0, &saved).unwrap();
+            assert_eq!(load(&dir.0).unwrap(), saved);
+        }
     }
 
     #[test]
