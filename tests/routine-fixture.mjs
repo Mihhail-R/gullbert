@@ -5,7 +5,7 @@ import { RoutineRegistry } from "../web-dist/simulation/registry.js";
 import { Body } from "../web-dist/simulation/body.js";
 import { clamp, SIZE } from "../web-dist/simulation/geometry.js";
 
-// A controlled capability seam for isolated routine clocks and external props.
+// Controlled built-in capabilities for isolated routine clocks and world objects.
 // Integration tests use Gullbert's operations and detached snapshots instead.
 export function routineFixture(Routine, random = () => 0.5) {
   const sim = {
@@ -112,7 +112,7 @@ export function routineFixture(Routine, random = () => 0.5) {
     },
   };
 
-  // The scoped routine seam keeps shared values live through accessors.
+  // Keep shared fixture values live through accessors.
   for (const [key, descriptor] of Object.entries(
     Object.getOwnPropertyDescriptors(sim),
   )) {
@@ -232,12 +232,6 @@ export function routineFixture(Routine, random = () => 0.5) {
     },
   };
   capabilities.movement = {
-    get position() {
-      return { x: sim.x, y: sim.y };
-    },
-    get bounds() {
-      return { width: sim.width, height: sim.height };
-    },
     moveTo(point) {
       Object.assign(sim, sim.safePoint(point));
     },
@@ -248,21 +242,6 @@ export function routineFixture(Routine, random = () => 0.5) {
   capabilities.events = {
     emit(sound) {
       sim.events.push(sound);
-    },
-  };
-  const props = [];
-  capabilities.props = {
-    add(prop) {
-      const id = objects.nextId();
-      props.push({ id, ...prop });
-      return id;
-    },
-    remove(id) {
-      const index = props.findIndex((prop) => prop.id === id);
-
-      if (index >= 0) {
-        props.splice(index, 1);
-      }
     },
   };
   const activity = new Activity(body, objects, {
