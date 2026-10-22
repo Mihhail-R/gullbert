@@ -987,3 +987,21 @@ fn long_screen_drips_capture_cleanup_clicks_and_release_after_removal() {
     input.sync_interaction(&effects, vec![], None);
     assert!(!effects.capture.get());
 }
+
+#[test]
+fn retaliation_hold_expires_after_two_seconds_without_extending_the_encounter() {
+    let mut input = Input::default();
+    let effects = Recording::default();
+    effects.settings.set((false, 2));
+    let pickup = input.begin_pickup(&effects, rect()).unwrap();
+    let id = input.end_pickup(&effects, pickup, true, true).unwrap();
+    assert!(input.tug_cursor(&effects, id, point()));
+    effects.advance(Duration::from_millis(1999));
+    effects.fire_due(&mut input);
+    assert!(effects.escape.get());
+    assert!(input.tug_cursor(&effects, id, point()));
+    effects.advance(Duration::from_millis(1));
+    effects.fire_due(&mut input);
+    assert!(!input.tug_cursor(&effects, id, point()));
+    effects.assert_released();
+}

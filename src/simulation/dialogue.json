@@ -442,6 +442,15 @@
       "visit": "interior design inspection.",
       "sleep": "do not disturb the architect.",
       "deposit": "this really ties the nest together."
+    },
+    "nestPlay": {
+      "invitation": "Are we throwing that?",
+      "protect": "That lives here.",
+      "warning": "You have rearranged your last shell.",
+      "retrieve": "I'll put that back.",
+      "again": "Again. Obviously.",
+      "flyby": "An aerial review of your behaviour.",
+      "home": "Everything in its proper place."
     }
   },
   "guests": {

@@ -200,30 +200,38 @@ impl Input {
         if self.cursor.id != id {
             return false;
         }
+
         let attempt = |input: &mut Self| -> Result<(), String> {
             if !effects.visible() || input.targeting.is_active() || effects.settings().0 {
                 return Err("Encounter ended".into());
             }
+
             let (size, scale) = effects.geometry()?;
             if !targeting::valid_point(point.x, point.y, size, scale) {
                 return Err("Outside display".into());
             }
+
             let first = !input.cursor.holding();
             if first {
                 let cursor = effects.pointer().ok_or("Pointer unavailable")?;
                 if !cursor.inside || (cursor.x - point.x).hypot(cursor.y - point.y) >= 30.0 {
                     return Err("Pointer escaped".into());
                 }
+
                 effects.escape(true)?;
             }
+
             if !input.cursor.update(id, effects.now(), (point.x, point.y)) {
                 return Err("Bite expired".into());
             }
+
             if first {
-                effects.schedule(Deadline::Cursor(id), cursor_bite::HOLD);
+                effects.schedule(Deadline::Cursor(id), input.cursor.hold_duration());
             }
+
             effects.move_cursor(point)
         };
+
         if attempt(self).is_err() {
             self.cancel_cursor(effects);
             false

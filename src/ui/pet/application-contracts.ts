@@ -92,6 +92,7 @@ export type ApplicationSimulation = Pick<
   | "drainSounds"
   | "interactionRects"
   | "pickupRect"
+  | "treasureRect"
   | "canPickup"
   | "directCleanupAt"
   | "flickCap"

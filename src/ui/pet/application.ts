@@ -907,9 +907,11 @@ export class PetApplication {
         return;
       }
 
-      const rect = sim.pickupRect();
+      const treasure = sim.treasureRect(point);
+      const rect = treasure ?? sim.pickupRect();
+      const pickup = sim.canPickup() && contains(rect, point);
 
-      if (sim.canPickup() && contains(rect, point)) {
+      if (treasure || pickup) {
         if (this.#drag.begin(event.pointerId, point, rect)) {
           event.preventDefault();
           this.#dependencies.browser.capture(event.pointerId);

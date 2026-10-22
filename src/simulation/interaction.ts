@@ -1,3 +1,4 @@
+import { playableTreasureRects } from "./behaviors/nest-play.js";
 import type { SimulationView } from "./capabilities.js";
 import {
   CLEANUP_HIT_PADDING,
@@ -41,6 +42,8 @@ export function interactionRects(
     | "tidying"
     | "x"
     | "y"
+    | "memory"
+    | "settings"
   >,
   interactive = true,
 ): HitRect[] {
@@ -69,6 +72,13 @@ export function interactionRects(
     if (cap) {
       rects.push(cap);
     }
+  }
+
+  if (!sim.settings?.paused && !sim.tidying) {
+    rects.push(...playableTreasureRects(
+      sim.memory?.nest ?? null,
+      sim.scene?.kind === "nest_play" ? sim.scene : null,
+    ));
   }
 
   return rects;

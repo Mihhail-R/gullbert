@@ -161,7 +161,7 @@ test("chase catches only near beak, tugs briefly, and has a ten-second overall d
     sim.pointer({ x: sim.inspect().x + 78, y: sim.inspect().y + 48 });
     advance(sim, 1.1);
     assert.equal(sim.inspect().scene.phase, "chew");
-    advance(sim, 1.3);
+    advance(sim, 2.1);
     assert.notEqual(sim.inspect().scene?.phase, "chew");
     advance(sim, 8);
     assert.notEqual(sim.inspect().scene?.kind, "cursor");
