@@ -6,11 +6,6 @@
 
 Gullbert roams your desktop, demands chips, learns tricks, collects questionable treasures, and occasionally leaves a little gift. Feed him, scratch his head, play games, or let him get on with being a nuisance. No chores or penalties for being away.
 
-Drag a treasure out of his nest and release it to invite a game of fetch. Sleepy or offended
-Gullbert retrieves it for safekeeping instead. Repeatedly disturbing an offended gull at maximum
-mischief can earn a four-poop flyby or a brief cursor grab and throw. Escape ends the interaction;
-borrowed treasures always remain in his collection.
-
 [Download](https://github.com/Mihhail-R/gullbert/releases) · [Try the browser playground](https://mihhail-r.github.io/gullbert/)
 
 ## Requirements and installation
