@@ -59,7 +59,7 @@ export function createPetRenderer(world: HTMLElement) {
     }
   }
   function renderBelongings(sim: PetPresentation) {
-    renderNest(sim.nest, sim.mode === "nest" && sim.phase === "arrange");
+    renderNest(sim.nest, sim.mode === "nest" && sim.phase === "arrange", sim.borrowedNestSlot);
     const spot = sim.perch;
     perch.hidden = !spot;
 

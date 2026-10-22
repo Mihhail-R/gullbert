@@ -67,6 +67,9 @@ export function harness(options = {}) {
     interactionRects() {
       return [{ x: 0, y: 0, width: 96, height: 96 }];
     },
+    treasureRect() {
+      return null;
+    },
     pickupRect() {
       return { x: 0, y: 0, width: 96, height: 96 };
     },

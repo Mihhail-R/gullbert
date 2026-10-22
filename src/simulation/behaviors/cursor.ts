@@ -2,7 +2,7 @@ import { dialogue } from "../dialogue.js";
 import { observe } from "../observation.js";
 import type { ReadonlyValue } from "../presentation.js";
 import { scopeCapabilities } from "../capabilities.js";
-import { isPointOnScreen, beakOffsetX } from "../geometry.js";
+import { isPointOnScreen, beakOffsetX, clamp } from "../geometry.js";
 import type { Point, PointerSample } from "../model.js";
 import type { Pose } from "../poses.js";
 import type { SimulationView, BehaviorCapabilities } from "../capabilities.js";
@@ -44,6 +44,7 @@ export interface CursorRetaliation {
   readonly expiresAtMs: number;
   readonly pointer: Point | null;
   readonly cursorId?: number;
+  readonly throwCursor?: boolean;
 }
 
 type Environment = Pick<
@@ -217,6 +218,23 @@ export class CursorRoutine implements SceneOwner {
     }
   }
 
+  cursorTarget(): Point {
+    const sim = this.#environment;
+    const scene = this.#scene;
+    const point = cursorBeak(sim.body);
+
+    if (scene?.throwCursor && scene.phase === "chew") {
+      const progress = clamp((sim.clock.now - (scene.caughtAt ?? sim.clock.now) - 1.6) / 0.3, 0, 1);
+      point.x += sim.body.facing * 60 * progress;
+      point.y -= 20 * progress;
+    }
+
+    return {
+      x: clamp(point.x, 0, sim.body.width - 1),
+      y: clamp(point.y, 0, sim.body.height - 1),
+    };
+  }
+
   authorize(id: number): boolean {
     if (!this.#scene?.takeover || !Number.isFinite(id)) {
       return false;
@@ -238,6 +256,7 @@ export class CursorRoutine implements SceneOwner {
       deadline: reaction.deadlineSeconds,
       pointer: reaction.pointer ? { ...reaction.pointer } : null,
       retaliation: true,
+      throwCursor: reaction.throwCursor,
       retaliationUntilMs: reaction.expiresAtMs,
       cursorId: reaction.cursorId,
       trail: reaction.reaction === "trail" ? 3 : 0,
@@ -377,11 +396,13 @@ export class CursorRoutine implements SceneOwner {
             return true;
           }
 
-          if (scene.takeover && scene.deadline - sim.clock.now > 1.3) {
+          const holdSeconds = scene.retaliation ? 2 : 1.2;
+
+          if (scene.takeover && scene.deadline - sim.clock.now > holdSeconds + 0.1) {
             scene.phase = "chew";
             scene.caughtAt = sim.clock.now;
-            scene.until = sim.clock.now + 1.2;
-            sim.speech.say(dialogue.gullbert.cursor.mineEscToEscape, 1.2);
+            scene.until = sim.clock.now + holdSeconds;
+            sim.speech.say(dialogue.gullbert.cursor.mineEscToEscape, holdSeconds);
             sim.events.emit("munch");
             return true;
           }
@@ -406,7 +427,7 @@ export class CursorRoutine implements SceneOwner {
           const facing = sim.body.facing;
           sim.body.moveToward(
             { x: sim.body.x - facing * 30, y: sim.body.y },
-            30,
+            scene.throwCursor ? 10 : 30,
             dt,
           );
           sim.body.face(facing as -1 | 1);

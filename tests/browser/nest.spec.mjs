@@ -79,3 +79,38 @@ test("control-room nest placement, movement and removal reach the live pet", asy
   await expect(nest)
     .toBeHidden();
 });
+
+test("nest treasures can be dragged, thrown and returned through real pointer events", async (
+  { page },
+  testInfo,
+) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("gullbert.roommate.v1", JSON.stringify({
+      collection: { shell: 1, button: 1 },
+      nest: { x: 200, y: 300, items: ["shell", "button"] },
+    }));
+  });
+  await page.goto("/pet.html");
+  await expect(page.locator(".nest-treasure:visible"))
+    .toHaveCount(2);
+  await page.mouse.move(215, 376);
+  await page.mouse.down();
+  await page.mouse.move(420, 360, { steps: 8 });
+  await expect(page.locator(".nest-treasure:visible"))
+    .toHaveCount(1);
+  await page.mouse.up();
+  await expect(page.locator("#speech"))
+    .toContainText("Again.", { timeout: 10000 });
+  await expect.poll(() => page.locator('[data-prop="nest-play-treasure"]')
+    .evaluate((image) => image.complete && image.naturalWidth > 0))
+    .toBe(true);
+  await page.screenshot({ path: testInfo.outputPath("nest-fetch.png") });
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".nest-treasure:visible"))
+    .toHaveCount(2);
+  const collection = await page.evaluate(() => {
+    return JSON.parse(localStorage.getItem("gullbert.roommate.v1")).collection;
+  });
+  expect(collection)
+    .toEqual({ shell: 1, button: 1 });
+});

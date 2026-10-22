@@ -87,7 +87,7 @@ export interface BehaviorCapabilities extends RoutineCapabilities {
     | "recallPoint"
     | "completeRecall"
   >;
-  readonly moods: Pick<Mood, "set" | "settleOffence">;
+  readonly moods: Pick<Mood, "set" | "settleOffence" | "snapshot">;
   readonly motivation: Pick<Motivation, "enjoyed">;
   readonly pettiness: Pick<Pettiness, "settle">;
   readonly meals: { consumed(point: Point): void };

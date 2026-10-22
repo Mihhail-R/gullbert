@@ -2,7 +2,7 @@ import { dialogue } from "../dialogue.js";
 import type { MoodName, QuietName } from "../model.js";
 import type { Pose } from "../poses.js";
 // A little recent-event colour, measured only in visible simulation seconds.
-// Moods never schedule mischief, require care, or restrict a command.
+// Moods colour reactions to nest play; they never schedule mischief on their own.
 const moods: Record<
   MoodName,
   { duration: number; routine: QuietName; pose: Pose; lines: string[] }

@@ -161,7 +161,7 @@ class CursorBiteController implements CursorBiteBridge {
       encounter.chewing = true;
       encounter.timer = this.options.schedule(() => {
         this.finish(encounter);
-      }, 1200);
+      }, snapshot.holdMs ?? 1200);
     }
 
     const authorization = encounter.authorization;

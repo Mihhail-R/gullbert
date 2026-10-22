@@ -41,10 +41,11 @@ import { GagRoutine, gagOffset } from "./behaviors/gags.js";
 import { TheatreRoutine, theatreOffset } from "./behaviors/theatre.js";
 import { GuestRoutine } from "./behaviors/guests.js";
 import { GiftRoutine } from "./behaviors/gifts.js";
+import { NestPlayRoutine } from "./behaviors/nest-play.js";
 import { NestRoutine } from "./behaviors/nest.js";
 import { PerchRoutine } from "./behaviors/perch.js";
 import { CrimeRoutine } from "./behaviors/crime.js";
-import { CursorRoutine, cursorBeak } from "./behaviors/cursor.js";
+import { CursorRoutine } from "./behaviors/cursor.js";
 import { SnackRoutine } from "./behaviors/snacks.js";
 import { CapRoutine } from "./behaviors/cap.js";
 import { LearningRoutine } from "./behaviors/learning.js";
@@ -64,6 +65,7 @@ export class Gullbert {
   #gifts: GiftRoutine;
   #perch: PerchRoutine;
   #nest: NestRoutine;
+  #nestPlay: NestPlayRoutine;
   #crime: CrimeRoutine;
   #cursor: CursorRoutine;
   #snacks: SnackRoutine;
@@ -138,6 +140,21 @@ export class Gullbert {
     this.#gifts = new GiftRoutine(this.#capabilities);
     this.#perch = new PerchRoutine(this.#capabilities);
     this.#nest = new NestRoutine(this.#capabilities);
+    this.#nestPlay = new NestPlayRoutine(
+      this.#capabilities,
+      (pointer, cursorId, remainingSeconds) => {
+        this.#cursor.startRetaliation({
+          reaction: "chase",
+          deadlineSeconds: this.#time + remainingSeconds,
+          expiresAtMs: this.#wallNow() + remainingSeconds * 1000,
+          pointer,
+          cursorId,
+          throwCursor: true,
+        });
+        this.#registry.activate(this.#cursor);
+        this.#activity.beginRoutine("cursor");
+      },
+    );
     this.#crime = new CrimeRoutine(this.#capabilities);
     this.#cursor = new CursorRoutine(this.#capabilities);
     this.#snacks = new SnackRoutine(this.#capabilities);
@@ -280,6 +297,7 @@ export class Gullbert {
         this.#gifts,
         this.#perch,
         this.#nest,
+        this.#nestPlay,
         this.#work,
         this.#crime,
         this.#cursor,
@@ -331,6 +349,7 @@ export class Gullbert {
     this.#objects.resize(this.#body.width, this.#body.height);
     this.#gags.resizeGags();
     this.#cap.resize();
+    this.#nestPlay.resize();
     this.#belongings.resize(this.#body.width, this.#body.height);
     this.#learning.resize();
     this.#activity.resize();
@@ -372,6 +391,7 @@ export class Gullbert {
   }
   #sceneWantsPointer(scene: ReadonlyValue<Scene> | null): boolean {
     switch (scene?.kind) {
+      case "nest_play":
       case "cap":
       case "cursor_egg":
         return true;
@@ -388,6 +408,7 @@ export class Gullbert {
     this.#gags.gagPointer(point);
     this.#cursor.pointerSample(point);
     this.#cap.pointerSample(point);
+    this.#nestPlay.pointerSample(point);
   }
   observeWork(sample: WorkSample | null, nowMs: number): void {
     if (!this.#visible || this.#settings.paused || this.#settings.mischief === 0) {
@@ -931,13 +952,23 @@ export class Gullbert {
       this.#learning.cancelAssociations();
       this.#pickup.cancel();
 
-      if (
-        this.#registry.scene?.kind === "relocation" ||
-        (this.#registry.scene?.kind === "cursor" &&
-          this.#registry.scene.retaliation)
-      ) {
-        this.#cancelScene();
-        this.#rest();
+      const scene = this.#registry.scene;
+
+      switch (scene?.kind) {
+        case "cursor":
+          if (!scene.retaliation) {
+            break;
+          }
+
+          this.#cancelScene();
+          this.#rest();
+          break;
+
+        case "nest_play":
+        case "relocation":
+          this.#cancelScene();
+          this.#rest();
+          break;
       }
     }
 
@@ -1189,6 +1220,8 @@ export class Gullbert {
       visible: this.#visible,
       tidying: this.tidying,
       mode: this.#activity.mode,
+      memory: this.#belongings.snapshot().memory,
+      settings: this.#settings,
     };
   }
   #presentationObservation(routine: RoutinePresentation): PresentationObservation {
@@ -1300,8 +1333,9 @@ export class Gullbert {
         this.moving ||
         this.tidying ||
         ["eat", "squawk"].includes(this.#activity.mode),
-      held: Boolean(this.#pickup.snapshot().held),
-      dragged: Boolean(this.#pickup.snapshot().held?.dragged),
+      held: Boolean(this.#pickup.snapshot().held) || this.#nestPlay.scene?.phase === "held",
+      dragged: Boolean(this.#pickup.snapshot().held?.dragged)
+        || this.#nestPlay.scene?.phase === "held",
     });
   }
   drainSounds(): Sound[] {
@@ -1339,13 +1373,52 @@ export class Gullbert {
 
     return flicked;
   }
+  treasureRect(point: Point) {
+    return this.#nestPlay.hitRect(point);
+  }
   beginPickup(point: Point, now: number): boolean {
+    if (this.#nestPlay.hitRect(point)) {
+      if (this.#nestPlay.scene?.phase !== "ready") {
+        const scene = this.#registry.scene;
+
+        if (scene?.kind === "nest" && scene.phase === "sleep") {
+          this.#moods.set("sleepy", this.#time, { speak: false });
+        }
+
+        this.#replaceActivity("nest_play");
+        this.#touch.reset();
+        this.#pickup.cancel();
+      }
+
+      if (this.#nestPlay.begin(point)) {
+        this.#registry.activate(this.#nestPlay);
+        return true;
+      }
+    }
+
     return this.#pickup.begin(point, now);
   }
   movePickup(point: Point): void {
+    if (this.#nestPlay.scene?.phase === "held") {
+      this.#nestPlay.move(point);
+      return;
+    }
+
     this.#pickup.move(point);
   }
   finishPickup(cancelled: boolean, now: number): object | null {
+    if (this.#nestPlay.scene?.phase === "held") {
+      if (cancelled) {
+        this.#cancelScene();
+        this.#rest();
+        return null;
+      }
+
+      const retaliates = this.#nestPlay.release();
+      this.#reactionToken = retaliates ? this.#tokenFor(this.#nestPlay.identity) : null;
+      return this.#reactionToken;
+    }
+
     if (cancelled) {
       this.#pickup.cancel();
       return null;
@@ -1370,6 +1443,9 @@ export class Gullbert {
     }
 
     switch (scene?.kind) {
+      case "nest_play":
+        return scene.revenge !== "none";
+
       case "relocation":
         return true;
 
@@ -1383,6 +1459,11 @@ export class Gullbert {
   armReaction(token: object, id: number): boolean {
     if (!Number.isFinite(id) || !this.currentReaction(token)) {
       return false;
+    }
+
+    if (this.#registry.scene?.kind === "nest_play") {
+      this.#nestPlay.authorize(id);
+      return true;
     }
 
     if (this.#registry.scene?.kind === "relocation") {
@@ -1399,6 +1480,10 @@ export class Gullbert {
   }
   reactionMovesCursor(): boolean {
     const scene = this.#registry.scene;
+
+    if (scene?.kind === "nest_play") {
+      return scene.revenge === "cursor";
+    }
 
     if (scene?.kind === "relocation") {
       return scene.revenge === "chase" || scene.revenge === "trail";
@@ -1420,7 +1505,8 @@ export class Gullbert {
       token: this.#tokenFor(this.#cursor.identity),
       phase: scene.phase,
       cursorId: scene.cursorId,
-      beak: Object.freeze(cursorBeak(this.#body)),
+      holdMs: scene.retaliation ? 2000 : 1200,
+      beak: Object.freeze(this.#cursor.cursorTarget()),
     });
   }
   releaseCursor(reason?: string, token?: object): void {

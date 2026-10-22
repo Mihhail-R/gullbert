@@ -195,3 +195,17 @@ test("authorization arriving after recoil is released immediately", () => {
   h.bridge.sync();
   assert.deepEqual(h.releases, [7]);
 });
+
+test("revenge snapshots use a fixed two-second wall-clock hold", () => {
+  const h = lifecycle({ preview: true });
+  h.encounter = { ...encounter(), holdMs: 2000 };
+  h.bridge.sync();
+  h.advance(1200);
+  h.bridge.sync();
+  assert.deepEqual(h.recoils, []);
+  h.advance(799);
+  assert.deepEqual(h.recoils, []);
+  h.advance(1);
+  assert.equal(h.recoils.length, 1);
+  assert.deepEqual(h.releases, [1]);
+});

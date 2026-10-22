@@ -17,6 +17,7 @@ export interface CursorScene extends TimedScene {
   caughtAt?: number;
   cursorId?: number;
   retaliation?: boolean;
+  throwCursor?: boolean;
   retaliationUntilMs?: number;
   trail?: number;
   nextSplat?: number;
@@ -65,6 +66,24 @@ export type GiftScene = TimedScene & GiftPurpose & {
   deadline: number;
   speed: number;
 };
+export interface NestPlayScene extends TimedScene {
+  kind: "nest_play";
+  phase: "held" | "toss" | "chase" | "return" | "ready" | "home" | "flyby";
+  item: Collectible;
+  slot: number;
+  point: Point;
+  origin: Point;
+  target: Point;
+  pointer: Point;
+  started: number;
+  deadline: number;
+  response: "play" | "sleepy" | "offended";
+  retrievalSpeedPxPerSecond: number;
+  revenge: "none" | "flyby" | "cursor";
+  cursorId?: number;
+  rounds: number;
+  drops: number;
+}
 export interface NestScene extends TimedScene {
   kind: "nest";
   phase: "approach" | "arrange" | "sleep";
@@ -272,6 +291,7 @@ export type Scene =
   | CrimeScene
   | GiftScene
   | NestScene
+  | NestPlayScene
   | PerchScene
   | WorkScene
   | CapScene

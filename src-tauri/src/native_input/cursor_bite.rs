@@ -1,6 +1,7 @@
 use std::time::{Duration, Instant};
 
 pub const HOLD: Duration = Duration::from_millis(1200);
+pub const REVENGE_HOLD: Duration = Duration::from_millis(2000);
 pub const ENCOUNTER: Duration = Duration::from_secs(8);
 
 // A one-shot authorization from Eat cursor or a completed Public enemy pickup. Renderer
@@ -10,6 +11,7 @@ pub struct CursorBite {
     pub id: u64,
     armed: Option<Instant>,
     encounter: Duration,
+    hold: Duration,
     movable: bool,
     caught: Option<(Instant, (f64, f64))>,
 }
@@ -20,17 +22,23 @@ impl CursorBite {
         self.caught = None;
     }
     pub fn arm(&mut self, now: Instant) -> u64 {
-        self.arm_reaction(now, ENCOUNTER, true)
+        let id = self.arm_reaction(now, ENCOUNTER, true);
+        self.hold = HOLD;
+        id
     }
     pub fn arm_reaction(&mut self, now: Instant, encounter: Duration, movable: bool) -> u64 {
         self.cancel();
         self.movable = movable;
         self.encounter = encounter;
+        self.hold = REVENGE_HOLD;
         self.armed = Some(now);
         self.id
     }
     pub fn armed(&self) -> bool {
         self.armed.is_some()
+    }
+    pub fn hold_duration(&self) -> Duration {
+        self.hold
     }
     pub fn holding(&self) -> bool {
         self.caught.is_some()
@@ -39,23 +47,28 @@ impl CursorBite {
         if !self.movable || id != self.id {
             return false;
         }
+
         if !point.0.is_finite() || !point.1.is_finite() {
             return false;
         }
+
         let Some(armed) = self.armed else {
             return false;
         };
+
         if now.duration_since(armed) >= self.encounter {
             self.cancel();
             return false;
         }
+
         let (started, origin) = *self.caught.get_or_insert((now, point));
-        if now.duration_since(started) >= HOLD
+        if now.duration_since(started) >= self.hold
             || (point.0 - origin.0).hypot(point.1 - origin.1) > 80.0
         {
             self.cancel();
             return false;
         }
+
         true
     }
 }

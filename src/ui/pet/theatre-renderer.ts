@@ -1,3 +1,4 @@
+import { isCollectible } from "../../simulation/items.js";
 import type { Prop } from "../../simulation/model.js";
 import { requiredElement, updateText } from "../dom.js";
 import type { PetPresentation } from "../../simulation/presentation.js";
@@ -30,8 +31,8 @@ export function createTheatreRenderer(
           filename = prop.asset;
         }
 
-        if (prop.asset === "bottle_cap") {
-          node.src = "assets/belongings/bottle_cap.svg";
+        if (isCollectible(prop.asset)) {
+          node.src = `assets/belongings/${filename}`;
         } else {
           node.src = `assets/theatre/${filename}`;
         }
@@ -93,7 +94,7 @@ export function createTheatreRenderer(
 
       draw(node, prop);
       node.dataset.playable = String(
-        prop.asset === "bottle_cap" && sim.phase === "ready",
+        (prop.asset === "bottle_cap" || prop.id === "nest-play-treasure") && sim.phase === "ready",
       );
     }
 
