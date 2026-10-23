@@ -78,6 +78,7 @@ export function interactionRects(
     rects.push(...playableTreasureRects(
       sim.memory?.nest ?? null,
       sim.scene?.kind === "nest_play" ? sim.scene : null,
+      sim.scene?.kind === "construction" ? sim.scene.borrowedSlots : [],
     ));
   }
 

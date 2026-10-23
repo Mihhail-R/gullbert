@@ -26,9 +26,11 @@ export function nestTreasureRects(nest: ReadonlyValue<Memory["nest"]>): HitRect[
 export function playableTreasureRects(
   nest: ReadonlyValue<Memory["nest"]>,
   scene: ReadonlyValue<NestPlayScene> | null,
+  borrowedSlots: readonly number[] = [],
 ): HitRect[] {
   if (!scene) {
-    return nestTreasureRects(nest);
+    return nestTreasureRects(nest)
+      .filter((_, slot) => !borrowedSlots.includes(slot));
   }
 
   if (scene.phase !== "ready") {
@@ -97,14 +99,18 @@ export class NestPlayRoutine implements SceneOwner {
     }
   }
 
-  hitRect(point: Point): HitRect | null {
+  hitRect(point: Point, borrowedSlots: readonly number[] = []): HitRect | null {
     const sim = this.#environment;
 
     if (!sim.policy.visible() || sim.policy.tidying() || sim.policy.settings().paused) {
       return null;
     }
 
-    return playableTreasureRects(sim.belongings.snapshot().memory.nest, this.scene)
+    return playableTreasureRects(
+      sim.belongings.snapshot().memory.nest,
+      this.scene,
+      borrowedSlots,
+    )
       .find((rect) => contains(rect, point)) ?? null;
   }
 

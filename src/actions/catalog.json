@@ -395,5 +395,13 @@
     "visibility": "show",
     "route": "command",
     "command": "clear_nest"
+  },
+  "build_something": {
+    "variant": "BuildSomething",
+    "aliases": ["--build-something"],
+    "availability": "all",
+    "visibility": "show",
+    "route": "command",
+    "command": "build_something"
   }
 }
