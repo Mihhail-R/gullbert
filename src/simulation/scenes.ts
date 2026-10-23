@@ -1,5 +1,5 @@
 import type { ReadonlyValue } from "./presentation.js";
-import type { Point, Direction, Trick } from "./model.js";
+import type { Point, Direction, Trick, SceneProp } from "./model.js";
 import type { Collectible, Item } from "./items.js";
 import type { RecallReservation } from "./long-term-memory.js";
 
@@ -83,6 +83,18 @@ export interface NestPlayScene extends TimedScene {
   cursorId?: number;
   rounds: number;
   drops: number;
+}
+export interface ConstructionScene extends TimedScene {
+  kind: "construction";
+  phase: "inspect" | "carry-first" | "fetch-second" | "carry-second" | "adjust"
+    | "admire" | "sit" | "collapse" | "blame" | "tidy-first" | "tidy-second" | "leave";
+  phaseIndex: number;
+  started: number;
+  origin: Point;
+  items: Collectible[];
+  borrowedSlots: number[];
+  accused?: boolean;
+  props: SceneProp[];
 }
 export interface NestScene extends TimedScene {
   kind: "nest";
@@ -290,6 +302,7 @@ export type Scene =
   | SnackScene
   | CrimeScene
   | GiftScene
+  | ConstructionScene
   | NestScene
   | NestPlayScene
   | PerchScene

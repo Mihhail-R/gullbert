@@ -101,8 +101,7 @@ export function projectPresentation(
     hat: hatPosture(sim),
     perch: sim.memory.perch,
     nest: sim.memory.nest,
-    borrowedNestSlot: sim.scene?.kind === "nest_play" && sim.scene.phase !== "flyby"
-      ? sim.scene.slot : null,
+    borrowedNestSlots: borrowedNestSlots(sim.scene),
     carriedItem: sim.carriedItem,
     gullHidden: sim.scene?.kind === "gift" && sim.scene.phase === "away",
     mood: sim.mood?.name ?? "",
@@ -141,4 +140,18 @@ export function portraitPresentation(settings: Settings) {
     frame: POSES.idle,
     hatPlacement: hatPlacement({ settings, pose: "idle", facing: 1, scene: null, bag: null }),
   };
+}
+
+/** One presentation rule covers both fetch games and temporary constructions. */
+function borrowedNestSlots(scene: PresentationObservation["scene"]): readonly number[] {
+  switch (scene?.kind) {
+    case "construction":
+      return scene.borrowedSlots;
+
+    case "nest_play":
+      return scene.phase === "flyby" ? [] : [scene.slot];
+
+    default:
+      return [];
+  }
 }

@@ -45,7 +45,7 @@ test("throwing a nest treasure plays fetch without changing ownership", () => {
   const saved = sim.exportMemory().collection;
   throwTreasure(sim);
   assert.equal(sim.inspect().scene.phase, "toss");
-  assert.equal(sim.present().borrowedNestSlot, 0);
+  assert.deepEqual(sim.present().borrowedNestSlots, [0]);
   assert.equal(sim.present().props[0].asset, "shell");
   reach(sim, "ready");
   assert.deepEqual(sim.exportMemory().collection, saved);
@@ -59,7 +59,7 @@ test("throwing a nest treasure plays fetch without changing ownership", () => {
   assert.equal(sim.inspect().scene.rounds, 2);
   advance(sim, 12);
   assert.notEqual(sim.inspect().scene?.kind, "nest_play");
-  assert.equal(sim.present().borrowedNestSlot, null);
+  assert.deepEqual(sim.present().borrowedNestSlots, []);
   assert.deepEqual(sim.exportMemory().collection, saved);
 });
 
@@ -71,7 +71,7 @@ test("repeated disturbance after sleepy retrieval causes exactly four flyby drop
   assert.equal(sim.reactionMovesCursor(), false);
   assert.equal(sim.inspect().scene.revenge, "flyby");
   reach(sim, "flyby");
-  assert.equal(sim.present().borrowedNestSlot, null);
+  assert.deepEqual(sim.present().borrowedNestSlots, []);
   advance(sim, 2.5);
   assert.equal(sim.inspect().splats.length, 4);
   assert.equal(sim.inspect().mood.name, "smug");
@@ -130,7 +130,7 @@ for (const [reason, interrupt] of [
     throwTreasure(sim);
     interrupt(sim);
     assert.notEqual(sim.inspect().scene?.kind, "nest_play");
-    assert.equal(sim.present().borrowedNestSlot, null);
+    assert.deepEqual(sim.present().borrowedNestSlots, []);
     assert.deepEqual(sim.exportMemory().collection, { shell: 1 });
   });
 }
@@ -147,7 +147,7 @@ test("held treasures cancel cleanly and invalid moves cannot corrupt geometry", 
   sim.resize(100, 100);
   assert.ok(sim.inspect().scene.point.x <= 100);
   sim.finishPickup(true, 200);
-  assert.equal(sim.present().borrowedNestSlot, null);
+  assert.deepEqual(sim.present().borrowedNestSlots, []);
   assert.deepEqual(sim.exportMemory().collection, { shell: 1 });
   sim.configure({ paused: true });
   assert.equal(sim.treasureRect({ x: 19, y: 80 }), null);

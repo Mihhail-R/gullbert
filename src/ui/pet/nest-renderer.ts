@@ -21,7 +21,7 @@ export function createNestRenderer(world: HTMLElement) {
   function render(
     nest: PetPresentation["nest"],
     arranging: boolean,
-    borrowedSlot: number | null = null,
+    borrowedSlots: readonly number[] = [],
   ) {
     root.hidden = !nest;
     root.classList.toggle("arranging", arranging);
@@ -35,7 +35,7 @@ export function createNestRenderer(world: HTMLElement) {
 
     for (const [index, image] of treasures.entries()) {
       const item = nest.items[index];
-      image.hidden = !item || index === borrowedSlot;
+      image.hidden = !item || borrowedSlots.includes(index);
 
       if (item && image.dataset.item !== item) {
         image.src = `assets/belongings/${item}.svg`;

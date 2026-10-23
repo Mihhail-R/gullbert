@@ -42,6 +42,7 @@ import { TheatreRoutine, theatreOffset } from "./behaviors/theatre.js";
 import { GuestRoutine } from "./behaviors/guests.js";
 import { GiftRoutine } from "./behaviors/gifts.js";
 import { NestPlayRoutine } from "./behaviors/nest-play.js";
+import { ConstructionRoutine } from "./behaviors/construction.js";
 import { NestRoutine } from "./behaviors/nest.js";
 import { PerchRoutine } from "./behaviors/perch.js";
 import { CrimeRoutine } from "./behaviors/crime.js";
@@ -65,6 +66,7 @@ export class Gullbert {
   #gifts: GiftRoutine;
   #perch: PerchRoutine;
   #nest: NestRoutine;
+  #construction: ConstructionRoutine;
   #nestPlay: NestPlayRoutine;
   #crime: CrimeRoutine;
   #cursor: CursorRoutine;
@@ -139,6 +141,7 @@ export class Gullbert {
     this.#guests = new GuestRoutine(this.#capabilities);
     this.#gifts = new GiftRoutine(this.#capabilities);
     this.#perch = new PerchRoutine(this.#capabilities);
+    this.#construction = new ConstructionRoutine(this.#capabilities);
     this.#nest = new NestRoutine(this.#capabilities);
     this.#nestPlay = new NestPlayRoutine(
       this.#capabilities,
@@ -297,6 +300,7 @@ export class Gullbert {
         this.#gifts,
         this.#perch,
         this.#nest,
+        this.#construction,
         this.#nestPlay,
         this.#work,
         this.#crime,
@@ -394,6 +398,7 @@ export class Gullbert {
       case "nest_play":
       case "cap":
       case "cursor_egg":
+      case "construction":
         return true;
 
       case "cursor":
@@ -409,6 +414,7 @@ export class Gullbert {
     this.#cursor.pointerSample(point);
     this.#cap.pointerSample(point);
     this.#nestPlay.pointerSample(point);
+    this.#construction.pointerSample(point);
   }
   observeWork(sample: WorkSample | null, nowMs: number): void {
     if (!this.#visible || this.#settings.paused || this.#settings.mischief === 0) {
@@ -756,6 +762,10 @@ export class Gullbert {
       this.#time >= this.#cleanup.snapshot().suppressUntil &&
       (this.#theatre.maybeTheatre() || this.#guests.maybeGuest())
     ) {
+      return;
+    }
+
+    if (this.#construction.maybeBuild()) {
       return;
     }
 
@@ -1374,10 +1384,10 @@ export class Gullbert {
     return flicked;
   }
   treasureRect(point: Point) {
-    return this.#nestPlay.hitRect(point);
+    return this.#nestPlay.hitRect(point, this.#construction.scene?.borrowedSlots);
   }
   beginPickup(point: Point, now: number): boolean {
-    if (this.#nestPlay.hitRect(point)) {
+    if (this.treasureRect(point)) {
       if (this.#nestPlay.scene?.phase !== "ready") {
         const scene = this.#registry.scene;
 
