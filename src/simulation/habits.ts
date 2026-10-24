@@ -1,4 +1,4 @@
-import type { Memory, MemoryEpisode } from "./model.js";
+import type { Memory } from "./model.js";
 import type { ReadonlyValue } from "./presentation.js";
 import { NEUTRAL_MOTIVATION, type MotivationState } from "./motivation.js";
 import { FRESH_INTEREST, type BoredomState } from "./boredom.js";
@@ -44,33 +44,13 @@ function responseRate(outcomes: readonly boolean[]): number {
   return successes / total;
 }
 
-function playEvidence(episodes: readonly ReadonlyValue<MemoryEpisode>[]): Evidence {
-  const outcomes: boolean[] = [];
-  let responseId = 0;
-  let completed = 0;
-
-  for (const event of episodes) {
-    if (event.detail !== "cap") {
-      continue;
-    }
-
-    switch (event.kind) {
-      case "play":
-        completed += 1;
-        responseId = event.id;
-        outcomes.push(true);
-        break;
-
-      case "activity":
-        outcomes.push(false);
-        break;
-    }
-  }
+function playEvidence(memory: ReadonlyValue<Memory>): Evidence {
+  const { completed, lastCompletedId, outcomes } = memory.learned.capPlay;
 
   return {
     command: "play_cap",
     weight: 3 * responseRate(outcomes) * (completed / (completed + 1)),
-    responseId,
+    responseId: lastCompletedId,
   };
 }
 
@@ -123,7 +103,7 @@ export class Habits {
     }
 
     if (mischief > 0) {
-      choices.push(playEvidence(memory.episodes));
+      choices.push(playEvidence(memory));
     }
 
     const available: Evidence[] = [];

@@ -9,6 +9,7 @@ import {
 import { ITEMS, isCollectible, type Collectible, type Item } from "./items.js";
 import type { Memory, MemoryEpisode, Point, Trick } from "./model.js";
 import { observe } from "./observation.js";
+import { rememberCapGame } from "./cap-memory.js";
 import type { ReadonlyValue } from "./presentation.js";
 import { chooseGift, favouriteTreasure, hangoutPosition } from "./preferences.js";
 import { SIZE } from "./geometry.js";
@@ -64,7 +65,7 @@ export class Belongings {
     }
 
     const episodes = this.#memory.episodes;
-    episodes.push({
+    const event: MemoryEpisode = {
       id: (episodes.at(-1)?.id ?? 0) + 1,
       at: Math.floor(at),
       kind,
@@ -75,7 +76,9 @@ export class Belongings {
         width: this.#width,
         height: this.#height,
       },
-    });
+    };
+    episodes.push(event);
+    rememberCapGame(this.#memory.learned.capPlay, event);
 
     if (episodes.length > MEMORY_LIMIT) {
       episodes.shift();
