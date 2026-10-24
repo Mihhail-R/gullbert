@@ -106,6 +106,82 @@ export function localMemoryDay(atMs: number): string {
   return `${year}-${month}-${day}`;
 }
 
+/** Repair a corrected wall clock without erasing evidence or granting another credited day. */
+export function reconcileMemoryClock(memory: LongTermMemory, nowMs: number): boolean {
+  if (!validMemoryTime(nowMs) || nowMs >= memory.highWaterAtMs) {
+    return false;
+  }
+
+  const day = localMemoryDay(nowMs);
+  memory.highWaterAtMs = nowMs;
+  const creditedDays = [
+    memory.active.lastDay,
+    memory.snack.established?.lastDay,
+    memory.snack.candidate?.lastDay,
+    memory.tricks.spin.lastDay,
+    memory.tricks.dead.lastDay,
+  ];
+
+  // Only future dates move: legitimate earlier memories keep their age.
+  for (const credited of creditedDays) {
+    if (!credited || credited.atMs <= nowMs) {
+      continue;
+    }
+
+    credited.atMs = nowMs;
+    credited.day = day;
+  }
+
+  if (memory.active.progressDay !== null && memory.active.progressDay > day) {
+    memory.active.progressDay = day;
+  }
+
+  if (memory.migratedOnDay !== null && memory.migratedOnDay > day) {
+    memory.migratedOnDay = day;
+  }
+
+  // An uncertain day's allowance is spent, including any interrupted callback.
+  if (memory.daily && memory.daily.atMs > nowMs) {
+    memory.daily.atMs = nowMs;
+    memory.daily.day = day;
+    memory.daily.used = true;
+  }
+
+  if (memory.lastStart && memory.lastStart.atMs > nowMs) {
+    memory.lastStart.atMs = nowMs;
+  }
+
+  const oldSnack = memory.snack.old;
+
+  if (oldSnack) {
+    oldSnack.replacedAtMs = Math.min(oldSnack.replacedAtMs, nowMs);
+
+    if (oldSnack.recalledAtMs !== null) {
+      oldSnack.recalledAtMs = Math.min(oldSnack.recalledAtMs, nowMs);
+    }
+  }
+
+  for (const evidence of Object.values(memory.tricks)) {
+    if (evidence.qualifiedAtMs !== null) {
+      evidence.qualifiedAtMs = Math.min(evidence.qualifiedAtMs, nowMs);
+    }
+
+    if (evidence.recalledAtMs !== null) {
+      evidence.recalledAtMs = Math.min(evidence.recalledAtMs, nowMs);
+    }
+  }
+
+  for (const keepsake of Object.values(memory.keepsakes)) {
+    keepsake.acquiredAtMs = Math.min(keepsake.acquiredAtMs, nowMs);
+
+    if (keepsake.recalledAtMs !== null) {
+      keepsake.recalledAtMs = Math.min(keepsake.recalledAtMs, nowMs);
+    }
+  }
+
+  return true;
+}
+
 function observeTime(memory: LongTermMemory, nowMs: number): boolean {
   if (!validMemoryTime(nowMs) || nowMs < memory.highWaterAtMs) {
     return false;

@@ -91,14 +91,11 @@ export class Habits {
     const spot = memory.learned.snackSpot;
 
     if (spot) {
-      const meals = memory.episodes.filter((event) => {
-        return event.kind === "meal";
-      });
       const appetite = Math.min(1, (now - this.#lastMeal) / 180);
       choices.push({
         command: "habit_snack",
         weight: 1.5 * (spot.meals / (spot.meals + 1)) * appetite,
-        responseId: meals.at(-1)?.id ?? 0,
+        responseId: memory.learned.lastMealId,
       });
     }
 

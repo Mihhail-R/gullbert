@@ -232,6 +232,45 @@ test("meals delay choices and reduce snack checks before appetite recovers", () 
   assert.equal(habits.choose(memory, 333, 0, () => 0.7), "habit_snack");
 });
 
+test("a meal answers snack invitations even after its event leaves history", () => {
+  const belongings = new Belongings(900, 650, () => 1000);
+  const point = { x: 100, y: 100 };
+  belongings.rememberMeal(point);
+  const habits = new Habits();
+
+  for (const now of [90, 280, 640]) {
+    assert.equal(habits.choose(belongings.exportMemory(), now, 0, () => 0), "habit_snack");
+  }
+
+  belongings.rememberMeal(point);
+  habits.ate(700);
+
+  for (let event = 0; event < MEMORY_LIMIT; event++) {
+    belongings.remember("activity", "hangout", point);
+  }
+
+  const saved = JSON.parse(JSON.stringify(belongings.exportMemory()));
+  assert.equal(saved.episodes.some((event) => event.kind === "meal"), false);
+  belongings.restore(saved);
+  assert.equal(habits.choose(belongings.exportMemory(), 830, 0, () => 0), "habit_snack");
+});
+
+test("meal responses migrate from valid history and stay forgotten after restore", () => {
+  const episodes = [episode(1, "meal", "chip"), episode(2, "play", "cap")];
+
+  for (const lastMealId of [undefined, null, "1", -1, 0.5, Infinity]) {
+    const memory = normalizeMemory({ learned: { lastMealId }, episodes });
+    assert.equal(memory.learned.lastMealId, 1);
+  }
+
+  const belongings = new Belongings(900, 650, () => 1000);
+  belongings.restore({ version: 3, episodes });
+  assert.equal(belongings.exportMemory().learned.lastMealId, 1);
+  belongings.forgetLearning();
+  belongings.restore(JSON.parse(JSON.stringify(belongings.exportMemory())));
+  assert.equal(belongings.exportMemory().learned.lastMealId, 0);
+});
+
 test("a bag meal postpones autonomous snack checks for ninety visible seconds", () => {
   const sim = new Gullbert(900, 650, () => 0);
   sim.configure({ paused: true, mischief: 0 });

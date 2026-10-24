@@ -82,7 +82,10 @@ export class PetApplication {
     this.#persistence = new MemoryPersistence({
       storage: dependencies.storage,
       clock: dependencies.clock,
-      restore: (memory) => dependencies.simulation.restoreMemory(memory),
+      restore: (memory) => {
+        this.#resizeSimulation();
+        dependencies.simulation.restoreMemory(memory);
+      },
       revision: () => dependencies.simulation.status().memoryRevision,
       snapshot: () => dependencies.simulation.exportMemory(),
       checkpoint: () => dependencies.simulation.checkpointMemory(),

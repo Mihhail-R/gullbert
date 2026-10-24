@@ -353,6 +353,7 @@ test("invalid learning data is bounded and forgetting affects only learned habit
   assert.deepEqual(memory.learned, {
     tricks: { come: 6, spin: 0, dead: 0 },
     capPlay: { completed: 0, lastCompletedId: 0, outcomes: [] },
+    lastMealId: 0,
     snackSpot: null,
     snackCandidate: null,
     scratchesAfterPlay: 0,

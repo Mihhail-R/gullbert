@@ -1,11 +1,41 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { Gullbert } from "../web-dist/simulation/engine.js";
 import {
   harness,
   deferred,
   settle,
   pointerEvent,
 } from "./application-harness.mjs";
+
+test("startup restores remembered places using the latest display size", async () => {
+  const pending = deferred();
+  let size = { width: 800, height: 600 };
+  const simulation = new Gullbert(800, 600, () => 0);
+  const memory = simulation.exportMemory();
+  memory.perch = { x: 1700, y: 900 };
+  memory.nest = { x: 1600, y: 800, items: [] };
+  memory.learned.snackSpot = { x: 1500, y: 700, meals: 3 };
+  const h = harness({
+    native: true,
+    simulation,
+    size: () => size,
+    load: () => pending.promise,
+  });
+  const startup = h.app.start();
+  await settle();
+  size = { width: 1920, height: 1080 };
+  h.emit("resize");
+  pending.resolve(memory);
+  await startup;
+  await h.app.dispose();
+
+  for (const restored of [simulation.exportMemory(), h.saved.at(-1)]) {
+    assert.deepEqual(restored.perch, memory.perch);
+    assert.deepEqual(restored.nest, memory.nest);
+    assert.deepEqual(restored.learned.snackSpot, memory.learned.snackSpot);
+  }
+});
 
 test("application starts once and disposes all browser resources and scheduled work", async () => {
   const h = harness();

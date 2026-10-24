@@ -18,6 +18,7 @@ test("missing and malformed snapshots produce fresh, empty durable memories", ()
     learned: {
       tricks: { come: 0, spin: 0, dead: 0 },
       capPlay: { completed: 0, lastCompletedId: 0, outcomes: [] },
+      lastMealId: 0,
       snackSpot: null,
       snackCandidate: null,
       scratchesAfterPlay: 0,

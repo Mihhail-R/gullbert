@@ -36,6 +36,7 @@ export type Trick = "come" | "spin" | "dead";
 export interface LearnedHabits {
   tricks: Record<Trick, number>;
   capPlay: CapPlayMemory;
+  lastMealId: number;
   snackSpot: (Point & { meals: number }) | null;
   snackCandidate: (Point & { meals: number }) | null;
   scratchesAfterPlay: number;
