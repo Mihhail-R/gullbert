@@ -2,7 +2,9 @@ import type { Memory, MemoryEpisode, Point } from "./model.js";
 import { ITEMS, isCollectible, type Collectible } from "./items.js";
 import { clamp, SIZE } from "./geometry.js";
 import { normalizePreferences } from "./preferences.js";
+import { createCapMemory, normalizeCapMemory } from "./cap-memory.js";
 import { migrateSummaries, normalizeSummaries, validRecallDetail } from "./memory-summaries.js";
+import { reconcileMemoryClock } from "./long-term-memory.js";
 
 // Completed experiences only. Scenes and animation clocks never enter the snapshot.
 export const MEMORY_LIMIT = 200;
@@ -57,6 +59,8 @@ export function clampMemoryPoint(value: unknown, width: number, height: number):
 export function createLearnedMemory(): Memory["learned"] {
   return {
     tricks: { come: 0, spin: 0, dead: 0 },
+    capPlay: createCapMemory(),
+    lastMealId: 0,
     snackSpot: null,
     snackCandidate: null,
     scratchesAfterPlay: 0,
@@ -170,6 +174,18 @@ export function normalizeMemory(
     dead: lessons(tricks.dead),
   };
   learnedMemory.scratchesAfterPlay = lessons(learned.scratchesAfterPlay);
+  learnedMemory.capPlay = normalizeCapMemory(learned.capPlay, episodes);
+
+  if (
+    typeof learned.lastMealId === "number" &&
+    Number.isSafeInteger(learned.lastMealId) &&
+    learned.lastMealId >= 0
+  ) {
+    learnedMemory.lastMealId = learned.lastMealId;
+  } else {
+    const meals = episodes.filter((event) => event.kind === "meal");
+    learnedMemory.lastMealId = meals.at(-1)?.id ?? 0;
+  }
 
   const spot = clampMemoryPoint(learned.snackSpot, width, height);
   const meals = lessons(object(learned.snackSpot).meals);
@@ -238,11 +254,14 @@ export function normalizeMemory(
     }
   }
 
+  const longTerm = source.version === 3
+    ? normalizeSummaries(source.longTerm)
+    : migrateSummaries(episodes, nowMs);
+  reconcileMemoryClock(longTerm, nowMs);
+
   return {
     version: 3,
-    longTerm: source.version === 3
-      ? normalizeSummaries(source.longTerm)
-      : migrateSummaries(episodes, nowMs),
+    longTerm,
     episodes,
     unpaidTricks: Math.min(2, memoryCount(source.unpaidTricks)),
     trickCooldownUntilMs,

@@ -1,6 +1,7 @@
 import type { Collectible } from "./items.js";
 import type { Preferences } from "./preferences.js";
 import type { LongTermMemory } from "./long-term-memory.js";
+import type { CapPlayMemory } from "./cap-memory.js";
 
 export interface Point {
   x: number;
@@ -34,6 +35,8 @@ export type Sound = "squawk" | "plop" | "munch" | "pop" | "splash";
 export type Trick = "come" | "spin" | "dead";
 export interface LearnedHabits {
   tricks: Record<Trick, number>;
+  capPlay: CapPlayMemory;
+  lastMealId: number;
   snackSpot: (Point & { meals: number }) | null;
   snackCandidate: (Point & { meals: number }) | null;
   scratchesAfterPlay: number;

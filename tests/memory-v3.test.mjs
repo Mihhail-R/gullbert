@@ -4,6 +4,7 @@ import { Belongings } from "../web-dist/simulation/belongings.js";
 import { normalizeMemory } from "../web-dist/simulation/memory.js";
 import { memoryDescription } from "../web-dist/ui/controls/memory-view.js";
 import { MemoryPersistence } from "../web-dist/platform/roommate-store.js";
+import { eligibleRecalls } from "../web-dist/simulation/long-term-memory.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const startMs = new Date(2026, 0, 5, 12)
@@ -167,6 +168,160 @@ test("a newly allowed day still waits twenty hours after the previous callback s
   day(5.3);
   assert.ok(belongings.reserveRecall(() => 0));
 });
+
+for (const restart of [false, true]) {
+  test(`learning recovers from a future clock after correction (restart=${restart})`, () => {
+    const { belongings, day } = fixture();
+    belongings.rewardTrick("spin", point);
+    belongings.rememberMeal(point);
+    belongings.collect("bent_spoon", point);
+    day(30);
+    belongings.creditActiveTime(100, () => 0);
+    belongings.rewardTrick("dead", point);
+    belongings.collect("sock", point);
+    const saved = JSON.parse(JSON.stringify(belongings.exportMemory()));
+    day(1);
+
+    if (restart) {
+      belongings.restore(saved);
+    }
+
+    belongings.creditActiveTime(300_000, () => 0);
+    belongings.rewardTrick("spin", point);
+    belongings.rewardTrick("dead", point);
+    belongings.rememberMeal(point);
+    belongings.collect("bottle_cap", point);
+    const recovered = belongings.exportMemory().longTerm;
+    assert.equal(recovered.active.days, 1);
+    assert.equal(recovered.tricks.spin.days, 2);
+    assert.equal(recovered.tricks.dead.days, 1, "correction cannot repeat a credited reward");
+    assert.equal(recovered.snack.candidate.days, 2);
+    assert.equal(recovered.keepsakes.bent_spoon.acquiredAtMs, startMs);
+    assert.equal(recovered.keepsakes.sock.acquiredAtMs, startMs + DAY_MS);
+    assert.equal(recovered.keepsakes.bottle_cap.acquiredAtMs, startMs + DAY_MS);
+
+    belongings.restore(JSON.parse(JSON.stringify(belongings.exportMemory())));
+    day(2);
+    belongings.creditActiveTime(300_000, () => 0);
+    belongings.rewardTrick("spin", point);
+    belongings.rewardTrick("dead", point);
+    belongings.rememberMeal(point);
+    const next = belongings.exportMemory().longTerm;
+    assert.equal(next.active.days, 2);
+    assert.equal(next.tricks.spin.days, 3);
+    assert.equal(next.tricks.dead.days, 2);
+    assert.equal(next.snack.established.days, 3);
+  });
+}
+
+test("clock recovery persists without rerolling credit or completing a stale recall", () => {
+  const { belongings, day } = fixture();
+
+  for (let current = 0; current < 3; current++) {
+    day(current);
+    belongings.rewardTrick("spin", point);
+  }
+
+  day(30);
+  belongings.creditActiveTime(300_000, () => 0);
+  const reservation = belongings.reserveRecall(() => 0);
+  assert.ok(reservation);
+  const before = belongings.snapshot();
+  day(4);
+  const forbidReroll = () => assert.fail("a corrected clock cannot reroll an active day");
+  belongings.creditActiveTime(300_000, forbidReroll);
+  assert.ok(belongings.snapshot().revision > before.revision);
+  assert.equal(belongings.exportMemory().longTerm.active.days, 1);
+  assert.equal(belongings.completeRecall(reservation, point), false);
+  assert.equal(belongings.reserveRecall(() => 0), null);
+
+  belongings.restore(JSON.parse(JSON.stringify(belongings.exportMemory())));
+  belongings.creditActiveTime(300_000, forbidReroll);
+  assert.equal(belongings.reserveRecall(() => 0), null);
+  day(5);
+  belongings.creditActiveTime(300_000, () => 0);
+  const next = belongings.reserveRecall(() => 0);
+  assert.ok(next, "the next real day can recall without waiting for the erroneous date");
+  assert.equal(belongings.completeRecall(next, point), true);
+});
+
+test("future trick and snack memories retain their age gates after clock correction", () => {
+  const { belongings, day } = fixture();
+
+  for (let current = 30; current < 33; current++) {
+    day(current);
+    belongings.rewardTrick("spin", point);
+    belongings.rememberMeal(point);
+  }
+
+  for (let current = 33; current < 36; current++) {
+    day(current);
+    belongings.rememberMeal({ x: 900, y: 300 });
+  }
+
+  day(4);
+  const saved = JSON.parse(JSON.stringify(belongings.exportMemory()));
+  belongings.restore(saved);
+  const memory = belongings.exportMemory();
+  const atMs = startMs + 6 * DAY_MS;
+  assert.deepEqual(eligibleRecalls(memory.longTerm, atMs - 1, {}, 1200, 800), []);
+  const recalls = eligibleRecalls(memory.longTerm, atMs, {}, 1200, 800);
+  assert.deepEqual(recalls.map((recall) => recall.kind), ["snack", "trick"]);
+  day(6);
+  belongings.creditActiveTime(300_000, () => 0);
+  const reservation = belongings.reserveRecall(() => 0, ["snack"]);
+  assert.ok(belongings.completeRecall(reservation, point));
+  day(5);
+  const corrected = belongings.exportMemory();
+  const later = eligibleRecalls(corrected.longTerm, atMs + 30 * DAY_MS, {}, 1200, 800);
+  assert.equal(later.some((recall) => recall.kind === "snack"), false);
+});
+
+test("a recall interrupted by a clock jump cannot finish after the clock recovers", () => {
+  const { belongings, day } = fixture();
+
+  for (let current = 0; current < 3; current++) {
+    day(current);
+    belongings.rewardTrick("spin", point);
+  }
+
+  day(4);
+  belongings.creditActiveTime(300_000, () => 0);
+  const reservation = belongings.reserveRecall(() => 0);
+  assert.ok(reservation);
+  day(30);
+  belongings.creditActiveTime(100, () => 0);
+  day(5);
+  assert.equal(belongings.completeRecall(reservation, point), false);
+});
+
+for (const [kind, cooldownDays] of [["trick", 7], ["treasure", 14]]) {
+  test(`clock correction preserves the ${kind} recall cooldown across restart`, () => {
+    const { belongings, day } = fixture();
+    day(30);
+    belongings.collect("bent_spoon", point);
+
+    for (let current = 31; current < 34; current++) {
+      day(current);
+      belongings.creditActiveTime(300_000, () => 0);
+      belongings.rewardTrick("spin", point);
+    }
+
+    day(38);
+    belongings.creditActiveTime(300_000, () => 0);
+    const reservation = belongings.reserveRecall(() => 0, [kind]);
+    assert.ok(belongings.completeRecall(reservation, point));
+    const saved = JSON.parse(JSON.stringify(belongings.exportMemory()));
+    day(4);
+    belongings.restore(saved);
+    const memory = belongings.exportMemory();
+    const atMs = startMs + (4 + cooldownDays) * DAY_MS;
+    const before = eligibleRecalls(memory.longTerm, atMs - 1, memory.collection, 1200, 800);
+    const after = eligibleRecalls(memory.longTerm, atMs, memory.collection, 1200, 800);
+    assert.equal(before.some((recall) => recall.kind === kind), false);
+    assert.equal(after.some((recall) => recall.kind === kind), true);
+  });
+}
 
 test("normalization rejects malformed evidence, dates, coordinates and recall details", () => {
   const saved = normalizeMemory(null);

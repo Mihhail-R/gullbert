@@ -131,7 +131,7 @@ export function harness(options = {}) {
   };
   const browser = {
     size() {
-      return { width: 800, height: 600 };
+      return options.size?.() ?? { width: 800, height: 600 };
     },
     listen(name, callback) {
       const group = listeners.get(name) ?? new Set();

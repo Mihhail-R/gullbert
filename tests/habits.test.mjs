@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { Habits } from "../web-dist/simulation/habits.js";
-import { normalizeMemory } from "../web-dist/simulation/memory.js";
+import { Belongings } from "../web-dist/simulation/belongings.js";
+import { MEMORY_LIMIT, normalizeMemory } from "../web-dist/simulation/memory.js";
 import { Gullbert } from "../web-dist/simulation/engine.js";
 import { advance, reach } from "./simulation-helpers.mjs";
 
@@ -86,9 +87,107 @@ test("only completed cap games establish invitations; failed games lower their a
   assert.ok(selectionCounts(ignored).play_cap < selectionCounts(completed).play_cap);
 });
 
+test("cap play stays familiar after unrelated history rolls off and memory is restored", () => {
+  const belongings = new Belongings(900, 650, () => 1000);
+  const point = { x: 100, y: 100 };
+  belongings.remember("play", "cap", point);
+  const familiar = selectionCounts(belongings.exportMemory());
+  assert.ok(familiar.play_cap > 0);
+
+  for (let event = 0; event < MEMORY_LIMIT; event++) {
+    belongings.remember("activity", "hangout", point);
+  }
+
+  const saved = belongings.exportMemory();
+  assert.equal(saved.episodes.some((event) => event.detail === "cap"), false);
+  assert.deepEqual(selectionCounts(saved), familiar);
+
+  const restored = new Belongings(900, 650, () => 2000);
+  restored.restore(JSON.parse(JSON.stringify(saved)));
+  assert.deepEqual(selectionCounts(restored.exportMemory()), familiar);
+});
+
+test("ignored cap games stay less appealing after history eviction", () => {
+  const belongings = new Belongings(900, 650, () => 1000);
+  const point = { x: 100, y: 100 };
+  belongings.remember("play", "cap", point);
+  const familiar = selectionCounts(belongings.exportMemory()).play_cap;
+
+  for (let game = 0; game < 20; game++) {
+    belongings.remember("activity", "cap", point);
+  }
+
+  const ignored = selectionCounts(belongings.exportMemory()).play_cap;
+  assert.ok(ignored > 0, "ignored games cannot erase the completed game");
+  assert.ok(ignored < familiar, "ignored invitations still reduce interest");
+
+  for (let event = 0; event < MEMORY_LIMIT; event++) {
+    belongings.remember("activity", "hangout", point);
+  }
+
+  const restored = new Belongings(900, 650, () => 2000);
+  restored.restore(JSON.parse(JSON.stringify(belongings.exportMemory())));
+  assert.equal(selectionCounts(restored.exportMemory()).play_cap, ignored);
+
+  restored.remember("play", "cap", point);
+  assert.ok(selectionCounts(restored.exportMemory()).play_cap > ignored);
+});
+
+test("existing saves migrate cap experience once and forgetting survives restarting", () => {
+  const belongings = new Belongings(900, 650, () => 1000);
+  belongings.restore({
+    version: 3,
+    episodes: [episode(1, "play", "cap"), episode(2, "activity", "cap")],
+  });
+  const migrated = selectionCounts(belongings.exportMemory());
+  assert.ok(migrated.play_cap > 0);
+
+  belongings.restore(JSON.parse(JSON.stringify(belongings.exportMemory())));
+  assert.deepEqual(selectionCounts(belongings.exportMemory()), migrated);
+
+  belongings.forgetLearning();
+  belongings.restore(JSON.parse(JSON.stringify(belongings.exportMemory())));
+  assert.equal(selectionCounts(belongings.exportMemory()).play_cap, 0);
+
+  belongings.remember("play", "cap", { x: 100, y: 100 });
+  assert.ok(selectionCounts(belongings.exportMemory()).play_cap > 0);
+});
+
+test("malformed cap summaries fall back to real history without inventing familiarity", () => {
+  const valid = { completed: 1, lastCompletedId: 1, outcomes: [true] };
+  const invalid = [
+    null,
+    [],
+    { ...valid, completed: "1" },
+    { ...valid, completed: Infinity },
+    { ...valid, completed: -1 },
+    { ...valid, completed: 0.5 },
+    { ...valid, lastCompletedId: 0 },
+    { ...valid, lastCompletedId: "1" },
+    { ...valid, lastCompletedId: Infinity },
+    { ...valid, completed: 0 },
+    { ...valid, outcomes: "true" },
+    { ...valid, outcomes: ["true"] },
+    { ...valid, outcomes: [true, true] },
+  ];
+
+  for (const capPlay of invalid) {
+    const memory = normalizeMemory({ learned: { capPlay } });
+    assert.equal(selectionCounts(memory).play_cap, 0);
+  }
+
+  const recovered = normalizeMemory({
+    learned: { capPlay: { completed: "1" } },
+    episodes: [episode(1, "play", "cap")],
+  });
+  assert.ok(selectionCounts(recovered).play_cap > 0);
+});
+
 test("unanswered invitations back off and a new completed game restores willingness", () => {
   const habits = new Habits();
-  const memory = normalizeMemory({ episodes: [episode(1, "play", "cap")] });
+  const belongings = new Belongings(900, 650, () => 1000);
+  belongings.remember("play", "cap", { x: 100, y: 100 });
+  const memory = belongings.exportMemory();
   const random = () => 0;
   assert.equal(habits.choose(memory, 89, 1, random), null);
   assert.equal(habits.choose(memory, 90, 1, random), "play_cap");
@@ -98,8 +197,8 @@ test("unanswered invitations back off and a new completed game restores willingn
   assert.equal(habits.choose(memory, 640, 1, random), "play_cap");
   assert.equal(habits.choose(memory, 1000, 1, random), null);
 
-  memory.episodes.push(episode(2, "play", "cap"));
-  assert.equal(habits.choose(memory, 1010, 1, random), "play_cap");
+  belongings.remember("play", "cap", { x: 100, y: 100 });
+  assert.equal(habits.choose(belongings.exportMemory(), 1010, 1, random), "play_cap");
 });
 
 test("unpaid tricks allow invitations, while quiet mode suppresses them", () => {
@@ -131,6 +230,45 @@ test("meals delay choices and reduce snack checks before appetite recovers", () 
   const hungry = new Habits();
   assert.equal(hungry.choose(memory, 150, 0, () => 0.7), "habit_snack");
   assert.equal(habits.choose(memory, 333, 0, () => 0.7), "habit_snack");
+});
+
+test("a meal answers snack invitations even after its event leaves history", () => {
+  const belongings = new Belongings(900, 650, () => 1000);
+  const point = { x: 100, y: 100 };
+  belongings.rememberMeal(point);
+  const habits = new Habits();
+
+  for (const now of [90, 280, 640]) {
+    assert.equal(habits.choose(belongings.exportMemory(), now, 0, () => 0), "habit_snack");
+  }
+
+  belongings.rememberMeal(point);
+  habits.ate(700);
+
+  for (let event = 0; event < MEMORY_LIMIT; event++) {
+    belongings.remember("activity", "hangout", point);
+  }
+
+  const saved = JSON.parse(JSON.stringify(belongings.exportMemory()));
+  assert.equal(saved.episodes.some((event) => event.kind === "meal"), false);
+  belongings.restore(saved);
+  assert.equal(habits.choose(belongings.exportMemory(), 830, 0, () => 0), "habit_snack");
+});
+
+test("meal responses migrate from valid history and stay forgotten after restore", () => {
+  const episodes = [episode(1, "meal", "chip"), episode(2, "play", "cap")];
+
+  for (const lastMealId of [undefined, null, "1", -1, 0.5, Infinity]) {
+    const memory = normalizeMemory({ learned: { lastMealId }, episodes });
+    assert.equal(memory.learned.lastMealId, 1);
+  }
+
+  const belongings = new Belongings(900, 650, () => 1000);
+  belongings.restore({ version: 3, episodes });
+  assert.equal(belongings.exportMemory().learned.lastMealId, 1);
+  belongings.forgetLearning();
+  belongings.restore(JSON.parse(JSON.stringify(belongings.exportMemory())));
+  assert.equal(belongings.exportMemory().learned.lastMealId, 0);
 });
 
 test("a bag meal postpones autonomous snack checks for ninety visible seconds", () => {
