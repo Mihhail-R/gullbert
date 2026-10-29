@@ -32,6 +32,7 @@ export interface CleanupHost {
   rest(delay?: number): void;
   action(name: string): void;
   splat(point: Point): void;
+  offended(): void;
 }
 
 // Selection extends beyond painted bounds; highlights use the unpadded shape.
@@ -379,6 +380,7 @@ export class Cleanup {
     this.#recentRemovals = this.#recentRemovals.filter((at) => sim.time - at <= 120);
     this.#recentRemovals.push(sim.time);
     this.#recentRemovals = this.#recentRemovals.slice(-6);
+    this.#host.offended();
   }
 
   #scheduleRetaliation(

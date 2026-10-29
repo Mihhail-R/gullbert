@@ -29,41 +29,42 @@ export class Pettiness {
     return this.#pending !== null && now < this.#pending.at;
   }
 
+  /** Returns whether this completion counted as an ignored invitation. */
   completed(
     identity: object | null,
     scene: ReadonlyValue<Scene> | null,
     now: number,
     settings: Readonly<Settings>,
     random: () => number,
-  ): void {
+  ): boolean {
     if (!identity || identity !== this.#invitation || !scene) {
-      return;
+      return false;
     }
 
     this.#invitation = null;
 
     if (settings.paused || settings.mischief === 0) {
-      return;
+      return false;
     }
 
     switch (scene.kind) {
       case "cap":
         if (scene.rounds > 0) {
           this.settle();
-          return;
+          return false;
         }
 
         break;
 
       case "trick":
         if (scene.phase !== "reward") {
-          return;
+          return false;
         }
 
         break;
 
       default:
-        return;
+        return false;
     }
 
     this.#ignoredAt = this.#ignoredAt.filter((at) => now - at <= 600);
@@ -71,7 +72,7 @@ export class Pettiness {
     this.#ignoredAt = this.#ignoredAt.slice(-2);
 
     if (this.#ignoredAt.length < 2 || now < this.#nextProtestAt) {
-      return;
+      return true;
     }
 
     // Consume this pair even when he decides to let it go.
@@ -80,7 +81,7 @@ export class Pettiness {
     const chance = settings.mischief >= 2 ? 0.6 : 0.35;
 
     if (random() >= chance) {
-      return;
+      return true;
     }
 
     this.#pending = {
@@ -88,6 +89,7 @@ export class Pettiness {
       at: now + 4,
       expiresAt: now + 20,
     };
+    return true;
   }
 
   take(now: number, settings: Readonly<Settings>): Protest | null {

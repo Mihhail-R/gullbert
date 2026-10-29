@@ -9,6 +9,18 @@
       "ignoredMess": "perhaps this will receive a response.",
       "cleanupExit": "apparently my work is not appreciated."
     },
+    "grudge": {
+      "annoyed": [
+        "i have not forgotten.",
+        "this is about earlier.",
+        "consider this a reminder."
+      ],
+      "furious": [
+        "i am keeping a list.",
+        "you know what you did.",
+        "this one is personal."
+      ]
+    },
     "work": {
       "arrival": "i'll supervise.",
       "chips": "excellent work. my fee is chips.",

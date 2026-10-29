@@ -57,6 +57,8 @@ export interface PickupContext {
   };
   pickLoose(point: Readonly<Point>): boolean;
   offend(): void;
+  /** Current grudge level, read after this handling has been counted. */
+  grudge(): number;
   beginDragging(): void;
   carry(): void;
   rest(delay?: number): void;
@@ -96,10 +98,12 @@ const PUBLIC_ENEMY_REPLIES: Record<RelocationScene["revenge"], string> = {
 
 function choosePublicEnemyRevenge(
   pickupCount: number,
+  grudge: number,
   random: () => number,
 ): RelocationScene["revenge"] {
-  // Repeated handling favors mess, but cursor encounters always remain the majority.
-  const annoyance = Math.min(pickupCount - 1, 3);
+  // Repeated handling or an older grudge favors mess, but cursor encounters remain the majority.
+  // The grudge already counts recent handling, so take the larger rather than adding.
+  const annoyance = Math.min(Math.max(pickupCount - 1, grudge), 3);
   const choices: [RelocationScene["revenge"], number][] = [
     ["chase", 6],
     ["trail", 2 + annoyance],
@@ -371,7 +375,11 @@ export class Pickup implements SceneOwner {
       }
 
       case 2: {
-        scene.revenge = choosePublicEnemyRevenge(count, context.random);
+        scene.revenge = choosePublicEnemyRevenge(
+          count,
+          context.grudge(),
+          context.random,
+        );
         break;
       }
     }
