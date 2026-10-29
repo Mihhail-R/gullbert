@@ -340,7 +340,7 @@ export class PetApplication {
         "Could not restore Gullbert’s belongings. Restart to try again; saved " +
         "belongings have not been replaced.";
 
-      this.#deliverRoommate({ error: this.#storageError });
+      this.#deliverRoommate({ error: this.#storageError, unreadable: true });
     }
 
     if (!this.#current(generation)) {
@@ -606,7 +606,7 @@ export class PetApplication {
         return;
       }
 
-      this.#deliverRoommate({ error: this.#storageError });
+      this.#deliverRoommate({ error: this.#storageError, unreadable: true });
       return;
     }
 

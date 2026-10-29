@@ -1,6 +1,7 @@
 import { dialogue } from "./dialogue.js";
 import {
   MEMORY_LIMIT,
+  TRICK_COOLDOWN_MS,
   memoryCount,
   normalizeMemory,
   clampMemoryPoint,
@@ -29,7 +30,6 @@ import {
   type RelativePosition,
 } from "./long-term-memory.js";
 
-export const TRICK_COOLDOWN_MS = 2 * 60 * 1000;
 export const GREETING_COOLDOWN_MS = 5 * 60 * 1000;
 const firstLines = dialogue.gullbert.greetings.first;
 const returnLines = dialogue.gullbert.greetings.return;

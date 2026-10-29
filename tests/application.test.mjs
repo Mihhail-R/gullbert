@@ -274,15 +274,18 @@ test("native roommate requests keep reporting a failed restore without memory", 
     {
       error: "Could not restore Gullbert’s belongings. Restart to try again; saved " +
         "belongings have not been replaced.",
+      unreadable: true,
     },
     {
       error: "Could not restore Gullbert’s belongings. Restart to try again; saved " +
         "belongings have not been replaced.",
+      unreadable: true,
     },
   ]);
   assert.deepEqual(statuses[0], {
     error: "Could not restore Gullbert’s belongings. Restart to try again; saved " +
       "belongings have not been replaced.",
+    unreadable: true,
   });
   assert.deepEqual(h.saved, []);
   assert.deepEqual(h.restored, []);
@@ -307,6 +310,7 @@ test("preview publishes only the restore error after failed initialization", asy
     type: "roommate",
     error: "Could not restore Gullbert’s belongings. Restart to try again; saved " +
       "belongings have not been replaced.",
+    unreadable: true,
   })));
   assert.deepEqual(h.saved, []);
   assert.deepEqual(h.restored, []);

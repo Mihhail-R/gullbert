@@ -16,13 +16,19 @@ env:
   # Upgrade deliberately so main and release tags use compatible Rust caches.
   RUST_TOOLCHAIN: "1.99.1"
   RELEASE_TAG: ${{ inputs.release_tag || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.ref_name) || '' }}
+# Two runs for one tag would race to replace the same draft release assets.
+concurrency:
+  group: build-${{ inputs.release_tag || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   test:
+    # Manual runs receive release secrets, so only main's workflow may start them.
+    if: github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     outputs:
       source_sha: ${{ steps.source.outputs.sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       # Keep the selected workflow's release tooling and tests when retrying an older tag.
       - name: Preserve release tooling
         if: env.RELEASE_TAG != ''
@@ -31,12 +37,12 @@ jobs:
           cp tests/release.test.mjs "$RUNNER_TEMP/gullbert-release.test.mjs"
       - name: Check out the existing release tag
         if: github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: refs/tags/${{ inputs.release_tag }}
       - id: source
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm
@@ -64,7 +70,7 @@ jobs:
         run: npm run test:browser
       - name: Save browser failure diagnostics
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: browser-test-results
           if-no-files-found: ignore
@@ -72,7 +78,7 @@ jobs:
           path: test-results/
       - name: Share validated release metadata
         if: env.RELEASE_TAG != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: release-metadata
           if-no-files-found: error
@@ -89,6 +95,9 @@ jobs:
     # tags, and manual runs also build packages and keep release caches warm.
     name: ${{ matrix.platform }} (${{ matrix.task }})
     needs: test
+    # Only release packaging uses the signing key. Restrict the release environment to main and
+    # v* tags, and store the key there, so other branches and pull requests cannot read it.
+    environment: ${{ matrix.task == 'package' && (inputs.release_tag != '' || startsWith(github.ref, 'refs/tags/v')) && 'release' || '' }}
     strategy:
       fail-fast: false
       matrix:
@@ -107,22 +116,22 @@ jobs:
             bundle: nsis
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ needs.test.outputs.source_sha }}
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         if: env.RELEASE_TAG != ''
         with:
           name: release-metadata
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm
-      - uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
           targets: ${{ matrix.target }}
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           workspaces: src-tauri -> target
           # Separate test and release profiles so parallel jobs never compete
@@ -141,7 +150,7 @@ jobs:
         if: matrix.task == 'package' && env.RELEASE_TAG != ''
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npm run build -- --target ${{ matrix.target }} --bundles ${{ matrix.bundle }}
       - name: Build frontend for native tests
         if: matrix.task == 'test'
@@ -155,7 +164,7 @@ jobs:
       - name: Collect installers and update signatures
         if: matrix.task == 'package' && env.RELEASE_TAG != ''
         run: node scripts/release.mjs collect ${{ matrix.target }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: matrix.task == 'package' && env.RELEASE_TAG != ''
         with:
           name: Gullbert-${{ matrix.platform }}
@@ -166,27 +175,28 @@ jobs:
     if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
     # Every platform must finish both packaging and native tests successfully.
     needs: [test, desktop]
+    environment: release
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ needs.test.outputs.source_sha }}
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: release-metadata
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: Gullbert-*
           path: artifacts
           merge-multiple: true
       - name: Assemble update manifest for all platforms
         run: node scripts/release.mjs merge artifacts
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           draft: true

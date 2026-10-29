@@ -76,7 +76,8 @@ fn main() {
             roommate::load_roommate,
             roommate::save_roommate,
             roommate::request_roommate,
-            roommate::publish_roommate
+            roommate::publish_roommate,
+            roommate::start_fresh
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

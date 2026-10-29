@@ -90,6 +90,8 @@ Describe how you tested the change. For desktop changes, name the OS and test th
 
 Supported targets are **Apple Silicon macOS and Windows x64**. Paid platform signing and Apple notarization are deferred; keep the README's installation caveats accurate. Cryptographic updater signatures are still required. Back up `TAURI_SIGNING_PRIVATE_KEY` securely.
 
+The signing key belongs in a GitHub environment named `release`. Limit that environment's deployment branches and tags to `main` and `v*`. Generate the key with a password and store it as `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` in the same environment. Workflow actions are pinned by commit; when upgrading one, update the SHA together with its version comment.
+
 Push a version tag such as `v1.0.0` or `v1.0.0-rc.1` after merging the intended changes. The [build workflow](.github/workflows/build.yml) sets embedded versions from the tag, tests both platforms, and creates a draft release. No version-bump commit is needed.
 
 Before publishing, test the downloaded installers and an in-app upgrade with saved settings and memories on both platforms. Check sleep/wake, available display setups, and offline/interrupted updates. Record tested OS versions, write release notes and known limitations, then publish the draft.
