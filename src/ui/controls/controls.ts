@@ -29,6 +29,8 @@ let settings: Settings = {
 };
 let visible = true;
 let saving = false;
+// Saving builds settings from the form, so never save before it shows the real ones.
+let baselineReady = !native;
 const preferencesKey = "gullbert.preferences.v1";
 const $ = requiredElement;
 const frame = $<HTMLIFrameElement>("iframe");
@@ -42,11 +44,19 @@ function error(message: string) {
   $("#error").textContent = message;
   $("#error").hidden = !message;
 }
+function setEditable(editable: boolean) {
+  $<HTMLButtonElement>("#pause-toggle").disabled = !editable;
+
+  for (const el of settingInputs) {
+    el.disabled = !editable;
+  }
+}
 function render() {
   $<HTMLInputElement>("#paused").checked = settings.paused;
   $<HTMLInputElement>("#sound").checked = settings.sound;
   $<HTMLSelectElement>("#mischief").value = String(settings.mischief);
   $<HTMLSelectElement>("#hat").value = normalizeHat(settings.hat);
+  setEditable(baselineReady && !saving);
 
   if (!visible) {
     $("#status").textContent = "Away for a little while.";
@@ -149,22 +159,18 @@ for (const button of document.querySelectorAll<HTMLElement>("[data-action]")) {
 }
 
 async function save() {
-  if (saving) {
+  if (saving || !baselineReady) {
     return;
   }
 
   saving = true;
-  $<HTMLButtonElement>("#pause-toggle").disabled = true;
   const next = {
     paused: $<HTMLInputElement>("#paused").checked,
     sound: $<HTMLInputElement>("#sound").checked,
     mischief: Number($<HTMLSelectElement>("#mischief").value),
     hat: normalizeHat($<HTMLSelectElement>("#hat").value),
   };
-
-  for (const el of settingInputs) {
-    el.disabled = true;
-  }
+  setEditable(false);
 
   try {
     if (native) {
@@ -180,12 +186,6 @@ async function save() {
     error(`Could not save preferences: ${e}`);
   } finally {
     saving = false;
-    $<HTMLButtonElement>("#pause-toggle").disabled = false;
-
-    for (const el of settingInputs) {
-      el.disabled = false;
-    }
-
     render();
   }
 }
@@ -193,6 +193,8 @@ async function save() {
 for (const el of settingInputs) {
   el.addEventListener("change", save);
 }
+
+setEditable(baselineReady);
 
 $("#pause-toggle")
   .addEventListener("click", () => {
@@ -213,6 +215,20 @@ async function cancelPlacement() {
 }
 $("#cancel-placement")
   .addEventListener("click", cancelPlacement);
+
+$("#start-fresh")
+  .addEventListener("click", async () => {
+    const button = $<HTMLButtonElement>("#start-fresh");
+    button.disabled = true;
+
+    try {
+      // Restarts Gullbert on success, so only failures return here.
+      await invoke("start_fresh");
+    } catch (e) {
+      error(`Could not start fresh: ${e}`);
+      button.disabled = false;
+    }
+  });
 
 function roommate(data: RoommateStatus) {
   if (data.mood) {
@@ -321,6 +337,7 @@ function roommate(data: RoommateStatus) {
   const storageError = $("#storage-error");
   storageError.textContent = data.error ?? "";
   storageError.hidden = !data.error;
+  $("#storage-recovery").hidden = !(native && data.unreadable);
 }
 
 function renderMemories(episodes: readonly MemoryEpisode[]) {
@@ -421,12 +438,22 @@ function renderCollection(collection: Memory["collection"], favourite: Collectib
     .replaceChildren(...shelfItems);
 }
 
+/** Report a failed startup step and keep going, so later steps and the controls still load. */
+async function attempt(step: () => Promise<unknown>) {
+  try {
+    await step();
+  } catch (e) {
+    error(String(e));
+  }
+}
+
 if (native) {
+  const events = native.event;
   let target: { id: number; purpose: string } | null = null;
-  await native.event.listen("gullbert-shutdown-error", ({ payload }) => {
+  await attempt(() => events.listen("gullbert-shutdown-error", ({ payload }) => {
     error(payload);
-  });
-  await native.event.listen("gullbert-target", ({ payload }: { payload: TargetNotice }) => {
+  }));
+  await attempt(() => events.listen("gullbert-target", ({ payload }: { payload: TargetNotice }) => {
     if (payload.outcome === "started") {
       target = { id: payload.id, purpose: payload.purpose };
       $("#placement-notice").hidden = false;
@@ -447,23 +474,23 @@ if (native) {
 
     target = null;
     $("#placement-notice").hidden = true;
-  });
-  await native.event.listen("gullbert-roommate", (e) => {
+  }));
+  await attempt(() => events.listen("gullbert-roommate", (e) => {
     return roommate(e.payload);
-  });
-  await invoke("request_roommate");
+  }));
   let receivedSettings = false;
   let receivedVisibility = false;
-  await native.event.listen("gullbert-settings", (event) => {
+  await attempt(() => events.listen("gullbert-settings", (event) => {
     receivedSettings = true;
+    baselineReady = true;
     settings = event.payload;
     render();
-  });
-  await native.event.listen("gullbert-visible", (event) => {
+  }));
+  await attempt(() => events.listen("gullbert-visible", (event) => {
     receivedVisibility = true;
     visible = event.payload;
     render();
-  });
+  }));
 
   try {
     const snapshot = await invoke("snapshot");
@@ -472,6 +499,8 @@ if (native) {
     if (!receivedSettings) {
       settings = snapshot.settings;
     }
+
+    baselineReady = true;
 
     if (!receivedVisibility) {
       visible = snapshot.visible;
@@ -485,6 +514,8 @@ if (native) {
   } catch (e) {
     error(String(e));
   }
+
+  await attempt(() => invoke("request_roommate"));
 } else {
   document.documentElement.classList.add("preview");
   document.body.classList.add("preview");

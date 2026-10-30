@@ -11,6 +11,7 @@ import {
   completeRecall,
   recallPoint,
 } from "../web-dist/simulation/long-term-memory.js";
+import { normalizeMemory } from "../web-dist/simulation/memory.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const startMs = new Date(2026, 0, 5, 12)
@@ -207,4 +208,15 @@ test("selection prefers a never-recalled memory and breaks equal-age ties random
   creditActiveTime(memory, activeMs, nowMs, () => 0);
   const next = reserveRecall(memory, eligible(memory, nowMs), nowMs, () => 0.99);
   assert.equal(next.memory.trick, "spin");
+});
+
+test("a trick cooldown saved under a future clock lasts no longer than usual", () => {
+  const memory = normalizeMemory(
+    { trickCooldownUntilMs: startMs + 365 * DAY_MS },
+    1200,
+    800,
+    startMs,
+  );
+
+  assert.ok(memory.trickCooldownUntilMs <= startMs + 2 * 60 * 1000);
 });

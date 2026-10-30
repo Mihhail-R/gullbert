@@ -21,6 +21,8 @@ export interface RoommateStatus {
   memory?: Memory;
   mood?: MoodName | null;
   error?: string;
+  /** Saved memories could not be read; the control room may offer to set them aside. */
+  unreadable?: boolean;
 }
 interface Snapshot {
   settings: Settings;
@@ -41,6 +43,7 @@ interface Commands {
   save_roommate: [{ memory: Memory }, void];
   publish_roommate: [{ status: RoommateStatus }, void];
   request_roommate: [undefined, void];
+  start_fresh: [undefined, void];
   sync_interaction: [
     {
       rects: (Point & { width: number; height: number })[];

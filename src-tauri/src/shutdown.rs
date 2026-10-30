@@ -6,11 +6,13 @@ use std::{
         mpsc::{self, Receiver, Sender},
         Mutex,
     },
-    time::Duration,
+    time::{Duration, Instant},
 };
 use tauri::{Emitter, Manager};
 
 const SAVE_TIMEOUT: Duration = Duration::from_secs(15);
+// A second Quit soon after a failed save is an explicit choice to lose unsaved memories.
+const FORCE_QUIT_WINDOW: Duration = Duration::from_secs(60);
 
 #[derive(Default)]
 struct Requests {
@@ -60,9 +62,25 @@ impl Requests {
 }
 
 #[derive(Default)]
+struct FailedQuit(Option<Instant>);
+
+impl FailedQuit {
+    fn record(&mut self, now: Instant) {
+        self.0 = Some(now);
+    }
+
+    fn take_if_recent(&mut self, now: Instant) -> bool {
+        self.0
+            .take()
+            .is_some_and(|at| now.duration_since(at) <= FORCE_QUIT_WINDOW)
+    }
+}
+
+#[derive(Default)]
 pub(crate) struct Runtime {
     requests: Mutex<Requests>,
     exiting: AtomicBool,
+    failed_quit: Mutex<FailedQuit>,
 }
 
 /// Dropping an unsuccessful operation releases the gate and unfreezes the pet.
@@ -175,15 +193,42 @@ pub(crate) fn in_progress(app: &tauri::AppHandle) -> bool {
 pub(crate) fn request_quit(app: &tauri::AppHandle) {
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
+        let runtime = app.state::<Runtime>();
+
+        // Never cut short a save or update installation that is still running.
+        if !in_progress(&app)
+            && runtime
+                .failed_quit
+                .lock()
+                .unwrap()
+                .take_if_recent(Instant::now())
+        {
+            force_quit(&app).await;
+            return;
+        }
+
         match prepare(&app).await {
             Ok(prepared) => {
                 prepared.allow_exit();
                 app.exit(0);
             }
 
-            Err(error) => show_error(&app, &error),
+            Err(error) => {
+                runtime.failed_quit.lock().unwrap().record(Instant::now());
+                show_quit_error(&app, &error);
+            }
         }
     });
+}
+
+async fn force_quit(app: &tauri::AppHandle) {
+    // Best effort: never let input cleanup keep a stuck app from closing.
+    let _ = native_input::request(app.clone(), |app| {
+        native_input::desktop::prepare_shutdown(app);
+    })
+    .await;
+    app.state::<Runtime>().exiting.store(true, Ordering::SeqCst);
+    app.exit(0);
 }
 
 pub(crate) fn on_exit(app: &tauri::AppHandle, event: &tauri::RunEvent) {
@@ -199,6 +244,16 @@ pub(crate) fn show_error(app: &tauri::AppHandle, error: &str) {
     windows::controls(app);
     let message =
         format!("{error} Gullbert is still running. Retry Quit or Install after saving works.");
+    let _ = app.emit("gullbert-shutdown-error", &message);
+    eprintln!("{message}");
+}
+
+fn show_quit_error(app: &tauri::AppHandle, error: &str) {
+    windows::controls(app);
+    let message = format!(
+        "{error} Gullbert is still running. Choose Quit again within a minute to quit \
+        without saving his latest memories."
+    );
     let _ = app.emit("gullbert-shutdown-error", &message);
     eprintln!("{message}");
 }
@@ -245,5 +300,19 @@ mod tests {
         assert!(reply.try_recv().is_err());
         requests.acknowledge(id, Ok(())).unwrap();
         assert_eq!(wait_for_save(reply, Duration::ZERO), Ok(()));
+    }
+
+    #[test]
+    fn only_a_quit_soon_after_a_failed_save_skips_saving_and_only_once() {
+        let start = Instant::now();
+        let mut failed = FailedQuit::default();
+        assert!(!failed.take_if_recent(start));
+
+        failed.record(start);
+        assert!(failed.take_if_recent(start + FORCE_QUIT_WINDOW));
+        assert!(!failed.take_if_recent(start + FORCE_QUIT_WINDOW));
+
+        failed.record(start);
+        assert!(!failed.take_if_recent(start + FORCE_QUIT_WINDOW + Duration::from_secs(1)));
     }
 }

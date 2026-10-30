@@ -375,6 +375,36 @@ pub(crate) fn save(dir: &Path, memory: &Value) -> Result<(), String> {
     write(&open(dir)?, memory)
 }
 
+/// Moves unreadable memories out of the way without deleting them, so the next
+/// launch starts fresh while the originals stay available for recovery.
+pub(crate) fn set_aside(dir: &Path, stamp: u64) -> Result<(), String> {
+    let names = [
+        "memory.sqlite3",
+        "memory.sqlite3-wal",
+        "memory.sqlite3-shm",
+        "memory.sqlite3-journal",
+        "roommate.json",
+    ];
+
+    for name in names {
+        let from = dir.join(name);
+
+        if !from.exists() {
+            continue;
+        }
+
+        let to = dir.join(format!("{name}.unreadable-{stamp}"));
+
+        if to.exists() {
+            return Err(format!("{} already exists", to.display()));
+        }
+
+        std::fs::rename(&from, &to).map_err(|error| format!("Could not move {name}: {error}"))?;
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -762,5 +792,31 @@ mod tests {
         assert_eq!(schema_version(&db), 1);
         assert_eq!(read_snapshot(&db).unwrap(), snapshot_before);
         require_tables(&db, &["episodes", "snapshot"]).unwrap();
+    }
+
+    #[test]
+    fn setting_aside_unreadable_memories_keeps_them_and_starts_fresh() {
+        let dir = Directory::new();
+        save(&dir.0, &memory()).unwrap();
+        open(&dir.0)
+            .unwrap()
+            .execute_batch("PRAGMA user_version = 999")
+            .unwrap();
+        std::fs::write(dir.0.join("roommate.json"), "broken").unwrap();
+        let original = std::fs::read(dir.0.join("memory.sqlite3")).unwrap();
+        assert!(load(&dir.0).is_err());
+
+        set_aside(&dir.0, 7).unwrap();
+
+        assert_eq!(
+            std::fs::read(dir.0.join("memory.sqlite3.unreadable-7")).unwrap(),
+            original
+        );
+        assert_eq!(
+            std::fs::read_to_string(dir.0.join("roommate.json.unreadable-7")).unwrap(),
+            "broken"
+        );
+        assert_eq!(load(&dir.0).unwrap(), Value::Null);
+        assert!(set_aside(&dir.0, 7).is_err());
     }
 }
