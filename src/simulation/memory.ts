@@ -8,6 +8,7 @@ import { reconcileMemoryClock } from "./long-term-memory.js";
 
 // Completed experiences only. Scenes and animation clocks never enter the snapshot.
 export const MEMORY_LIMIT = 200;
+export const TRICK_COOLDOWN_MS = 2 * 60 * 1000;
 const episodeKinds = new Set<MemoryEpisode["kind"]>([
   "trick",
   "reward",
@@ -231,7 +232,11 @@ export function normalizeMemory(
 
   if (finite(source.trickCooldownUntilMs)) {
     if (source.trickCooldownUntilMs >= 0 && source.trickCooldownUntilMs <= 8.64e15) {
-      trickCooldownUntilMs = Math.floor(source.trickCooldownUntilMs);
+      // A cooldown saved under a clock set far ahead must not outlast its normal length.
+      trickCooldownUntilMs = Math.min(
+        Math.floor(source.trickCooldownUntilMs),
+        nowMs + TRICK_COOLDOWN_MS,
+      );
     }
   }
 

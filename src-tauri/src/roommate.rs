@@ -49,6 +49,47 @@ pub(crate) fn request_roommate(app: tauri::AppHandle) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
+/// Recovery for memories that cannot be read: keep the originals beside the new
+/// store and restart, instead of leaving every launch stuck on the same error.
+#[tauri::command]
+pub(crate) async fn start_fresh(
+    app: tauri::AppHandle,
+    window: tauri::WebviewWindow,
+) -> Result<(), String> {
+    if window.label() != "controls" {
+        return Err("Only the control room can set memories aside".into());
+    }
+
+    let worker = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let state = worker.state::<State>();
+        let mut cached = state.roommate.lock().unwrap();
+
+        if cached.is_ok() {
+            return Err("Gullbert's memories are readable; nothing was set aside.".to_string());
+        }
+
+        let dir = worker.path().app_config_dir().map_err(|e| e.to_string())?;
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|e| e.to_string())?
+            .as_secs();
+        memory_store::set_aside(&dir, stamp)?;
+        // The running pet never restored, so it has nothing to save before restarting.
+        *cached = Err("Memories were set aside; restarting".into());
+        Ok(())
+    })
+    .await
+    .map_err(|e| e.to_string())??;
+
+    let prepared = crate::shutdown::prepare(&app).await.map_err(|error| {
+        crate::shutdown::show_error(&app, &error);
+        error
+    })?;
+    prepared.allow_exit();
+    app.restart();
+}
+
 pub(crate) fn restore(app: &tauri::AppHandle) {
     *app.state::<State>().roommate.lock().unwrap() = app
         .path()

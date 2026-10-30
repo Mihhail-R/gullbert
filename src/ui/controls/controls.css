@@ -385,7 +385,8 @@ small {
   max-height: 120px;
   overflow: auto;
 }
-#placement-notice {
+#placement-notice,
+#storage-recovery {
   display: flex;
   align-items: center;
   justify-content: space-between;
