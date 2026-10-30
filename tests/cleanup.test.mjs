@@ -155,6 +155,7 @@ function cleanupFixture() {
     splat(point) {
       sim.splats.push({ ...point, id: ++sim.serial, born: sim.time });
     },
+    offended() {},
   });
   Object.defineProperty(sim, "cleanup", {
     get() {

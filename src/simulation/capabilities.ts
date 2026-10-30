@@ -10,6 +10,7 @@ import type { Cleanup } from "./behaviors/cleanup.js";
 import type { Motivation, MotivationState } from "./motivation.js";
 import type { Pettiness } from "./pettiness.js";
 import type { BoredomState } from "./boredom.js";
+import type { GrudgeState } from "./grudge.js";
 
 /** Operation groups for builtins; they cannot configure, resize or access native input. */
 export interface BehaviorCapabilities extends RoutineCapabilities {
@@ -171,6 +172,7 @@ export interface SimulationView extends Readonly<Point> {
   readonly memoryRevision: number;
   readonly motivation: Readonly<MotivationState>;
   readonly boredom: BoredomState;
+  readonly grudge: GrudgeState;
   readonly memory: ReadonlyValue<Memory>;
   readonly nextPerchVisit: number;
   readonly calmUntil: number;

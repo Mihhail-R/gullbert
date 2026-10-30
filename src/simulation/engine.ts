@@ -7,6 +7,7 @@ import { FoodPolicy } from "./food-policy.js";
 import { Belongings } from "./belongings.js";
 import { Motivation } from "./motivation.js";
 import { Pettiness } from "./pettiness.js";
+import { Grudge } from "./grudge.js";
 import { Boredom } from "./boredom.js";
 import { RoutineRegistry } from "./registry.js";
 import type { RoutinePresentation } from "./routine.js";
@@ -90,6 +91,7 @@ export class Gullbert {
   #moods: Mood;
   #motivation = new Motivation();
   #pettiness = new Pettiness();
+  #grudge = new Grudge();
   #boredom = new Boredom();
   #nextHangoutVisit = 60;
   #recallGraceSeconds = 0;
@@ -128,6 +130,7 @@ export class Gullbert {
         this.#sounds.push(sound);
       },
       ateChip: (point) => {
+        this.#grudge.soothe(3, this.#time);
         this.#learning.ateMeal(point);
       },
       walked: (point) => {
@@ -188,9 +191,13 @@ export class Gullbert {
       splat: (point) => {
         this.splat(point);
       },
+      offended: () => {
+        this.#grudge.offend("tidied", this.#time);
+      },
     });
     this.#touch = new Touch({
       scratched: () => {
+        this.#grudge.soothe(2, this.#time);
         this.#learning.scratched();
       },
       body: this.#body,
@@ -248,7 +255,11 @@ export class Gullbert {
         return this.#cleanup.directPick(point);
       },
       offend: () => {
+        this.#grudge.offend("handled", this.#time);
         this.#moods.set("offended", this.#time, { speak: false });
+      },
+      grudge: () => {
+        return this.#grudge.level(this.#time);
       },
       beginDragging: () => {
         this.#beginDragging();
@@ -337,6 +348,7 @@ export class Gullbert {
   }
   restoreMemory(data: unknown) {
     this.#pettiness.settle();
+    this.#grudge.settle();
     this.#learning.cancelAssociations();
     this.#cancelScene();
     this.#cancelFlight();
@@ -434,6 +446,7 @@ export class Gullbert {
 
     if (!visible) {
       this.#pettiness.settle();
+      this.#grudge.settle();
       this.#work.reset();
       this.#learning.cancelAssociations();
       this.#pickup.cancel();
@@ -829,15 +842,27 @@ export class Gullbert {
         mischiefDelay = 35;
       }
 
-      this.#nextMischief = this.#time + mischiefDelay + this.#random() * 20;
+      // A grudge makes unprompted mischief sooner and messier, never different in kind.
+      const grudge = this.#grudge.level(this.#time);
+      const pace = [1, 0.75, 0.5][grudge];
+      this.#nextMischief =
+        this.#time + (mischiefDelay + this.#random() * 20) * pace;
 
       if (
         this.#time >= this.#cleanup.snapshot().suppressUntil &&
-        this.#random() < 0.35
+        this.#random() < [0.35, 0.5, 0.7][grudge]
       ) {
         this.action("poop");
       } else {
         this.action("squawk");
+      }
+
+      if (grudge > 0) {
+        const lines = [
+          dialogue.gullbert.grudge.annoyed,
+          dialogue.gullbert.grudge.furious,
+        ][grudge - 1];
+        this.#say(lines[Math.floor(this.#random() * lines.length)], 3);
       }
     } else if (this.#time >= this.#activity.until) {
       const quiet = this.#quiet.choose(motivation, boredom);
@@ -1014,6 +1039,7 @@ export class Gullbert {
     }
 
     if (settings.paused || settings.mischief === 0) {
+      this.#grudge.settle();
       this.#food.clearRequest();
       this.#work.reset();
     }
@@ -1275,6 +1301,7 @@ export class Gullbert {
       memoryRevision: belongings.revision,
       motivation: this.#motivation.snapshot(),
       boredom: this.#boredom.snapshot(),
+      grudge: this.#grudge.snapshot(this.#time),
       nextPerchVisit: this.#perch.nextPerchVisit,
       cleanup: this.#cleanup.snapshot(),
       touch: this.#touch.snapshot(),
@@ -1293,13 +1320,18 @@ export class Gullbert {
 
   #completeRoutine(): void {
     const scene = this.#registry.scene;
-    this.#pettiness.completed(
+    const ignored = this.#pettiness.completed(
       this.#registry.identity,
       scene,
       this.#time,
       this.#settings,
       this.#random,
     );
+
+    if (ignored) {
+      this.#grudge.offend("ignored", this.#time);
+    }
+
     const played = this.#learning.rememberCompletion(scene);
 
     this.#objects.releaseBag();
